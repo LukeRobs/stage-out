@@ -5,13 +5,13 @@
 // @description  Sincroniza posições do staging outbound com o dashboard local
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
-// @connect      localhost
+// @connect      stage-out.onrender.com
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  const SERVER_URL = 'http://localhost:4567/api/stage-data';
+  const SERVER_URL = 'https://stage-out.onrender.com/api/stage-data';
   const SEARCH_URL = '/api/in-station/outbound/outbound_staging_area/config/search';
   const PAGE_SIZE  = 100;
   const INTERVAL   = 60 * 1000; // 60s

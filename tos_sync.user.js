@@ -5,13 +5,13 @@
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
-// @connect      localhost
+// @connect      stage-out.onrender.com
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  const SERVER_BASE  = 'http://localhost:4567';
+  const SERVER_BASE  = 'https://stage-out.onrender.com';
   const SEARCH_URL   = '/api/in-station/general_to/outbound/search';
   const PAGE_SIZE    = 100;
   const INTERVAL     = 60 * 1000; // 60s
