@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staging Area Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --orange: #ee4d2d;
+  --orange2: #ff6b4a;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --radius: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px;
+  background: var(--orange);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.live-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted);
+}
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted);
+}
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── Stats ── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px 24px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+}
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ── Toolbar ── */
+.toolbar {
+  padding: 0 24px 12px;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.search-wrap {
+  position: relative; flex: 1; min-width: 200px;
+}
+.search-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); pointer-events: none;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 12px 7px 34px;
+  border-radius: 8px;
+  font-size: 12px;
+  outline: none;
+  transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--orange); }
+.sort-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.sort-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.sort-btn.active {
+  background: rgba(238,77,45,.12);
+  border-color: var(--orange);
+  color: var(--orange);
+}
+.sort-btn .arrow { font-size: 9px; }
+.count-info { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+/* ── List ── */
+.dest-list {
+  padding: 0 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Destination card ── */
+.dest-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.dest-card:hover { border-color: var(--border2); }
+.dest-card.expanded { border-color: var(--orange); }
+
+.dest-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.dest-id {
+  background: var(--orange);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  min-width: 44px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.dest-name {
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dest-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-blue   { background: rgba(59,130,246,.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,.2); }
+.badge-purple { background: rgba(139,92,246,.12); color: #a78bfa; border: 1px solid rgba(139,92,246,.2); }
+.badge-green  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+.badge-orange { background: rgba(238,77,45,.12);  color: #fb923c; border: 1px solid rgba(238,77,45,.2); }
+.badge-red    { background: rgba(239,68,68,.12);  color: #f87171; border: 1px solid rgba(239,68,68,.2); }
+.badge-yellow { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+
+.occ-badge { min-width: 72px; justify-content: center; }
+
+.chevron {
+  color: var(--muted);
+  font-size: 14px;
+  transition: transform .2s;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.dest-card.expanded .chevron { transform: rotate(180deg); }
+
+/* ── Ruas table ── */
+.ruas-wrap {
+  display: none;
+  border-top: 1px solid var(--border);
+  padding: 0 16px 12px;
+}
+.dest-card.expanded .ruas-wrap { display: block; }
+
+.ruas-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.ruas-table th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+.ruas-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(42,45,62,.6);
+  vertical-align: middle;
+}
+.ruas-table tr:last-child td { border-bottom: none; }
+.ruas-table tr:hover td { background: rgba(255,255,255,.02); }
+
+.rua-name { font-family: monospace; font-weight: 700; font-size: 12px; color: var(--text); }
+
+.mini-bar { display: flex; align-items: center; gap: 7px; }
+.mini-bg  { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; min-width: 50px; }
+.mini-fill { height: 100%; border-radius: 3px; }
+.mini-pct { font-family: monospace; font-size: 11px; width: 42px; text-align: right; }
+
+.status-pill {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.s1 { background: rgba(59,130,246,.12); color: #60a5fa; }
+.s3 { background: rgba(245,158,11,.12); color: #fbbf24; }
+.s2 { background: rgba(239,68,68,.12); color: #f87171; }
+
+.dur { font-family: monospace; font-size: 11px; }
+.dur.warn { color: var(--yellow); }
+.dur.crit { color: var(--red); }
+
+/* ── Empty / No data ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-top: 14px;
+  text-align: left;
+  line-height: 1.8;
+}
+
+@media (max-width: 700px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .dest-badges .badge:nth-child(n+3) { display: none; }
+  .header-right .meta-tag { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-icon">📦</div>
+  <div class="header-title">
+    <h1>Staging Area Dashboard</h1>
+    <p>SPX EXPRESS · ANÁLISE POR DESTINO</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">—</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Destinos</div>
+    <div class="stat-value" id="sDest" style="color:var(--orange)">—</div>
+    <div class="stat-sub">TOs únicos</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total de Ruas</div>
+    <div class="stat-value" id="sRuas" style="color:var(--blue)">—</div>
+    <div class="stat-sub">staging lanes</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Gaiolas</div>
+    <div class="stat-value" id="sGaiolas" style="color:var(--yellow)">—</div>
+    <div class="stat-sub">cages alocadas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">TOs</div>
+    <div class="stat-value" id="sTOs" style="color:var(--green)">—</div>
+    <div class="stat-sub">ordens de transporte</div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="search-wrap">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="search" placeholder="Buscar por destino, ID ou rua...">
+  </div>
+  <div class="sort-btns">
+    <button class="sort-btn active" data-sort="ruas">Ruas <span class="arrow">↓</span></button>
+    <button class="sort-btn" data-sort="gaiolas">Gaiolas <span class="arrow">↕</span></button>
+    <button class="sort-btn" data-sort="tos">TOs <span class="arrow">↕</span></button>
+    <button class="sort-btn" data-sort="occ">Ocupação <span class="arrow">↕</span></button>
+  </div>
+  <span class="count-info" id="countInfo"></span>
+</div>
+
+<!-- List -->
+<div class="dest-list" id="destList">
+  <div class="empty">
+    <h2>⏳ Aguardando sincronização</h2>
+    <p>O Tampermonkey ainda não enviou dados.</p>
+    <code>
+      1. Instale o Tampermonkey no Chrome<br>
+      2. Adicione o script <b>stage_out_sync.user.js</b><br>
+      3. Abra a página SPX → Staging Area Outbound<br>
+      4. Aguarde o badge <b>✅ Sync</b> aparecer
+    </code>
+  </div>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────
+const parsePct = s => parseFloat((s||'0').replace('%','').trim()) || 0;
+
+function occColor(p) {
+  if (p >= 100) return 'var(--red)';
+  if (p >= 80)  return 'var(--yellow)';
+  if (p >= 40)  return 'var(--blue)';
+  return 'var(--green)';
+}
+
+function fmtDur(s) {
+  if (!s) return '—';
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+
+function durClass(s) {
+  if (s > 86400) return 'crit';
+  if (s > 43200) return 'warn';
+  return '';
+}
+
+function parseDestId(to_destination) {
+  const m = (to_destination||'').match(/^\[(\d+)\](.*)/);
+  return m ? { id: m[1], name: m[2].trim() } : { id: '?', name: to_destination||'—' };
+}
+
+// ── State ──────────────────────────────────────────────────────────────
+let groups    = [];   // [{id, name, ruas:[...], totRuas, totGaiolas, totTOs, avgOcc}]
+let sortKey   = 'ruas';
+let sortAsc   = false;
+let lastAt    = null;
+
+// ── Group by destination ───────────────────────────────────────────────
+function buildGroups(list) {
+  const map = {};
+  list.forEach(r => {
+    const { id, name } = parseDestId(r.to_destination);
+    if (!map[id]) map[id] = { id, name, ruas: [] };
+    map[id].ruas.push(r);
+  });
+
+  return Object.values(map).map(g => {
+    const totGaiolas = g.ruas.reduce((s,r) => s + (r.cage_quantity||0), 0);
+    const totTOs     = g.ruas.reduce((s,r) => s + (r.transport_order_quantity||0), 0);
+    const totCap     = g.ruas.reduce((s,r) => s + (r.capacity||0), 0);
+    const totUsed    = g.ruas.reduce((s,r) => s + Math.round(parsePct(r.occupancy_percentage)/100*(r.capacity||0)), 0);
+    const avgOcc     = totCap > 0 ? Math.round(totUsed/totCap*100) : 0;
+    return { ...g, totGaiolas, totTOs, avgOcc };
+  });
+}
+
+// ── Sort ───────────────────────────────────────────────────────────────
+function sortedGroups(g) {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let filtered = q
+    ? g.filter(d => d.name.toLowerCase().includes(q) || d.id.includes(q) ||
+                    d.ruas.some(r => r.staging_area_name.toLowerCase().includes(q)))
+    : g;
+
+  const key = { ruas:'ruas', gaiolas:'totGaiolas', tos:'totTOs', occ:'avgOcc' }[sortKey];
+  filtered.sort((a,b) => {
+    let av = key==='ruas' ? a.ruas.length : a[key];
+    let bv = key==='ruas' ? b.ruas.length : b[key];
+    return sortAsc ? av-bv : bv-av;
+  });
+  return filtered;
+}
+
+// ── Render summary row ─────────────────────────────────────────────────
+function occBadgeClass(p) {
+  if (p >= 100) return 'badge-red';
+  if (p >= 80)  return 'badge-yellow';
+  if (p >= 40)  return 'badge-orange';
+  return 'badge-green';
+}
+
+function renderCard(g, expanded) {
+  const oc = occBadgeClass(g.avgOcc);
+  const statusMap = {1:'s1',2:'s2',3:'s3'};
+  const statusLabel = {1:'Aberto',2:'Fechado',3:'Despacho'};
+
+  const ruasRows = g.ruas
+    .sort((a,b) => a.staging_area_name.localeCompare(b.staging_area_name))
+    .map(r => {
+      const pct = parsePct(r.occupancy_percentage);
+      const col = occColor(pct);
+      const sc  = statusMap[r.staging_area_status] || '';
+      const sl  = statusLabel[r.staging_area_status] || r.staging_area_status;
+      const dc  = durClass(r.staging_duration_time);
+      return `<tr>
+        <td><span class="rua-name">${r.staging_area_name}</span></td>
+        <td><span class="status-pill ${sc}">${sl}</span></td>
+        <td style="text-align:center">${r.cage_quantity||0}</td>
+        <td style="text-align:center">${r.transport_order_quantity||0}</td>
+        <td>
+          <div class="mini-bar">
+            <div class="mini-bg"><div class="mini-fill" style="width:${Math.min(pct,100)}%;background:${col}"></div></div>
+            <span class="mini-pct" style="color:${col}">${pct.toFixed(0)}%</span>
+          </div>
+        </td>
+        <td><span class="dur ${dc}">${fmtDur(r.staging_duration_time)}</span></td>
+        <td style="color:var(--muted);font-size:11px">${r.operator?.replace(/@shopee\.com/,'').replace(/\[.*?\]/,'').trim()||'—'}</td>
+      </tr>`;
+    }).join('');
+
+  return `
+    <div class="dest-card${expanded?' expanded':''}" data-id="${g.id}">
+      <div class="dest-header">
+        <span class="dest-id">${g.id}</span>
+        <span class="dest-name" title="${g.name}">${g.name}</span>
+        <div class="dest-badges">
+          <span class="badge badge-blue">${g.ruas.length} rua${g.ruas.length!==1?'s':''}</span>
+          <span class="badge badge-purple">${g.totGaiolas} gaiola${g.totGaiolas!==1?'s':''}</span>
+          <span class="badge badge-green">${g.totTOs} TO${g.totTOs!==1?'s':''}</span>
+          <span class="badge ${oc} occ-badge">${g.avgOcc}% ocp</span>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="ruas-wrap">
+        <table class="ruas-table">
+          <thead>
+            <tr>
+              <th>Rua</th><th>Status</th><th>Gaiolas</th><th>TOs</th>
+              <th>Ocupação</th><th>Tempo</th><th>Operador</th>
+            </tr>
+          </thead>
+          <tbody>${ruasRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Full render ────────────────────────────────────────────────────────
+const expandedIds = new Set();
+
+function render() {
+  const list   = sortedGroups(groups);
+  const container = document.getElementById('destList');
+  document.getElementById('countInfo').textContent = `${list.length} destinos`;
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty"><p>Nenhum destino encontrado.</p></div>';
+    return;
+  }
+
+  container.innerHTML = list.map(g => renderCard(g, expandedIds.has(g.id))).join('');
+
+  container.querySelectorAll('.dest-header').forEach(hdr => {
+    hdr.addEventListener('click', () => {
+      const card = hdr.closest('.dest-card');
+      const id   = card.dataset.id;
+      if (expandedIds.has(id)) expandedIds.delete(id);
+      else expandedIds.add(id);
+      card.classList.toggle('expanded');
+    });
+  });
+}
+
+// ── Update stats ───────────────────────────────────────────────────────
+function updateStats(data) {
+  const list = data.list || [];
+  document.getElementById('sDest').textContent    = groups.length;
+  document.getElementById('sRuas').textContent    = list.length;
+  document.getElementById('sGaiolas').textContent = list.reduce((s,r)=>s+(r.cage_quantity||0),0);
+  document.getElementById('sTOs').textContent     = list.reduce((s,r)=>s+(r.transport_order_quantity||0),0);
+
+  const t = new Date(data.fetchedAt);
+  const ts = t.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const ds = t.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('lastUpdated').textContent = ts;
+  document.getElementById('liveDot').className = 'live-dot on';
+  document.getElementById('metaTag').textContent =
+    `outbound_staging_area_${ds.replace(/\//g,'-')} · ${list.length} ruas · ${ts}`;
+}
+
+// ── Load data ──────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch('/api/stage-out');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return; // no change
+    lastAt = data.fetchedAt;
+    groups = buildGroups(data.list || []);
+    updateStats(data);
+    render();
+  } catch(e) {}
+}
+
+// ── Sort buttons ───────────────────────────────────────────────────────
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = btn.dataset.sort;
+    if (sortKey === s) sortAsc = !sortAsc;
+    else { sortKey = s; sortAsc = false; }
+
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.classList.remove('active');
+      b.querySelector('.arrow').textContent = '↕';
+    });
+    btn.classList.add('active');
+    btn.querySelector('.arrow').textContent = sortAsc ? '↑' : '↓';
+    render();
+  });
+});
+
+// ── Search ─────────────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input', render);
+
+// ── Init ───────────────────────────────────────────────────────────────
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>

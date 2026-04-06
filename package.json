@@ -1,0 +1,12 @@
+{
+  "name": "stage-out-dashboard",
+  "version": "1.0.0",
+  "description": "SPX Stage Out & TO Management Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

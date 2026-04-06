@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TO's Packed Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --orange: #ee4d2d;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --accent: #22c55e;
+  --radius: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── Stats ── */
+.stats {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 12px; padding: 16px 24px;
+}
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ── Toolbar ── */
+.toolbar { padding: 0 24px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-wrap input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 12px 7px 34px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.sort-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.sort-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px; transition: all .15s; white-space: nowrap;
+}
+.sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.sort-btn.active { background: rgba(34,197,94,.12); border-color: var(--accent); color: var(--accent); }
+.sort-btn .arrow { font-size: 9px; }
+.count-info { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+/* ── List ── */
+.dest-list { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Destination card ── */
+.dest-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .15s; }
+.dest-card:hover { border-color: var(--border2); }
+.dest-card.expanded { border-color: var(--accent); }
+
+.dest-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; }
+.dest-id {
+  background: var(--accent); color: #000;
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 6px;
+  min-width: 44px; text-align: center; flex-shrink: 0;
+}
+.dest-name { font-weight: 600; font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dest-badges { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-blue   { background: rgba(59,130,246,.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,.2); }
+.badge-purple { background: rgba(139,92,246,.12); color: #a78bfa; border: 1px solid rgba(139,92,246,.2); }
+.badge-yellow { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+.badge-green  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+
+.chevron { color: var(--muted); font-size: 14px; transition: transform .2s; flex-shrink: 0; margin-left: 4px; }
+.dest-card.expanded .chevron { transform: rotate(180deg); }
+
+/* ── TOs table ── */
+.tos-wrap { display: none; border-top: 1px solid var(--border); padding: 0 16px 12px; }
+.dest-card.expanded .tos-wrap { display: block; }
+
+.tos-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.tos-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 6px 10px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.tos-table td { padding: 7px 10px; border-bottom: 1px solid rgba(42,45,62,.6); vertical-align: middle; }
+.tos-table tr:last-child td { border-bottom: none; }
+.tos-table tr:hover td { background: rgba(255,255,255,.02); }
+
+.to-num { font-family: monospace; font-weight: 700; font-size: 11px; color: var(--text); letter-spacing: .3px; }
+.op-name { font-size: 11px; color: var(--muted); }
+.pack-pill {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600;
+}
+.pack-saca    { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.pack-scuttle { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.pack-other   { background: rgba(139,92,246,.15); color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.dur { font-family: monospace; font-size: 11px; }
+.dur.warn { color: var(--yellow); }
+.dur.crit { color: var(--red); }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
+  text-align: left; line-height: 1.8;
+}
+
+@media (max-width: 700px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .dest-badges .badge:nth-child(n+3) { display: none; }
+  .header-right .meta-tag { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">✅</div>
+  <div class="header-title">
+    <h1>TO's Packed Dashboard</h1>
+    <p>SPX EXPRESS · ORDENS EMBALADAS SEM STAGING AREA</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">—</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Destinos</div>
+    <div class="stat-value" id="sDest" style="color:var(--accent)">—</div>
+    <div class="stat-sub">destinos únicos</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total de TOs</div>
+    <div class="stat-value" id="sTOs" style="color:var(--blue)">—</div>
+    <div class="stat-sub">sem staging area</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Pacotes</div>
+    <div class="stat-value" id="sPacotes" style="color:var(--purple)">—</div>
+    <div class="stat-sub">total de volumes</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Peso Total</div>
+    <div class="stat-value" id="sPeso" style="color:var(--yellow)">—</div>
+    <div class="stat-sub">kg processados</div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <div class="search-wrap">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="search" placeholder="Buscar por destino ou TO...">
+  </div>
+  <div class="sort-btns">
+    <button class="sort-btn active" data-sort="tos">TOs <span class="arrow">↓</span></button>
+    <button class="sort-btn" data-sort="pacotes">Pacotes <span class="arrow">↕</span></button>
+    <button class="sort-btn" data-sort="peso">Peso <span class="arrow">↕</span></button>
+  </div>
+  <span class="count-info" id="countInfo"></span>
+</div>
+
+<div class="dest-list" id="destList">
+  <div class="empty">
+    <h2>⏳ Aguardando sincronização</h2>
+    <p>O Tampermonkey ainda não enviou dados de Packed.</p>
+    <code>
+      1. Instale o script <b>tos_sync.user.js</b> no Tampermonkey<br>
+      2. Acesse qualquer página do SPX<br>
+      3. Aguarde o badge <b>✅ TOs Sync</b> aparecer
+    </code>
+  </div>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────
+function fmtDur(s) {
+  if (!s || s <= 0) return '—';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+function durClass(s) {
+  if (s > 7200) return 'crit';
+  if (s > 1800) return 'warn';
+  return '';
+}
+function fmtTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtWeight(g) {
+  const kg = g / 1000;
+  return kg >= 1000 ? `${(kg / 1000).toFixed(1)}t` : `${kg.toFixed(1)}kg`;
+}
+function cleanOp(s) {
+  return (s || '—').replace(/\[Ops\d+\]/i, '').replace(/@shopee\.com/i, '').trim() || '—';
+}
+function packClass(name) {
+  if (!name) return 'pack-other';
+  const n = name.toLowerCase();
+  if (n === 'saca')    return 'pack-saca';
+  if (n === 'scuttle') return 'pack-scuttle';
+  return 'pack-other';
+}
+
+// ── State ──────────────────────────────────────────────────────────────
+let groups  = [];
+let sortKey = 'tos';
+let sortAsc = false;
+let lastAt  = null;
+
+// ── Group by destination ───────────────────────────────────────────────
+function buildGroups(list) {
+  const map = {};
+  list.forEach(to => {
+    const id   = to.dest_station_id;
+    const name = to.dest_station_name || to.receiver || '—';
+    if (!map[id]) map[id] = { id, name, tos: [] };
+    map[id].tos.push(to);
+  });
+  return Object.values(map).map(g => ({
+    ...g,
+    totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
+    totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
+  }));
+}
+
+// ── Sort / filter ──────────────────────────────────────────────────────
+function sortedGroups(g) {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let filtered = q
+    ? g.filter(d => d.name.toLowerCase().includes(q) ||
+                    String(d.id).includes(q) ||
+                    d.tos.some(t => t.to_number.toLowerCase().includes(q)))
+    : g;
+  const keyMap = { tos: 'tos', pacotes: 'totPacotes', peso: 'totPeso' };
+  const key = keyMap[sortKey];
+  filtered.sort((a, b) => {
+    const av = key === 'tos' ? a.tos.length : a[key];
+    const bv = key === 'tos' ? b.tos.length : b[key];
+    return sortAsc ? av - bv : bv - av;
+  });
+  return filtered;
+}
+
+// ── Render card ────────────────────────────────────────────────────────
+function renderCard(g, expanded) {
+  const toRows = g.tos
+    .sort((a, b) => b.complete_time - a.complete_time)
+    .map(to => {
+      const packSec = (to.complete_time || 0) - to.ctime;
+      const dc = durClass(packSec);
+      return `<tr>
+        <td><span class="to-num" title="${to.to_number}">${to.to_number}</span></td>
+        <td><span class="op-name">${cleanOp(to.operator)}</span></td>
+        <td><span class="pack-pill ${packClass(to.pack_name)}">${to.pack_name || '—'}</span></td>
+        <td style="text-align:center;font-family:monospace">${to.quantity || 0}</td>
+        <td style="font-family:monospace;font-size:11px">${fmtWeight(to.weight || 0)}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(to.complete_time)}</td>
+        <td><span class="dur ${dc}">${fmtDur(packSec)}</span></td>
+      </tr>`;
+    }).join('');
+
+  return `
+    <div class="dest-card${expanded ? ' expanded' : ''}" data-id="${g.id}">
+      <div class="dest-header">
+        <span class="dest-id">${g.id}</span>
+        <span class="dest-name" title="${g.name}">${g.name}</span>
+        <div class="dest-badges">
+          <span class="badge badge-blue">${g.tos.length} TO${g.tos.length !== 1 ? 's' : ''}</span>
+          <span class="badge badge-purple">${g.totPacotes} pac.</span>
+          <span class="badge badge-green">${fmtWeight(g.totPeso)}</span>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="tos-wrap">
+        <table class="tos-table">
+          <thead>
+            <tr>
+              <th>TO Number</th><th>Operador</th><th>Tipo</th>
+              <th>Pacotes</th><th>Peso</th><th>Concluído</th><th>Tempo Pack</th>
+            </tr>
+          </thead>
+          <tbody>${toRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Full render ────────────────────────────────────────────────────────
+const expandedIds = new Set();
+
+function render() {
+  const list      = sortedGroups(groups);
+  const container = document.getElementById('destList');
+  document.getElementById('countInfo').textContent = `${list.length} destinos`;
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty"><p>Nenhum destino encontrado.</p></div>';
+    return;
+  }
+
+  container.innerHTML = list.map(g => renderCard(g, expandedIds.has(String(g.id)))).join('');
+
+  container.querySelectorAll('.dest-header').forEach(hdr => {
+    hdr.addEventListener('click', () => {
+      const card = hdr.closest('.dest-card');
+      const id   = card.dataset.id;
+      if (expandedIds.has(id)) expandedIds.delete(id);
+      else expandedIds.add(id);
+      card.classList.toggle('expanded');
+    });
+  });
+}
+
+// ── Update stats ───────────────────────────────────────────────────────
+function updateStats(data) {
+  const list = data.list || [];
+  document.getElementById('sDest').textContent    = groups.length;
+  document.getElementById('sTOs').textContent     = list.length;
+  document.getElementById('sPacotes').textContent = list.reduce((s, t) => s + (t.quantity || 0), 0);
+
+  const pesoKg = list.reduce((s, t) => s + (t.weight || 0), 0) / 1000;
+  document.getElementById('sPeso').textContent =
+    pesoKg >= 1000 ? `${(pesoKg / 1000).toFixed(1)}t` : `${pesoKg.toFixed(0)}`;
+
+  const t  = new Date(data.fetchedAt);
+  const ts = t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('lastUpdated').textContent = ts;
+  document.getElementById('liveDot').className       = 'live-dot on';
+  document.getElementById('metaTag').textContent     = `packed · ${list.length} TOs · ${ts}`;
+}
+
+// ── Load data ──────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res  = await fetch('/api/tos-packed');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return;
+    lastAt = data.fetchedAt;
+    // Só mostra TOs Packed que ainda NÃO têm Staging Area atribuída
+    const filtered = (data.list || []).filter(to =>
+      !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === ''
+    );
+    groups = buildGroups(filtered);
+    updateStats({ ...data, list: filtered });
+    render();
+  } catch (e) {}
+}
+
+// ── Sort buttons ───────────────────────────────────────────────────────
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = btn.dataset.sort;
+    if (sortKey === s) sortAsc = !sortAsc;
+    else { sortKey = s; sortAsc = false; }
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.classList.remove('active');
+      b.querySelector('.arrow').textContent = '↕';
+    });
+    btn.classList.add('active');
+    btn.querySelector('.arrow').textContent = sortAsc ? '↑' : '↓';
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', render);
+
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>
