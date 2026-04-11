@@ -280,6 +280,51 @@ let toPackingCache  = null; // { list, total, fetchedAt }
 let toPackedCache   = null; // { list, total, fetchedAt }
 let stageInCache    = null; // { list, total, fetchedAt }
 
+// ── Report sheet (pacotes por TO) ─────────────────────────────────────
+const REPORT_SPREADSHEET_ID = '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E';
+const REPORT_RANGE          = 'Report!A:I';
+const REPORT_TTL            = 5 * 60 * 1000; // 5 min
+let   reportCache           = null;
+let   reportFetchedAt       = 0;
+
+async function getReportData() {
+  if (reportCache && Date.now() - reportFetchedAt < REPORT_TTL) return reportCache;
+  if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+
+  const token = await getServiceAccountToken();
+  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${REPORT_SPREADSHEET_ID}/values/${encodeURIComponent(REPORT_RANGE)}`;
+  const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
+
+  const raw  = await resp.json();
+  const rows = (raw.values || []).slice(1); // pula cabeçalho
+
+  // Colunas: A=TO, B=ZONA, C=STATION, D=QTD PACOTES, E=RUA, F=AGING_HOURS, G=Hora now, H=Hora endereçamento, I=Turno
+  const byZone = {}; // { "ZONA VOLUMOSO": { tos, pacotes } }
+  const byArea = {}; // { "IN-05":          { tos, pacotes } }
+
+  rows.forEach(r => {
+    const zona    = (r[1] || '').trim();
+    const rua     = (r[4] || '').trim();
+    const pacotes = parseInt(r[3]) || 0;
+    if (zona) {
+      if (!byZone[zona]) byZone[zona] = { tos: 0, pacotes: 0 };
+      byZone[zona].tos++;
+      byZone[zona].pacotes += pacotes;
+    }
+    if (rua) {
+      if (!byArea[rua]) byArea[rua] = { tos: 0, pacotes: 0 };
+      byArea[rua].tos++;
+      byArea[rua].pacotes += pacotes;
+    }
+  });
+
+  reportCache      = { byZone, byArea, rowCount: rows.length, fetchedAt: Date.now() };
+  reportFetchedAt  = Date.now();
+  console.log(`[report] ${rows.length} linhas lidas — ${Object.keys(byZone).length} zonas, ${Object.keys(byArea).length} ruas`);
+  return reportCache;
+}
+
 // ── HTTP server ────────────────────────────────────────────────────────
 
 const server = http.createServer((req, res) => {
@@ -445,6 +490,26 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify(stageInCache));
+    return;
+  }
+
+  // GET /api/report-data — serves package data from Report sheet
+  if (urlPath === '/api/report-data') {
+    if (!SERVICE_ACCOUNT) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Service Account não configurado — configure GOOGLE_SERVICE_ACCOUNT no Render' }));
+      return;
+    }
+    getReportData()
+      .then(data => {
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+        res.end(JSON.stringify(data));
+      })
+      .catch(err => {
+        console.error('[report] Erro:', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      });
     return;
   }
 

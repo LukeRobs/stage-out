@@ -330,6 +330,7 @@ table.main-table tr:last-child td { border-bottom: none; }
         <th data-col="area_name">Rua <span class="sa"></span></th>
         <th data-col="staging_group_name">Zona <span class="sa"></span></th>
         <th data-col="to_quantity" class="sorted" style="text-align:center">TOs <span class="sa">↓</span></th>
+        <th data-col="pacotes" style="text-align:center">Pacotes <span class="sa"></span></th>
         <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
         <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
         <th data-col="staging_duration_time">Aging <span class="sa"></span></th>
@@ -392,6 +393,7 @@ const ZONE_RGBA = {
 
 // ── State ──────────────────────────────────────────────────────────────
 let allAreas   = [];
+let reportData = null; // { byZone, byArea } from /api/report-data
 let activeZone = 'all';
 let sortCol    = 'to_quantity';
 let sortAsc    = false;
@@ -454,12 +456,17 @@ function buildZonaSection(areas) {
   const cardHtml = Object.values(zones).sort((a, b) => b.tos - a.tos).map(z => {
     const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
     const pico = z.agings.length ? Math.max(...z.agings) : 0;
+    const rd   = reportData?.byZone?.[z.name]; // pacotes from sheet
+    const mainVal  = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
+    const mainLabel= rd ? 'pacotes' : 'TOs';
+    const tosLine  = rd ? `<span>${z.tos} TOs</span>` : '';
     return `
       <div class="zone-card ${zoneCardClass(z.name)}">
         <div class="zone-card-label">${zoneShort(z.name)}</div>
-        <div class="zone-card-value">${z.tos.toLocaleString('pt-BR')}</div>
+        <div class="zone-card-value">${mainVal}</div>
         <div class="zone-card-meta">
-          <span>TOs</span>
+          <span>${mainLabel}</span>
+          ${tosLine}
           ${avg  ? `<span>avg <strong>${fmtDur(Math.round(avg))}</strong></span>` : ''}
           ${pico ? `<span>pico <strong>${fmtDur(pico)}</strong></span>` : ''}
         </div>
@@ -494,9 +501,13 @@ function buildZonaSection(areas) {
 
   // Build table header
   const zoneHeaders = zoneNames.map(z => {
-    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    const rgb  = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    const rdZ  = reportData?.byZone?.[z];
+    const sub  = rdZ
+      ? `${rdZ.pacotes.toLocaleString('pt-BR')} pcts`
+      : `${(colTotals[z]||0).toLocaleString('pt-BR')} TOs`;
     return `<th class="col-zone" style="color:rgb(${rgb.join(',')})">
-      ${zoneShort(z)}<span class="sub">(${(colTotals[z]||0).toLocaleString('pt-BR')} TOs)</span>
+      ${zoneShort(z)}<span class="sub">(${sub})</span>
     </th>`;
   }).join('');
 
@@ -616,7 +627,10 @@ function sortedAreas(areas) {
   return [...areas].sort((a, b) => {
     let av, bv;
     if (sortCol === 'occupy_pct') { av = parseOcc(a.occupy_percentage); bv = parseOcc(b.occupy_percentage); }
-    else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
+    else if (sortCol === 'pacotes') {
+      av = reportData?.byArea?.[a.area_name]?.pacotes || 0;
+      bv = reportData?.byArea?.[b.area_name]?.pacotes || 0;
+    } else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
       av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     } else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
@@ -638,10 +652,12 @@ function buildMainTable(areas) {
 
   document.getElementById('mainBody').innerHTML = sorted.map(a => {
     const occ = parseOcc(a.occupy_percentage);
+    const pac = reportData?.byArea?.[a.area_name]?.pacotes;
     return `<tr>
       <td class="area-name">${a.area_name}</td>
       <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
       <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity>0?'700':'400'}">${a.to_quantity||0}</td>
+      <td style="font-family:monospace;text-align:center;font-weight:600;color:${pac>0?'var(--text)':'var(--muted)'}">${pac!=null ? pac.toLocaleString('pt-BR') : '—'}</td>
       <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
       <td>
         <div class="occ-bar-wrap">
@@ -685,13 +701,22 @@ function render() {
 // ── Load data ──────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const res  = await fetch('/api/stage-in');
-    if (!res.ok) return;
-    const data = await res.json();
+    const [stageRes, reportRes] = await Promise.all([
+      fetch('/api/stage-in'),
+      fetch('/api/report-data').catch(() => null),
+    ]);
+
+    if (!stageRes.ok) return;
+    const data = await stageRes.json();
     if (data.error) return;
     if (data.fetchedAt === lastAt) return;
     lastAt   = data.fetchedAt;
     allAreas = data.list || [];
+
+    if (reportRes?.ok) {
+      const rd = await reportRes.json().catch(() => null);
+      if (rd && !rd.error) reportData = rd;
+    }
 
     const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
