@@ -22,7 +22,6 @@
   --red: #ef4444;
   --blue: #3b82f6;
   --purple: #8b5cf6;
-  --teal: #14b8a6;
   --radius: 10px;
 }
 
@@ -43,11 +42,9 @@ body {
   position: sticky; top: 0; z-index: 100;
 }
 .header-icon {
-  width: 36px; height: 36px;
-  background: var(--accent);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
+  width: 36px; height: 36px; background: var(--accent);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 18px; flex-shrink: 0;
 }
 .header-title h1 { font-size: 15px; font-weight: 700; }
 .header-title p  { font-size: 11px; color: var(--muted); }
@@ -64,10 +61,8 @@ body {
 
 /* ── Zone tabs ── */
 .zone-tabs {
-  padding: 0 24px;
-  display: flex; gap: 4px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  padding: 0 24px; display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); background: var(--surface);
 }
 .zone-tab {
   background: transparent; border: none; color: var(--muted);
@@ -79,12 +74,10 @@ body {
 .zone-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .zone-tab .tab-count {
   background: var(--surface2); color: var(--muted);
-  font-size: 10px; padding: 1px 6px; border-radius: 10px;
-  border: 1px solid var(--border);
+  font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border);
 }
 .zone-tab.active .tab-count {
-  background: rgba(34,197,94,.12); color: var(--accent);
-  border-color: rgba(34,197,94,.25);
+  background: rgba(34,197,94,.12); color: var(--accent); border-color: rgba(34,197,94,.25);
 }
 
 /* ── KPIs ── */
@@ -97,21 +90,82 @@ body {
 .stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
 .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-/* ── Middle row ── */
-.middle-row {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 12px; padding: 0 24px 16px;
+/* ── Visão por Zona ── */
+.section { padding: 0 24px 16px; }
+.section-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 600; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
 }
-.panel {
+.section-label::before {
+  content: ''; width: 8px; height: 8px; border-radius: 2px;
+  background: var(--accent); display: inline-block;
+}
+
+/* Zone summary cards */
+.zone-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; margin-bottom: 16px; }
+.zone-card  {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px;
+  border-radius: var(--radius); padding: 16px 18px;
+  border-top: 3px solid;
 }
+.zone-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 6px; }
+.zone-card-value { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+.zone-card-meta  { font-size: 11px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.zone-card-meta strong { color: var(--text); }
+
+.zc-linear   { border-top-color: #3b82f6; }
+.zc-linear   .zone-card-label { color: #60a5fa; }
+.zc-linear   .zone-card-value { color: #3b82f6; }
+.zc-volumoso { border-top-color: #22c55e; }
+.zc-volumoso .zone-card-label { color: #4ade80; }
+.zc-volumoso .zone-card-value { color: #22c55e; }
+.zc-cop      { border-top-color: #f59e0b; }
+.zc-cop      .zone-card-label { color: #fbbf24; }
+.zc-cop      .zone-card-value { color: #f59e0b; }
+.zc-other    { border-top-color: #8b5cf6; }
+.zc-other    .zone-card-label { color: #a78bfa; }
+.zc-other    .zone-card-value { color: #8b5cf6; }
+
+/* Cross-tab histogram */
+.crosstab-wrap { overflow-x: auto; }
+table.crosstab {
+  width: 100%; border-collapse: collapse; min-width: 500px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+table.crosstab th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 600;
+  background: var(--surface2);
+}
+table.crosstab th.col-total { text-align: right; }
+table.crosstab th.col-zone  { text-align: center; }
+table.crosstab .sub { display: block; font-size: 9px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+table.crosstab td {
+  padding: 9px 14px; border-bottom: 1px solid rgba(42,45,62,.5);
+  vertical-align: middle; font-family: monospace; font-size: 12px;
+}
+table.crosstab tr:last-child td { border-bottom: none; }
+table.crosstab td.faixa { font-family: 'Segoe UI',sans-serif; font-size: 11px; color: var(--muted); font-weight: 500; }
+table.crosstab td.zone-cell { text-align: center; position: relative; }
+table.crosstab td.total-cell { text-align: right; font-weight: 700; color: var(--text); }
+table.crosstab tr.row-total td { background: var(--surface2); font-weight: 700; border-top: 1px solid var(--border); }
+table.crosstab tr.row-total td.faixa { color: var(--text); font-size: 11px; }
+
+.cell-inner {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  min-width: 48px; text-align: center;
+}
+.cell-zero { color: var(--muted); }
+
+/* ── Middle row: Top5 ── */
+.panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 24px 16px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .panel-title {
   font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
   color: var(--muted); margin-bottom: 14px; font-weight: 600;
 }
-
-/* Top 5 */
 .top5-table { width: 100%; border-collapse: collapse; }
 .top5-table th {
   font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
@@ -122,26 +176,19 @@ body {
 .top5-table tr:last-child td { border-bottom: none; }
 .rank-num { color: var(--muted); font-size: 11px; margin-right: 6px; }
 
-/* Histogram */
-.hist-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.hist-label { font-size: 10px; color: var(--muted); width: 54px; text-align: right; flex-shrink: 0; }
-.hist-track { flex: 1; background: var(--surface2); border-radius: 3px; height: 16px; overflow: hidden; }
-.hist-fill  { height: 100%; border-radius: 3px; transition: width .4s ease; min-width: 0; }
-.hist-count { font-size: 10px; color: var(--muted); width: 22px; text-align: right; flex-shrink: 0; font-family: monospace; }
-.age-ok   { background: rgba(34,197,94,.7); }
-.age-warn { background: rgba(245,158,11,.7); }
-.age-hot  { background: rgba(238,77,45,.7); }
-.age-crit { background: rgba(239,68,68,.9); }
+/* Occ mini chart in panel */
+.occ-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.occ-label { font-size: 11px; color: var(--muted); min-width: 60px; }
+.occ-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 0 10px; }
+.occ-fill  { height: 100%; border-radius: 4px; }
+.occ-val   { font-size: 11px; font-family: monospace; min-width: 44px; text-align: right; }
+.occ-low   { background: var(--green); }
+.occ-mid   { background: var(--yellow); }
+.occ-high  { background: var(--red); }
 
 /* ── Detail table ── */
-.section-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 0 24px 10px;
-}
-.section-title {
-  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
-  color: var(--muted); font-weight: 600;
-}
+.section-header { display: flex; align-items: center; gap: 12px; padding: 0 24px 10px; }
+.section-title  { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
 .table-wrap { padding: 0 24px 32px; overflow-x: auto; }
 table.main-table { width: 100%; border-collapse: collapse; min-width: 640px; }
 table.main-table th {
@@ -152,30 +199,22 @@ table.main-table th {
 }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--accent); }
-table.main-table td {
-  padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle;
-}
+table.main-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
 table.main-table tr:hover td { background: rgba(255,255,255,.02); }
 table.main-table tr:last-child td { border-bottom: none; }
 
 .area-name { font-weight: 600; font-size: 13px; }
-.zone-pill {
-  display: inline-block; padding: 2px 8px; border-radius: 10px;
-  font-size: 10px; font-weight: 600;
-}
+.zone-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
 .zone-linear   { background: rgba(59,130,246,.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
-.zone-volumoso { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
-.zone-cop      { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
-.zone-other    { background: rgba(20,184,166,.15);  color: #2dd4bf; border: 1px solid rgba(20,184,166,.25); }
+.zone-volumoso { background: rgba(34,197,94,.15);   color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
+.zone-cop      { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.zone-other    { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
 
 .occ-bar-wrap { display: flex; align-items: center; gap: 6px; }
-.occ-bar { width: 70px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-.occ-fill { height: 100%; border-radius: 3px; }
-.occ-low  { background: var(--green); }
-.occ-mid  { background: var(--yellow); }
-.occ-high { background: var(--red); }
+.occ-bar  { width: 70px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.occ-fill2 { height: 100%; border-radius: 3px; }
 
-.aging-val { font-family: monospace; font-size: 12px; }
+.aging-val  { font-family: monospace; font-size: 12px; }
 .aging-ok   { color: var(--muted); }
 .aging-warn { color: var(--yellow); }
 .aging-hot  { color: var(--orange); }
@@ -192,7 +231,7 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 @media (max-width: 700px) {
   .stats { grid-template-columns: repeat(2,1fr); }
-  .middle-row { grid-template-columns: 1fr; }
+  .panel-row { grid-template-columns: 1fr; }
   .header-right .meta-tag { display: none; }
 }
 </style>
@@ -216,6 +255,7 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <div class="zone-tabs" id="zoneTabs"></div>
 
+<!-- KPIs -->
 <div class="stats">
   <div class="stat">
     <div class="stat-label">Total TOs</div>
@@ -239,37 +279,41 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
-<div class="middle-row">
+<!-- Visão por Zona -->
+<div class="section" id="zonaSection" style="display:none">
+  <div class="section-label">Visão por Zona · Distribuição de TOs</div>
+  <div class="zone-cards" id="zoneCards"></div>
+  <div class="crosstab-wrap">
+    <table class="crosstab" id="crosstabTable"></table>
+  </div>
+</div>
+
+<!-- Top 5 + Ocupação -->
+<div class="panel-row">
   <div class="panel">
     <div class="panel-title">Top 5 Ruas por Aging</div>
     <table class="top5-table">
       <thead>
-        <tr>
-          <th>Rua</th>
-          <th>Zona</th>
-          <th style="text-align:center">TOs</th>
-          <th>Aging</th>
-        </tr>
+        <tr><th>Rua</th><th>Zona</th><th style="text-align:center">TOs</th><th>Aging</th></tr>
       </thead>
       <tbody id="top5Body">
         <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">—</td></tr>
       </tbody>
     </table>
   </div>
-
   <div class="panel">
-    <div class="panel-title">Histograma Aging por Faixa</div>
-    <div id="histogram">
-      <div style="text-align:center;color:var(--muted);padding:20px">—</div>
+    <div class="panel-title">Ocupação por Zona</div>
+    <div id="occByZone">
+      <div style="color:var(--muted);text-align:center;padding:20px">—</div>
     </div>
   </div>
 </div>
 
+<!-- Detail table -->
 <div class="section-header">
   <span class="section-title">Detalhamento por Rua</span>
   <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
 </div>
-
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
     <h2>⏳ Aguardando sincronização</h2>
@@ -306,7 +350,9 @@ function fmtDur(s) {
   if (d > 0) return `${d}d ${h}h`;
   return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
 }
-
+function fmtNum(n) {
+  return n ? n.toLocaleString('pt-BR') : '—';
+}
 function agingClass(s) {
   if (!s || s <= 0) return 'aging-ok';
   const h = s / 3600;
@@ -315,33 +361,34 @@ function agingClass(s) {
   if (h < 13) return 'aging-hot';
   return 'aging-crit';
 }
-
 function parseOcc(s) {
   return parseFloat((s || '0').replace(/\s*%/, '')) || 0;
 }
-
 function occClass(pct) {
-  if (pct < 60) return 'occ-low';
-  if (pct < 85) return 'occ-mid';
-  return 'occ-high';
+  return pct < 60 ? 'occ-low' : pct < 85 ? 'occ-mid' : 'occ-high';
 }
-
-function zoneClass(name) {
-  if (!name) return 'zone-other';
+function zoneKey(name) {
+  if (!name) return 'other';
   const n = name.toLowerCase();
-  if (n.includes('linear'))   return 'zone-linear';
-  if (n.includes('volumoso')) return 'zone-volumoso';
-  if (n.includes('cop'))      return 'zone-cop';
-  return 'zone-other';
+  if (n.includes('linear'))   return 'linear';
+  if (n.includes('volumoso')) return 'volumoso';
+  if (n.includes('cop'))      return 'cop';
+  return 'other';
 }
-
-function zoneShort(name) {
-  return (name || '').replace('ZONA ', '').trim() || '—';
-}
-
+function zoneCardClass(name) { return 'zc-' + zoneKey(name); }
+function zonePillClass(name) { return 'zone-' + zoneKey(name); }
+function zoneShort(name) { return (name || '').replace('ZONA ', '').trim() || '—'; }
 function cleanOp(s) {
-  return (s || '—').replace(/\[ops\d+\]/i, '').replace(/@shopee\.com\.br/i, '').replace(/@shopee\.com/i, '').trim() || '—';
+  return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
 }
+
+// ── Zone cell colors ───────────────────────────────────────────────────
+const ZONE_RGBA = {
+  linear:   [59,  130, 246],
+  volumoso: [34,  197, 94],
+  cop:      [245, 158, 11],
+  other:    [139, 92,  246],
+};
 
 // ── State ──────────────────────────────────────────────────────────────
 let allAreas   = [];
@@ -349,6 +396,21 @@ let activeZone = 'all';
 let sortCol    = 'to_quantity';
 let sortAsc    = false;
 let lastAt     = null;
+
+// ── Histogram bins ─────────────────────────────────────────────────────
+const BINS = [
+  { label: '0–4h',   min: 0,       max: 14400   },
+  { label: '4–7h',   min: 14400,   max: 25200   },
+  { label: '7–10h',  min: 25200,   max: 36000   },
+  { label: '10–13h', min: 36000,   max: 46800   },
+  { label: '13–16h', min: 46800,   max: 57600   },
+  { label: '16–21h', min: 57600,   max: 75600   },
+  { label: '21–25h', min: 75600,   max: 90000   },
+  { label: '1–2d',   min: 90000,   max: 172800  },
+  { label: '2–3d',   min: 172800,  max: 259200  },
+  { label: '3–4d',   min: 259200,  max: 345600  },
+  { label: '>4d',    min: 345600,  max: Infinity },
+];
 
 // ── Zone tabs ──────────────────────────────────────────────────────────
 function buildZoneTabs() {
@@ -358,124 +420,206 @@ function buildZoneTabs() {
     zoneMap[z] = (zoneMap[z] || 0) + (a.to_quantity || 0);
   });
   const totalTOs = allAreas.reduce((s, a) => s + (a.to_quantity || 0), 0);
-
   const tabs = [{ key: 'all', label: 'Todas', count: totalTOs }];
-  Object.entries(zoneMap)
-    .sort((a, b) => b[1] - a[1])
+  Object.entries(zoneMap).sort((a, b) => b[1] - a[1])
     .forEach(([z, c]) => tabs.push({ key: z, label: zoneShort(z), count: c }));
 
   const container = document.getElementById('zoneTabs');
   container.innerHTML = tabs.map(t => `
     <button class="zone-tab${t.key === activeZone ? ' active' : ''}" data-zone="${t.key}">
-      ${t.label}
-      <span class="tab-count">${t.count}</span>
-    </button>
-  `).join('');
-
+      ${t.label}<span class="tab-count">${t.count}</span>
+    </button>`).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeZone = btn.dataset.zone;
-      render();
-    });
+    btn.addEventListener('click', () => { activeZone = btn.dataset.zone; render(); });
   });
 }
 
-// ── Filtered areas ─────────────────────────────────────────────────────
-function filteredAreas() {
-  if (activeZone === 'all') return allAreas;
-  return allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
-}
-
-// ── Histogram ──────────────────────────────────────────────────────────
-const BINS = [
-  { label: '0–4h',   min: 0,       max: 14400,   cls: 'age-ok'   },
-  { label: '4–7h',   min: 14400,   max: 25200,   cls: 'age-ok'   },
-  { label: '7–10h',  min: 25200,   max: 36000,   cls: 'age-warn'  },
-  { label: '10–13h', min: 36000,   max: 46800,   cls: 'age-warn'  },
-  { label: '13–16h', min: 46800,   max: 57600,   cls: 'age-hot'  },
-  { label: '16–21h', min: 57600,   max: 75600,   cls: 'age-hot'  },
-  { label: '21–25h', min: 75600,   max: 90000,   cls: 'age-crit' },
-  { label: '1–2d',   min: 90000,   max: 172800,  cls: 'age-crit' },
-  { label: '2–3d',   min: 172800,  max: 259200,  cls: 'age-crit' },
-  { label: '3–4d',   min: 259200,  max: 345600,  cls: 'age-crit' },
-  { label: '>4d',    min: 345600,  max: Infinity, cls: 'age-crit' },
-];
-
-function buildHistogram(areas) {
+// ── Visão por Zona ─────────────────────────────────────────────────────
+function buildZonaSection(areas) {
   const active = areas.filter(a => a.to_quantity > 0);
-  const counts = BINS.map(() => 0);
+  if (!active.length) { document.getElementById('zonaSection').style.display = 'none'; return; }
+  document.getElementById('zonaSection').style.display = '';
+
+  // Aggregate per zone
+  const zones = {};
   active.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { name: z, tos: 0, agings: [], cap: 0 };
+    zones[z].tos  += a.to_quantity;
+    zones[z].cap  += a.capacity || 0;
+    if (a.staging_duration_time > 0) zones[z].agings.push(a.staging_duration_time);
+  });
+
+  // Zone cards
+  const cardHtml = Object.values(zones).sort((a, b) => b.tos - a.tos).map(z => {
+    const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
+    const pico = z.agings.length ? Math.max(...z.agings) : 0;
+    return `
+      <div class="zone-card ${zoneCardClass(z.name)}">
+        <div class="zone-card-label">${zoneShort(z.name)}</div>
+        <div class="zone-card-value">${z.tos.toLocaleString('pt-BR')}</div>
+        <div class="zone-card-meta">
+          <span>TOs</span>
+          ${avg  ? `<span>avg <strong>${fmtDur(Math.round(avg))}</strong></span>` : ''}
+          ${pico ? `<span>pico <strong>${fmtDur(pico)}</strong></span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('zoneCards').innerHTML = cardHtml;
+
+  // Cross-tab
+  const zoneNames = Object.keys(zones);
+  // counts[binIdx][zoneName] = sum of to_quantity
+  const counts = BINS.map(() => {
+    const row = {};
+    zoneNames.forEach(z => { row[z] = 0; });
+    return row;
+  });
+  active.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
     const s = a.staging_duration_time || 0;
     const i = BINS.findIndex(b => s >= b.min && s < b.max);
-    if (i >= 0) counts[i]++;
+    if (i >= 0) counts[i][z] = (counts[i][z] || 0) + a.to_quantity;
   });
-  const maxCount = Math.max(...counts, 1);
 
-  document.getElementById('histogram').innerHTML = BINS.map((b, i) => `
-    <div class="hist-bar-row">
-      <span class="hist-label">${b.label}</span>
-      <div class="hist-track">
-        <div class="hist-fill ${b.cls}" style="width:${(counts[i] / maxCount * 100).toFixed(1)}%"></div>
-      </div>
-      <span class="hist-count">${counts[i] || ''}</span>
-    </div>
-  `).join('');
+  // Column maxes for color intensity
+  const colMax = {};
+  zoneNames.forEach(z => {
+    colMax[z] = Math.max(...counts.map(r => r[z] || 0), 1);
+  });
+
+  // Column totals
+  const colTotals = {};
+  zoneNames.forEach(z => { colTotals[z] = active.filter(a => (a.staging_group_name||'OUTRAS').trim() === z).reduce((s, a) => s + a.to_quantity, 0); });
+
+  // Build table header
+  const zoneHeaders = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<th class="col-zone" style="color:rgb(${rgb.join(',')})">
+      ${zoneShort(z)}<span class="sub">(${(colTotals[z]||0).toLocaleString('pt-BR')} TOs)</span>
+    </th>`;
+  }).join('');
+
+  // Build rows (skip bins with all zeros)
+  const rows = BINS.map((b, i) => {
+    const rowTotal = zoneNames.reduce((s, z) => s + (counts[i][z] || 0), 0);
+    if (rowTotal === 0) return '';
+    const cells = zoneNames.map(z => {
+      const v   = counts[i][z] || 0;
+      const pct = v / colMax[z];
+      const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+      const bg  = v > 0 ? `background:rgba(${rgb.join(',')},${(pct * 0.55 + 0.06).toFixed(2)})` : '';
+      return `<td class="zone-cell">
+        <span class="cell-inner ${v === 0 ? 'cell-zero' : ''}" style="${bg}">
+          ${v > 0 ? v.toLocaleString('pt-BR') : '—'}
+        </span>
+      </td>`;
+    }).join('');
+    return `<tr>
+      <td class="faixa">${b.label}</td>
+      ${cells}
+      <td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td>
+    </tr>`;
+  }).join('');
+
+  // Total row
+  const grandTotal = zoneNames.reduce((s, z) => s + (colTotals[z] || 0), 0);
+  const totalCells = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<td class="zone-cell total-cell" style="color:rgb(${rgb.join(',')});font-weight:800">
+      ${(colTotals[z]||0).toLocaleString('pt-BR')}
+    </td>`;
+  }).join('');
+
+  document.getElementById('crosstabTable').innerHTML = `
+    <thead>
+      <tr>
+        <th>Faixa Aging</th>
+        ${zoneHeaders}
+        <th class="col-total">Total</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+    <tfoot>
+      <tr class="row-total">
+        <td class="faixa">Total</td>
+        ${totalCells}
+        <td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td>
+      </tr>
+    </tfoot>`;
 }
 
-// ── Top 5 ──────────────────────────────────────────────────────────────
+// ── Top 5 aging ─────────────────────────────────────────────────────────
 function buildTop5(areas) {
-  const top = areas
+  const top = [...areas]
     .filter(a => a.to_quantity > 0)
     .sort((a, b) => b.staging_duration_time - a.staging_duration_time)
     .slice(0, 5);
-
   document.getElementById('top5Body').innerHTML = top.length
-    ? top.map((a, i) => `
-        <tr>
-          <td>
-            <span class="rank-num">${i + 1}</span>
-            <span style="font-weight:600">${a.area_name}</span>
-          </td>
-          <td><span class="zone-pill ${zoneClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
-          <td style="font-family:monospace;text-align:center">${a.to_quantity}</td>
-          <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
-        </tr>
-      `).join('')
+    ? top.map((a, i) => `<tr>
+        <td><span class="rank-num">${i+1}</span><span style="font-weight:600">${a.area_name}</span></td>
+        <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+        <td style="font-family:monospace;text-align:center">${a.to_quantity}</td>
+        <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+      </tr>`).join('')
     : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma rua ativa</td></tr>';
+}
+
+// ── Ocupação por Zona ─────────────────────────────────────────────────
+function buildOccByZone(areas) {
+  const zones = {};
+  areas.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { tos: 0, cap: 0 };
+    zones[z].tos += a.to_quantity || 0;
+    zones[z].cap += a.capacity    || 0;
+  });
+  const rows = Object.entries(zones)
+    .sort((a, b) => b[1].tos - a[1].tos)
+    .map(([z, v]) => {
+      const pct = v.cap > 0 ? (v.tos / v.cap * 100) : 0;
+      const oc  = occClass(pct);
+      const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+      return `<div class="occ-row">
+        <span class="occ-label" style="color:rgb(${rgb.join(',')})">${zoneShort(z)}</span>
+        <div class="occ-track">
+          <div class="occ-fill ${oc}" style="width:${Math.min(pct,100).toFixed(1)}%"></div>
+        </div>
+        <span class="occ-val">${pct.toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+  document.getElementById('occByZone').innerHTML = rows ||
+    '<div style="color:var(--muted);text-align:center;padding:20px">—</div>';
 }
 
 // ── KPIs ────────────────────────────────────────────────────────────────
 function updateStats(areas) {
   const active   = areas.filter(a => a.to_quantity > 0);
   const totalTOs = active.reduce((s, a) => s + a.to_quantity, 0);
-  const maxArea  = active.reduce((best, a) =>
-    (!best || a.staging_duration_time > best.staging_duration_time) ? a : best, null);
-  const avgAging = active.length
-    ? active.reduce((s, a) => s + a.staging_duration_time, 0) / active.length
-    : 0;
+  const maxArea  = active.reduce((b, a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
+  const avgAging = active.length ? active.reduce((s, a) => s + a.staging_duration_time, 0) / active.length : 0;
 
-  document.getElementById('sTOs').textContent          = totalTOs;
-  document.getElementById('sRuas').textContent         = active.length;
-  document.getElementById('sMaxAging').textContent     = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
-  document.getElementById('sMaxAgingRua').textContent  = maxArea ? maxArea.area_name : '—';
-  document.getElementById('sAvgAging').textContent     = avgAging ? fmtDur(Math.round(avgAging)) : '—';
+  document.getElementById('sTOs').textContent         = totalTOs;
+  document.getElementById('sRuas').textContent        = active.length;
+  document.getElementById('sMaxAging').textContent    = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
+  document.getElementById('sMaxAgingRua').textContent = maxArea ? maxArea.area_name : '—';
+  document.getElementById('sAvgAging').textContent    = avgAging ? fmtDur(Math.round(avgAging)) : '—';
 }
 
 // ── Main table ──────────────────────────────────────────────────────────
+function filteredAreas() {
+  return activeZone === 'all' ? allAreas
+    : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
+}
+
 function sortedAreas(areas) {
   return [...areas].sort((a, b) => {
     let av, bv;
-    if (sortCol === 'occupy_pct') {
-      av = parseOcc(a.occupy_percentage);
-      bv = parseOcc(b.occupy_percentage);
-    } else if (sortCol === 'area_name' || sortCol === 'staging_group_name' || sortCol === 'operator') {
-      av = (a[sortCol] || '').toLowerCase();
-      bv = (b[sortCol] || '').toLowerCase();
+    if (sortCol === 'occupy_pct') { av = parseOcc(a.occupy_percentage); bv = parseOcc(b.occupy_percentage); }
+    else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
+      av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    } else {
-      av = a[sortCol] || 0;
-      bv = b[sortCol] || 0;
-    }
+    } else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
     return sortAsc ? av - bv : bv - av;
   });
 }
@@ -484,7 +628,7 @@ function buildMainTable(areas) {
   const sorted = sortedAreas(areas);
   document.getElementById('tableCount').textContent = `${sorted.length} ruas`;
 
-  if (!sorted.length && allAreas.length === 0) {
+  if (allAreas.length === 0) {
     document.getElementById('mainTable').style.display = 'none';
     document.getElementById('emptyMsg').style.display  = '';
     return;
@@ -496,15 +640,13 @@ function buildMainTable(areas) {
     const occ = parseOcc(a.occupy_percentage);
     return `<tr>
       <td class="area-name">${a.area_name}</td>
-      <td><span class="zone-pill ${zoneClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
-      <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity > 0 ? '700' : '400'}">${a.to_quantity || 0}</td>
-      <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity || 0}</td>
+      <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+      <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity>0?'700':'400'}">${a.to_quantity||0}</td>
+      <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
       <td>
         <div class="occ-bar-wrap">
-          <div class="occ-bar">
-            <div class="occ-fill ${occClass(occ)}" style="width:${Math.min(occ, 100).toFixed(1)}%"></div>
-          </div>
-          <span style="font-size:11px;font-family:monospace">${a.occupy_percentage || '0 %'}</span>
+          <div class="occ-bar"><div class="occ-fill2 ${occClass(occ)}" style="width:${Math.min(occ,100).toFixed(1)}%"></div></div>
+          <span style="font-size:11px;font-family:monospace">${a.occupy_percentage||'0 %'}</span>
         </div>
       </td>
       <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
@@ -534,8 +676,9 @@ function render() {
   const areas = filteredAreas();
   buildZoneTabs();
   updateStats(areas);
+  buildZonaSection(areas);
   buildTop5(areas);
-  buildHistogram(areas);
+  buildOccByZone(areas);
   buildMainTable(areas);
 }
 
@@ -550,7 +693,7 @@ async function loadData() {
     lastAt   = data.fetchedAt;
     allAreas = data.list || [];
 
-    const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
     document.getElementById('liveDot').className       = 'live-dot on';
     document.getElementById('metaTag').textContent     = `inbound · ${allAreas.length} ruas · ${ts}`;
