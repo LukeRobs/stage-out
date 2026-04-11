@@ -104,7 +104,7 @@ body {
 
 /* ── KPIs ── */
 .stats {
-  display: grid; grid-template-columns: repeat(6,1fr);
+  display: grid; grid-template-columns: repeat(5,1fr);
   gap: 10px; padding: 14px 24px;
 }
 .stat {
@@ -181,7 +181,7 @@ table.crosstab tr.row-total td.faixa { color: var(--text); }
 .cell-zero  { color: var(--muted); }
 
 /* ── Panels row ── */
-.panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
+.panel-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
 .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
 .panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
 .top5-table { width: 100%; border-collapse: collapse; }
@@ -246,6 +246,23 @@ table.main-table tr:last-child td { border-bottom: none; }
 }
 
 @media (max-width: 1100px) { .stats { grid-template-columns: repeat(3,1fr); } }
+/* Donut chart */
+.donut-wrap { display:flex; align-items:center; gap:18px; flex:1; }
+.donut-svg-wrap { position:relative; flex-shrink:0; }
+.donut-center {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  text-align:center; pointer-events:none; line-height:1;
+}
+.donut-center-val { font-size:15px; font-weight:800; }
+.donut-center-lbl { font-size:9px; color:var(--muted); margin-top:2px; }
+.donut-legend-item {
+  display:flex; align-items:center; gap:8px; margin-bottom:9px;
+}
+.donut-swatch { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+.donut-legend-name { font-weight:700; font-size:13px; }
+.donut-legend-pct  { color:var(--muted); font-size:11px; margin-left:4px; }
+.donut-legend-val  { font-family:monospace; font-size:12px; font-weight:600; margin-left:auto; }
+@media (max-width: 900px)  { .panel-row { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px) {
   .stats { grid-template-columns: repeat(2,1fr); }
   .panel-row { grid-template-columns: 1fr; }
@@ -291,11 +308,6 @@ table.main-table tr:last-child td { border-bottom: none; }
     <div class="stat-sub">com TOs alocados</div>
   </div>
   <div class="stat">
-    <div class="stat-label">Turno Endereçou</div>
-    <div class="stat-value" id="sTurno" style="color:var(--orange);font-size:20px">—</div>
-    <div class="stat-sub" id="sTurnoSub">—</div>
-  </div>
-  <div class="stat">
     <div class="stat-label">Maior Aging</div>
     <div class="stat-value" id="sMaxAging" style="color:var(--red)">—</div>
     <div class="stat-sub" id="sMaxAgingRua">—</div>
@@ -333,6 +345,24 @@ table.main-table tr:last-child td { border-bottom: none; }
     <div class="panel-title">Ocupação por Zona</div>
     <div id="occByZone">
       <div style="color:var(--muted);text-align:center;padding:20px">—</div>
+    </div>
+  </div>
+
+  <div class="panel" style="display:flex;flex-direction:column">
+    <div class="panel-title">Turno Endereçou</div>
+    <div class="donut-wrap">
+      <div class="donut-svg-wrap">
+        <svg viewBox="0 0 100 100" width="128" height="128" id="turnoSvg" style="display:block">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="var(--surface2)" stroke-width="17"/>
+        </svg>
+        <div class="donut-center">
+          <div class="donut-center-val" id="turnoTotal">—</div>
+          <div class="donut-center-lbl">pacotes</div>
+        </div>
+      </div>
+      <div id="turnoLegend" style="flex:1">
+        <div style="color:var(--muted);font-size:11px">—</div>
+      </div>
     </div>
   </div>
 </div>
@@ -513,15 +543,6 @@ function updateStats(areas) {
     const totalPac = Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
     document.getElementById('sTotalPacotes').textContent = totalPac.toLocaleString('pt-BR');
 
-    if (reportData.byTurno) {
-      const turnos = Object.entries(reportData.byTurno).sort((a, b) => b[1].pacotes - a[1].pacotes);
-      if (turnos.length) {
-        const [topName, topVal] = turnos[0];
-        document.getElementById('sTurno').textContent    = topName;
-        const breakdown = turnos.map(([t, v]) => `${t}: ${v.pacotes.toLocaleString('pt-BR')}`).join(' · ');
-        document.getElementById('sTurnoSub').textContent = breakdown;
-      }
-    }
   }
 }
 
@@ -651,6 +672,52 @@ function buildTop5(areas) {
     : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma rua ativa</td></tr>';
 }
 
+// ── Turno Donut ────────────────────────────────────────────────────────
+const TURNO_COLORS = { T1: '#3b82f6', T2: '#f59e0b', T3: '#22c55e' };
+const TURNO_EXTRA  = ['#8b5cf6','#14b8a6','#ec4899'];
+
+function buildTurnoDonut() {
+  if (!reportData?.byTurno) return;
+
+  const R    = 38;
+  const C    = 2 * Math.PI * R; // ≈ 238.76
+  const turnos = Object.entries(reportData.byTurno).sort((a, b) => b[1].pacotes - a[1].pacotes);
+  const total  = turnos.reduce((s, [, v]) => s + v.pacotes, 0);
+
+  let cumulPct = 0;
+  const segs = turnos.map(([name, val], i) => {
+    const color  = TURNO_COLORS[name] || TURNO_EXTRA[i % TURNO_EXTRA.length];
+    const pct    = total > 0 ? val.pacotes / total : 0;
+    const dash   = pct * C;
+    const gap    = C - dash;
+    const offset = C * (0.25 - cumulPct); // 0.25 = start at 12 o'clock
+    cumulPct    += pct;
+    return { name, val, color, pct, dash, gap, offset };
+  });
+
+  // SVG
+  const svgInner = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--surface2)" stroke-width="17"/>` +
+    segs.map(s =>
+      `<circle cx="50" cy="50" r="${R}" fill="none"
+        stroke="${s.color}" stroke-width="17"
+        stroke-dasharray="${s.dash.toFixed(3)} ${s.gap.toFixed(3)}"
+        stroke-dashoffset="${s.offset.toFixed(3)}"/>`
+    ).join('');
+  document.getElementById('turnoSvg').innerHTML = svgInner;
+  document.getElementById('turnoTotal').textContent = total.toLocaleString('pt-BR');
+
+  // Legend
+  document.getElementById('turnoLegend').innerHTML = segs.map(s => `
+    <div class="donut-legend-item">
+      <div class="donut-swatch" style="background:${s.color}"></div>
+      <div>
+        <span class="donut-legend-name">${s.name}</span>
+        <span class="donut-legend-pct">${(s.pct * 100).toFixed(1)}%</span>
+      </div>
+      <div class="donut-legend-val">${s.val.pacotes.toLocaleString('pt-BR')}</div>
+    </div>`).join('');
+}
+
 // ── Ocupação por Zona ─────────────────────────────────────────────────
 function buildOccByZone(areas) {
   const zones = {};
@@ -754,6 +821,7 @@ function render() {
   buildZonaSection(areas);
   buildTop5(areas);
   buildOccByZone(areas);
+  buildTurnoDonut();
   buildMainTable(areas);
 }
 
