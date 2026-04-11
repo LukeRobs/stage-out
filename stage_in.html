@@ -262,6 +262,48 @@ table.main-table tr:last-child td { border-bottom: none; }
 .donut-legend-name { font-weight:700; font-size:13px; }
 .donut-legend-pct  { color:var(--muted); font-size:11px; margin-left:4px; }
 .donut-legend-val  { font-family:monospace; font-size:12px; font-weight:600; margin-left:auto; }
+/* ── Table toolbar ── */
+.table-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
+.search-wrap { position: relative; min-width: 200px; max-width: 300px; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.filter-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+.fpill {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.fpill:hover { border-color: var(--border2); color: var(--text); }
+.fpill.active { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: var(--accent); }
+
+/* ── Expandable TO rows ── */
+.area-row { cursor: pointer; }
+.area-row:hover td { background: rgba(34,197,94,.04); }
+.expand-chevron { font-size: 9px; color: var(--muted); margin-right: 5px; display: inline-block; transition: transform .18s; }
+.expand-chevron.open { transform: rotate(90deg); color: var(--accent); }
+.expand-row td { padding: 0 !important; background: var(--surface2); border-bottom: 1px solid var(--border) !important; }
+.expand-inner { padding: 10px 12px 10px 44px; }
+.tos-subtable { width: 100%; border-collapse: collapse; }
+.tos-subtable th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted);
+  padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.tos-subtable td { padding: 6px 10px; border-bottom: 1px solid rgba(42,45,62,.3); font-size: 12px; }
+[data-theme="light"] .tos-subtable td { border-bottom-color: rgba(226,232,240,.6); }
+.tos-subtable tr:last-child td { border-bottom: none; }
+.turno-tag {
+  display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10px; font-weight: 700;
+}
+.t-t1 { background: rgba(59,130,246,.15); color: #60a5fa; }
+.t-t2 { background: rgba(245,158,11,.15); color: #fbbf24; }
+.t-t3 { background: rgba(34,197,94,.15);  color: #4ade80; }
+.t-other { background: rgba(139,92,246,.15); color: #a78bfa; }
+
 @media (max-width: 900px)  { .panel-row { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px) {
   .stats { grid-template-columns: repeat(2,1fr); }
@@ -372,6 +414,13 @@ table.main-table tr:last-child td { border-bottom: none; }
   <span class="section-title">Detalhamento por Rua</span>
   <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
 </div>
+<div class="table-toolbar">
+  <div class="search-wrap">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar rua, operador...">
+  </div>
+  <div class="filter-pills" id="tableZonePills"></div>
+</div>
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
     <h2>⏳ Aguardando sincronização</h2>
@@ -476,12 +525,15 @@ const ZONE_RGBA = {
 };
 
 // ── State ──────────────────────────────────────────────────────────────
-let allAreas   = [];
-let reportData = null;
-let activeZone = 'all';
-let sortCol    = 'to_quantity';
-let sortAsc    = false;
-let lastAt     = null;
+let allAreas       = [];
+let reportData     = null;
+let activeZone     = 'all';
+let sortCol        = 'to_quantity';
+let sortAsc        = false;
+let lastAt         = null;
+let tableSearch    = '';
+let tableZoneFilter = '';
+let expandedAreas  = new Set();
 
 // ── Histogram bins ─────────────────────────────────────────────────────
 const BINS = [
@@ -641,7 +693,7 @@ function buildZonaSection(areas) {
   const grandTotal  = zoneNames.reduce((s, z) => s + (colTotals[z] || 0), 0);
   const totalCells  = zoneNames.map(z => {
     const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
-    return `<td class="zone-cell total-cell" style="color:rgb(${rgb.join(',')});font-weight:800">
+    return `<td class="zone-cell" style="color:rgb(${rgb.join(',')});font-weight:800;text-align:center">
       ${(colTotals[z]||0).toLocaleString('pt-BR')}
     </td>`;
   }).join('');
@@ -743,7 +795,7 @@ function buildOccByZone(areas) {
     '<div style="color:var(--muted);text-align:center;padding:20px">—</div>';
 }
 
-// ── Main table ──────────────────────────────────────────────────────────
+// ── Filtered / sorted areas ────────────────────────────────────────────
 function filteredAreas() {
   return activeZone === 'all' ? allAreas
     : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
@@ -764,10 +816,49 @@ function sortedAreas(areas) {
   });
 }
 
-function buildMainTable(areas) {
-  const sorted = sortedAreas(areas);
-  document.getElementById('tableCount').textContent = `${sorted.length} ruas`;
+// ── Zone filter pills (table) ──────────────────────────────────────────
+function buildTableZonePills() {
+  const zones = [...new Set(allAreas.map(a => (a.staging_group_name || 'OUTRAS').trim()))];
+  const pills = [{ key: '', label: 'Todas' }, ...zones.map(z => ({ key: z, label: zoneShort(z) }))];
+  document.getElementById('tableZonePills').innerHTML = pills.map(p => `
+    <button class="fpill${p.key === tableZoneFilter ? ' active' : ''}" data-zone="${p.key}">${p.label}</button>
+  `).join('');
+  document.querySelectorAll('.fpill').forEach(btn => {
+    btn.addEventListener('click', () => { tableZoneFilter = btn.dataset.zone; buildMainTable(filteredAreas()); });
+  });
+}
 
+// ── Turno tag helper ───────────────────────────────────────────────────
+function turnoTag(t) {
+  const cls = t === 'T1' ? 't-t1' : t === 'T2' ? 't-t2' : t === 'T3' ? 't-t3' : 't-other';
+  return `<span class="turno-tag ${cls}">${t || '—'}</span>`;
+}
+
+// ── Expanded TOs sub-table ─────────────────────────────────────────────
+function renderTosSub(areaName) {
+  const tos = reportData?.byAreaTOs?.[areaName];
+  if (!tos?.length) return `<div class="expand-inner" style="color:var(--muted);font-size:12px">Nenhum TO na planilha para esta rua.</div>`;
+  const rows = [...tos].sort((a, b) => b.aging_h - a.aging_h).map(t => `<tr>
+    <td style="font-family:monospace;font-size:11px">${t.to}</td>
+    <td style="font-family:monospace;text-align:center">${t.pacotes}</td>
+    <td style="font-family:monospace">${fmtDurH(t.aging_h)}</td>
+    <td style="color:var(--muted)">${t.hora_end}</td>
+    <td>${turnoTag(t.turno)}</td>
+  </tr>`).join('');
+  return `<div class="expand-inner">
+    <table class="tos-subtable">
+      <thead><tr><th>TO</th><th style="text-align:center">Pacotes</th><th>Aging</th><th>Hora End.</th><th>Turno</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function fmtDurH(h) {
+  return fmtDur(Math.round(h * 3600));
+}
+
+// ── Main table ──────────────────────────────────────────────────────────
+function buildMainTable(areas) {
   if (allAreas.length === 0) {
     document.getElementById('mainTable').style.display = 'none';
     document.getElementById('emptyMsg').style.display  = '';
@@ -776,14 +867,24 @@ function buildMainTable(areas) {
   document.getElementById('mainTable').style.display = '';
   document.getElementById('emptyMsg').style.display  = 'none';
 
-  document.getElementById('mainBody').innerHTML = sorted.map(a => {
+  // Apply table-level filters
+  const q = tableSearch.toLowerCase();
+  let vis = sortedAreas(areas);
+  if (q)             vis = vis.filter(a => a.area_name.toLowerCase().includes(q) || (a.staging_group_name||'').toLowerCase().includes(q) || cleanOp(a.operator).toLowerCase().includes(q));
+  if (tableZoneFilter) vis = vis.filter(a => (a.staging_group_name||'').trim() === tableZoneFilter);
+
+  document.getElementById('tableCount').textContent = `${vis.length} ruas`;
+
+  document.getElementById('mainBody').innerHTML = vis.map(a => {
     const occ = parseOcc(a.occupy_percentage);
     const pac = reportData?.byArea?.[a.area_name]?.pacotes;
-    return `<tr>
-      <td class="area-name">${a.area_name}</td>
+    const isExp = expandedAreas.has(a.area_name);
+    const expandRow = isExp ? `<tr class="expand-row"><td colspan="8">${renderTosSub(a.area_name)}</td></tr>` : '';
+    return `<tr class="area-row" data-area="${a.area_name}">
+      <td class="area-name"><span class="expand-chevron${isExp?' open':''}">▶</span>${a.area_name}</td>
       <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
       <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity>0?'700':'400'}">${a.to_quantity||0}</td>
-      <td style="font-family:monospace;text-align:center;font-weight:600;color:${pac>0?'var(--text)':'var(--muted)'}">${pac!=null ? pac.toLocaleString('pt-BR') : '—'}</td>
+      <td style="font-family:monospace;text-align:center;font-weight:600;color:${pac>0?'var(--text)':'var(--muted)'}">${pac!=null?pac.toLocaleString('pt-BR'):'—'}</td>
       <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
       <td>
         <div class="occ-bar-wrap">
@@ -793,8 +894,18 @@ function buildMainTable(areas) {
       </td>
       <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
       <td style="font-size:11px;color:var(--muted)">${cleanOp(a.operator)}</td>
-    </tr>`;
+    </tr>${expandRow}`;
   }).join('');
+
+  // Expand click
+  document.querySelectorAll('.area-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.dataset.area;
+      if (expandedAreas.has(name)) expandedAreas.delete(name);
+      else expandedAreas.add(name);
+      buildMainTable(filteredAreas());
+    });
+  });
 }
 
 // ── Sort headers ────────────────────────────────────────────────────────
@@ -813,6 +924,12 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
   });
 });
 
+// ── Search input ───────────────────────────────────────────────────────
+document.getElementById('tableSearch').addEventListener('input', e => {
+  tableSearch = e.target.value;
+  buildMainTable(filteredAreas());
+});
+
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
   const areas = filteredAreas();
@@ -822,6 +939,7 @@ function render() {
   buildTop5(areas);
   buildOccByZone(areas);
   buildTurnoDonut();
+  buildTableZonePills();
   buildMainTable(areas);
 }
 

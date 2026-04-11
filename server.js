@@ -303,7 +303,9 @@ async function getReportData() {
   const byZone = {}; // { "ZONA VOLUMOSO": { tos, pacotes } }
   const byArea = {}; // { "IN-05":          { tos, pacotes } }
 
-  const byTurno = {}; // { "T1": { tos, pacotes } }
+  const byTurno   = {}; // { "T1": { tos, pacotes } }
+  const byAreaTOs = {}; // { "IN-05": [ { to, pacotes, aging_h, hora_end, turno }, ... ] }
+
   rows.forEach(r => {
     const zona    = (r[1] || '').trim();
     const rua     = (r[4] || '').trim();
@@ -318,6 +320,14 @@ async function getReportData() {
       if (!byArea[rua]) byArea[rua] = { tos: 0, pacotes: 0 };
       byArea[rua].tos++;
       byArea[rua].pacotes += pacotes;
+      if (!byAreaTOs[rua]) byAreaTOs[rua] = [];
+      byAreaTOs[rua].push({
+        to:      r[0] || '',
+        pacotes,
+        aging_h: parseFloat(r[5]) || 0,
+        hora_end: r[7] || '',
+        turno,
+      });
     }
     if (turno) {
       if (!byTurno[turno]) byTurno[turno] = { tos: 0, pacotes: 0 };
@@ -326,7 +336,7 @@ async function getReportData() {
     }
   });
 
-  reportCache      = { byZone, byArea, byTurno, rowCount: rows.length, fetchedAt: Date.now() };
+  reportCache      = { byZone, byArea, byTurno, byAreaTOs, rowCount: rows.length, fetchedAt: Date.now() };
   reportFetchedAt  = Date.now();
   console.log(`[report] ${rows.length} linhas lidas — ${Object.keys(byZone).length} zonas, ${Object.keys(byArea).length} ruas`);
   return reportCache;
