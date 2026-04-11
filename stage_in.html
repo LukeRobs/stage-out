@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inbound Staging Area Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --accent: #22c55e;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --orange: #ee4d2d;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --teal: #14b8a6;
+  --radius: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── Zone tabs ── */
+.zone-tabs {
+  padding: 0 24px;
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.zone-tab {
+  background: transparent; border: none; color: var(--muted);
+  padding: 10px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.zone-tab:hover { color: var(--text); }
+.zone-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.zone-tab .tab-count {
+  background: var(--surface2); color: var(--muted);
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.zone-tab.active .tab-count {
+  background: rgba(34,197,94,.12); color: var(--accent);
+  border-color: rgba(34,197,94,.25);
+}
+
+/* ── KPIs ── */
+.stats {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 12px; padding: 16px 24px;
+}
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ── Middle row ── */
+.middle-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; padding: 0 24px 16px;
+}
+.panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+}
+.panel-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); margin-bottom: 14px; font-weight: 600;
+}
+
+/* Top 5 */
+.top5-table { width: 100%; border-collapse: collapse; }
+.top5-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 4px 8px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.top5-table td { padding: 9px 8px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.top5-table tr:last-child td { border-bottom: none; }
+.rank-num { color: var(--muted); font-size: 11px; margin-right: 6px; }
+
+/* Histogram */
+.hist-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.hist-label { font-size: 10px; color: var(--muted); width: 54px; text-align: right; flex-shrink: 0; }
+.hist-track { flex: 1; background: var(--surface2); border-radius: 3px; height: 16px; overflow: hidden; }
+.hist-fill  { height: 100%; border-radius: 3px; transition: width .4s ease; min-width: 0; }
+.hist-count { font-size: 10px; color: var(--muted); width: 22px; text-align: right; flex-shrink: 0; font-family: monospace; }
+.age-ok   { background: rgba(34,197,94,.7); }
+.age-warn { background: rgba(245,158,11,.7); }
+.age-hot  { background: rgba(238,77,45,.7); }
+.age-crit { background: rgba(239,68,68,.9); }
+
+/* ── Detail table ── */
+.section-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 24px 10px;
+}
+.section-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 600;
+}
+.table-wrap { padding: 0 24px 32px; overflow-x: auto; }
+table.main-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+table.main-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+table.main-table th:hover { color: var(--text); }
+table.main-table th.sorted { color: var(--accent); }
+table.main-table td {
+  padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle;
+}
+table.main-table tr:hover td { background: rgba(255,255,255,.02); }
+table.main-table tr:last-child td { border-bottom: none; }
+
+.area-name { font-weight: 600; font-size: 13px; }
+.zone-pill {
+  display: inline-block; padding: 2px 8px; border-radius: 10px;
+  font-size: 10px; font-weight: 600;
+}
+.zone-linear   { background: rgba(59,130,246,.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.zone-volumoso { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.zone-cop      { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.zone-other    { background: rgba(20,184,166,.15);  color: #2dd4bf; border: 1px solid rgba(20,184,166,.25); }
+
+.occ-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.occ-bar { width: 70px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.occ-fill { height: 100%; border-radius: 3px; }
+.occ-low  { background: var(--green); }
+.occ-mid  { background: var(--yellow); }
+.occ-high { background: var(--red); }
+
+.aging-val { font-family: monospace; font-size: 12px; }
+.aging-ok   { color: var(--muted); }
+.aging-warn { color: var(--yellow); }
+.aging-hot  { color: var(--orange); }
+.aging-crit { color: var(--red); font-weight: 700; }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
+  text-align: left; line-height: 1.8;
+}
+
+@media (max-width: 700px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .middle-row { grid-template-columns: 1fr; }
+  .header-right .meta-tag { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">📥</div>
+  <div class="header-title">
+    <h1>Inbound Staging Area</h1>
+    <p>SPX EXPRESS · GERENCIAMENTO DE STAGING INBOUND</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">—</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<div class="zone-tabs" id="zoneTabs"></div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Total TOs</div>
+    <div class="stat-value" id="sTOs" style="color:var(--accent)">—</div>
+    <div class="stat-sub">TOs em staging</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Ruas Ativas</div>
+    <div class="stat-value" id="sRuas" style="color:var(--blue)">—</div>
+    <div class="stat-sub">com TOs alocados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Maior Aging</div>
+    <div class="stat-value" id="sMaxAging" style="color:var(--red)">—</div>
+    <div class="stat-sub" id="sMaxAgingRua">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Média Aging</div>
+    <div class="stat-value" id="sAvgAging" style="color:var(--yellow)">—</div>
+    <div class="stat-sub">nas ruas ativas</div>
+  </div>
+</div>
+
+<div class="middle-row">
+  <div class="panel">
+    <div class="panel-title">Top 5 Ruas por Aging</div>
+    <table class="top5-table">
+      <thead>
+        <tr>
+          <th>Rua</th>
+          <th>Zona</th>
+          <th style="text-align:center">TOs</th>
+          <th>Aging</th>
+        </tr>
+      </thead>
+      <tbody id="top5Body">
+        <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Histograma Aging por Faixa</div>
+    <div id="histogram">
+      <div style="text-align:center;color:var(--muted);padding:20px">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-header">
+  <span class="section-title">Detalhamento por Rua</span>
+  <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
+</div>
+
+<div class="table-wrap">
+  <div class="empty" id="emptyMsg">
+    <h2>⏳ Aguardando sincronização</h2>
+    <p>O Tampermonkey ainda não enviou dados do Inbound Staging.</p>
+    <code>
+      1. Instale o script <b>stage_in_sync.user.js</b> no Tampermonkey<br>
+      2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
+      3. Aguarde o badge <b>✅ Stage In</b> aparecer
+    </code>
+  </div>
+  <table class="main-table" id="mainTable" style="display:none">
+    <thead>
+      <tr>
+        <th data-col="area_name">Rua <span class="sa"></span></th>
+        <th data-col="staging_group_name">Zona <span class="sa"></span></th>
+        <th data-col="to_quantity" class="sorted" style="text-align:center">TOs <span class="sa">↓</span></th>
+        <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
+        <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
+        <th data-col="staging_duration_time">Aging <span class="sa"></span></th>
+        <th data-col="operator">Operador <span class="sa"></span></th>
+      </tr>
+    </thead>
+    <tbody id="mainBody"></tbody>
+  </table>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────
+function fmtDur(s) {
+  if (!s || s <= 0) return '—';
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+
+function agingClass(s) {
+  if (!s || s <= 0) return 'aging-ok';
+  const h = s / 3600;
+  if (h < 4)  return 'aging-ok';
+  if (h < 7)  return 'aging-warn';
+  if (h < 13) return 'aging-hot';
+  return 'aging-crit';
+}
+
+function parseOcc(s) {
+  return parseFloat((s || '0').replace(/\s*%/, '')) || 0;
+}
+
+function occClass(pct) {
+  if (pct < 60) return 'occ-low';
+  if (pct < 85) return 'occ-mid';
+  return 'occ-high';
+}
+
+function zoneClass(name) {
+  if (!name) return 'zone-other';
+  const n = name.toLowerCase();
+  if (n.includes('linear'))   return 'zone-linear';
+  if (n.includes('volumoso')) return 'zone-volumoso';
+  if (n.includes('cop'))      return 'zone-cop';
+  return 'zone-other';
+}
+
+function zoneShort(name) {
+  return (name || '').replace('ZONA ', '').trim() || '—';
+}
+
+function cleanOp(s) {
+  return (s || '—').replace(/\[ops\d+\]/i, '').replace(/@shopee\.com\.br/i, '').replace(/@shopee\.com/i, '').trim() || '—';
+}
+
+// ── State ──────────────────────────────────────────────────────────────
+let allAreas   = [];
+let activeZone = 'all';
+let sortCol    = 'to_quantity';
+let sortAsc    = false;
+let lastAt     = null;
+
+// ── Zone tabs ──────────────────────────────────────────────────────────
+function buildZoneTabs() {
+  const zoneMap = {};
+  allAreas.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    zoneMap[z] = (zoneMap[z] || 0) + (a.to_quantity || 0);
+  });
+  const totalTOs = allAreas.reduce((s, a) => s + (a.to_quantity || 0), 0);
+
+  const tabs = [{ key: 'all', label: 'Todas', count: totalTOs }];
+  Object.entries(zoneMap)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([z, c]) => tabs.push({ key: z, label: zoneShort(z), count: c }));
+
+  const container = document.getElementById('zoneTabs');
+  container.innerHTML = tabs.map(t => `
+    <button class="zone-tab${t.key === activeZone ? ' active' : ''}" data-zone="${t.key}">
+      ${t.label}
+      <span class="tab-count">${t.count}</span>
+    </button>
+  `).join('');
+
+  container.querySelectorAll('.zone-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeZone = btn.dataset.zone;
+      render();
+    });
+  });
+}
+
+// ── Filtered areas ─────────────────────────────────────────────────────
+function filteredAreas() {
+  if (activeZone === 'all') return allAreas;
+  return allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
+}
+
+// ── Histogram ──────────────────────────────────────────────────────────
+const BINS = [
+  { label: '0–4h',   min: 0,       max: 14400,   cls: 'age-ok'   },
+  { label: '4–7h',   min: 14400,   max: 25200,   cls: 'age-ok'   },
+  { label: '7–10h',  min: 25200,   max: 36000,   cls: 'age-warn'  },
+  { label: '10–13h', min: 36000,   max: 46800,   cls: 'age-warn'  },
+  { label: '13–16h', min: 46800,   max: 57600,   cls: 'age-hot'  },
+  { label: '16–21h', min: 57600,   max: 75600,   cls: 'age-hot'  },
+  { label: '21–25h', min: 75600,   max: 90000,   cls: 'age-crit' },
+  { label: '1–2d',   min: 90000,   max: 172800,  cls: 'age-crit' },
+  { label: '2–3d',   min: 172800,  max: 259200,  cls: 'age-crit' },
+  { label: '3–4d',   min: 259200,  max: 345600,  cls: 'age-crit' },
+  { label: '>4d',    min: 345600,  max: Infinity, cls: 'age-crit' },
+];
+
+function buildHistogram(areas) {
+  const active = areas.filter(a => a.to_quantity > 0);
+  const counts = BINS.map(() => 0);
+  active.forEach(a => {
+    const s = a.staging_duration_time || 0;
+    const i = BINS.findIndex(b => s >= b.min && s < b.max);
+    if (i >= 0) counts[i]++;
+  });
+  const maxCount = Math.max(...counts, 1);
+
+  document.getElementById('histogram').innerHTML = BINS.map((b, i) => `
+    <div class="hist-bar-row">
+      <span class="hist-label">${b.label}</span>
+      <div class="hist-track">
+        <div class="hist-fill ${b.cls}" style="width:${(counts[i] / maxCount * 100).toFixed(1)}%"></div>
+      </div>
+      <span class="hist-count">${counts[i] || ''}</span>
+    </div>
+  `).join('');
+}
+
+// ── Top 5 ──────────────────────────────────────────────────────────────
+function buildTop5(areas) {
+  const top = areas
+    .filter(a => a.to_quantity > 0)
+    .sort((a, b) => b.staging_duration_time - a.staging_duration_time)
+    .slice(0, 5);
+
+  document.getElementById('top5Body').innerHTML = top.length
+    ? top.map((a, i) => `
+        <tr>
+          <td>
+            <span class="rank-num">${i + 1}</span>
+            <span style="font-weight:600">${a.area_name}</span>
+          </td>
+          <td><span class="zone-pill ${zoneClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+          <td style="font-family:monospace;text-align:center">${a.to_quantity}</td>
+          <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma rua ativa</td></tr>';
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────────
+function updateStats(areas) {
+  const active   = areas.filter(a => a.to_quantity > 0);
+  const totalTOs = active.reduce((s, a) => s + a.to_quantity, 0);
+  const maxArea  = active.reduce((best, a) =>
+    (!best || a.staging_duration_time > best.staging_duration_time) ? a : best, null);
+  const avgAging = active.length
+    ? active.reduce((s, a) => s + a.staging_duration_time, 0) / active.length
+    : 0;
+
+  document.getElementById('sTOs').textContent          = totalTOs;
+  document.getElementById('sRuas').textContent         = active.length;
+  document.getElementById('sMaxAging').textContent     = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
+  document.getElementById('sMaxAgingRua').textContent  = maxArea ? maxArea.area_name : '—';
+  document.getElementById('sAvgAging').textContent     = avgAging ? fmtDur(Math.round(avgAging)) : '—';
+}
+
+// ── Main table ──────────────────────────────────────────────────────────
+function sortedAreas(areas) {
+  return [...areas].sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'occupy_pct') {
+      av = parseOcc(a.occupy_percentage);
+      bv = parseOcc(b.occupy_percentage);
+    } else if (sortCol === 'area_name' || sortCol === 'staging_group_name' || sortCol === 'operator') {
+      av = (a[sortCol] || '').toLowerCase();
+      bv = (b[sortCol] || '').toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    } else {
+      av = a[sortCol] || 0;
+      bv = b[sortCol] || 0;
+    }
+    return sortAsc ? av - bv : bv - av;
+  });
+}
+
+function buildMainTable(areas) {
+  const sorted = sortedAreas(areas);
+  document.getElementById('tableCount').textContent = `${sorted.length} ruas`;
+
+  if (!sorted.length && allAreas.length === 0) {
+    document.getElementById('mainTable').style.display = 'none';
+    document.getElementById('emptyMsg').style.display  = '';
+    return;
+  }
+  document.getElementById('mainTable').style.display = '';
+  document.getElementById('emptyMsg').style.display  = 'none';
+
+  document.getElementById('mainBody').innerHTML = sorted.map(a => {
+    const occ = parseOcc(a.occupy_percentage);
+    return `<tr>
+      <td class="area-name">${a.area_name}</td>
+      <td><span class="zone-pill ${zoneClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+      <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity > 0 ? '700' : '400'}">${a.to_quantity || 0}</td>
+      <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity || 0}</td>
+      <td>
+        <div class="occ-bar-wrap">
+          <div class="occ-bar">
+            <div class="occ-fill ${occClass(occ)}" style="width:${Math.min(occ, 100).toFixed(1)}%"></div>
+          </div>
+          <span style="font-size:11px;font-family:monospace">${a.occupy_percentage || '0 %'}</span>
+        </div>
+      </td>
+      <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${cleanOp(a.operator)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Sort headers ────────────────────────────────────────────────────────
+document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = false; }
+    document.querySelectorAll('table.main-table th').forEach(t => {
+      t.classList.remove('sorted');
+      t.querySelector('.sa').textContent = '';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
+    buildMainTable(filteredAreas());
+  });
+});
+
+// ── Render all ──────────────────────────────────────────────────────────
+function render() {
+  const areas = filteredAreas();
+  buildZoneTabs();
+  updateStats(areas);
+  buildTop5(areas);
+  buildHistogram(areas);
+  buildMainTable(areas);
+}
+
+// ── Load data ──────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res  = await fetch('/api/stage-in');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return;
+    lastAt   = data.fetchedAt;
+    allAreas = data.list || [];
+
+    const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('lastUpdated').textContent = ts;
+    document.getElementById('liveDot').className       = 'live-dot on';
+    document.getElementById('metaTag').textContent     = `inbound · ${allAreas.length} ruas · ${ts}`;
+
+    render();
+  } catch (e) {}
+}
+
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>

@@ -278,6 +278,7 @@ getData((err, data) => {
 let stageCache      = null; // { list, total, fetchedAt }
 let toPackingCache  = null; // { list, total, fetchedAt }
 let toPackedCache   = null; // { list, total, fetchedAt }
+let stageInCache    = null; // { list, total, fetchedAt }
 
 // ── HTTP server ────────────────────────────────────────────────────────
 
@@ -414,6 +415,36 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify(toPackedCache));
+    return;
+  }
+
+  // POST /api/stage-in-data — receives inbound staging area data from Tampermonkey
+  if (urlPath === '/api/stage-in-data' && req.method === 'POST') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', () => {
+      try {
+        stageInCache = JSON.parse(body);
+        console.log(`[stage-in] Received ${stageInCache.list?.length}/${stageInCache.total} ruas`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/stage-in — serves inbound staging data to dashboard
+  if (urlPath === '/api/stage-in') {
+    if (!stageInCache) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(stageInCache));
     return;
   }
 
