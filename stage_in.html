@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +7,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── Dark (default) ── */
 :root {
   --bg: #0d0f14;
   --surface: #161920;
@@ -23,6 +24,19 @@
   --blue: #3b82f6;
   --purple: #8b5cf6;
   --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ── Light mode ── */
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
 body {
@@ -31,26 +45,28 @@ body {
   font-family: 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
   min-height: 100vh;
+  transition: background .2s, color .2s;
 }
 
 /* ── Header ── */
 .header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 24px;
+  padding: 12px 24px;
   display: flex; align-items: center; gap: 14px;
   position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
 }
 .header-icon {
-  width: 36px; height: 36px; background: var(--accent);
+  width: 34px; height: 34px; background: var(--accent);
   border-radius: 8px; display: flex; align-items: center;
-  justify-content: center; font-size: 18px; flex-shrink: 0;
+  justify-content: center; font-size: 17px; flex-shrink: 0;
 }
-.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title h1 { font-size: 14px; font-weight: 700; }
 .header-title p  { font-size: 11px; color: var(--muted); }
-.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink:0; }
 .live-dot.on { background: var(--green); animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 .meta-tag {
@@ -58,6 +74,12 @@ body {
   background: var(--surface2); padding: 3px 8px; border-radius: 20px;
   border: 1px solid var(--border);
 }
+.theme-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  font-size: 14px; color: var(--muted); transition: all .15s; line-height: 1;
+}
+.theme-btn:hover { border-color: var(--border2); color: var(--text); }
 
 /* ── Zone tabs ── */
 .zone-tabs {
@@ -66,9 +88,9 @@ body {
 }
 .zone-tab {
   background: transparent; border: none; color: var(--muted);
-  padding: 10px 16px; font-size: 12px; font-weight: 600; cursor: pointer;
+  padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: all .15s; display: flex; align-items: center; gap: 6px;
+  transition: all .15s; display: flex; align-items: center; gap: 5px;
 }
 .zone-tab:hover { color: var(--text); }
 .zone-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
@@ -82,19 +104,22 @@ body {
 
 /* ── KPIs ── */
 .stats {
-  display: grid; grid-template-columns: repeat(4,1fr);
-  gap: 12px; padding: 16px 24px;
+  display: grid; grid-template-columns: repeat(6,1fr);
+  gap: 10px; padding: 14px 24px;
 }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
-.stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
 .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
 /* ── Visão por Zona ── */
-.section { padding: 0 24px 16px; }
+.section { padding: 0 24px 14px; }
 .section-label {
   font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
-  color: var(--muted); font-weight: 600; margin-bottom: 12px;
+  color: var(--muted); font-weight: 600; margin-bottom: 10px;
   display: flex; align-items: center; gap: 8px;
 }
 .section-label::before {
@@ -103,17 +128,15 @@ body {
 }
 
 /* Zone summary cards */
-.zone-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; margin-bottom: 16px; }
+.zone-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 10px; margin-bottom: 14px; }
 .zone-card  {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 16px 18px;
-  border-top: 3px solid;
+  border-radius: var(--radius); padding: 14px 16px; border-top: 3px solid;
 }
-.zone-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 6px; }
-.zone-card-value { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
-.zone-card-meta  { font-size: 11px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.zone-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 4px; }
+.zone-card-value { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 5px; }
+.zone-card-meta  { font-size: 11px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
 .zone-card-meta strong { color: var(--text); }
-
 .zc-linear   { border-top-color: #3b82f6; }
 .zc-linear   .zone-card-label { color: #60a5fa; }
 .zc-linear   .zone-card-value { color: #3b82f6; }
@@ -127,11 +150,12 @@ body {
 .zc-other    .zone-card-label { color: #a78bfa; }
 .zc-other    .zone-card-value { color: #8b5cf6; }
 
-/* Cross-tab histogram */
+/* Cross-tab */
 .crosstab-wrap { overflow-x: auto; }
 table.crosstab {
   width: 100%; border-collapse: collapse; min-width: 500px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
 }
 table.crosstab th {
   font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
@@ -143,54 +167,47 @@ table.crosstab th.col-total { text-align: right; }
 table.crosstab th.col-zone  { text-align: center; }
 table.crosstab .sub { display: block; font-size: 9px; font-weight: 400; color: var(--muted); margin-top: 2px; }
 table.crosstab td {
-  padding: 9px 14px; border-bottom: 1px solid rgba(42,45,62,.5);
+  padding: 8px 14px; border-bottom: 1px solid rgba(42,45,62,.4);
   vertical-align: middle; font-family: monospace; font-size: 12px;
 }
+[data-theme="light"] table.crosstab td { border-bottom-color: rgba(226,232,240,.8); }
 table.crosstab tr:last-child td { border-bottom: none; }
 table.crosstab td.faixa { font-family: 'Segoe UI',sans-serif; font-size: 11px; color: var(--muted); font-weight: 500; }
-table.crosstab td.zone-cell { text-align: center; position: relative; }
+table.crosstab td.zone-cell { text-align: center; }
 table.crosstab td.total-cell { text-align: right; font-weight: 700; color: var(--text); }
 table.crosstab tr.row-total td { background: var(--surface2); font-weight: 700; border-top: 1px solid var(--border); }
-table.crosstab tr.row-total td.faixa { color: var(--text); font-size: 11px; }
+table.crosstab tr.row-total td.faixa { color: var(--text); }
+.cell-inner { display: inline-block; padding: 2px 8px; border-radius: 4px; min-width: 52px; text-align: center; }
+.cell-zero  { color: var(--muted); }
 
-.cell-inner {
-  display: inline-block; padding: 2px 8px; border-radius: 4px;
-  min-width: 48px; text-align: center;
-}
-.cell-zero { color: var(--muted); }
-
-/* ── Middle row: Top5 ── */
-.panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 24px 16px; }
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-.panel-title {
-  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
-  color: var(--muted); margin-bottom: 14px; font-weight: 600;
-}
+/* ── Panels row ── */
+.panel-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
 .top5-table { width: 100%; border-collapse: collapse; }
 .top5-table th {
   font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
   color: var(--muted); padding: 4px 8px; text-align: left;
   border-bottom: 1px solid var(--border); font-weight: 500;
 }
-.top5-table td { padding: 9px 8px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.top5-table td { padding: 8px 8px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
+[data-theme="light"] .top5-table td { border-bottom-color: rgba(226,232,240,.8); }
 .top5-table tr:last-child td { border-bottom: none; }
-.rank-num { color: var(--muted); font-size: 11px; margin-right: 6px; }
-
-/* Occ mini chart in panel */
+.rank-num { color: var(--muted); font-size: 11px; margin-right: 5px; }
 .occ-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.occ-label { font-size: 11px; color: var(--muted); min-width: 60px; }
+.occ-label { font-size: 11px; color: var(--muted); min-width: 70px; }
 .occ-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 0 10px; }
 .occ-fill  { height: 100%; border-radius: 4px; }
 .occ-val   { font-size: 11px; font-family: monospace; min-width: 44px; text-align: right; }
-.occ-low   { background: var(--green); }
-.occ-mid   { background: var(--yellow); }
-.occ-high  { background: var(--red); }
+.occ-low  { background: var(--green); }
+.occ-mid  { background: var(--yellow); }
+.occ-high { background: var(--red); }
 
 /* ── Detail table ── */
 .section-header { display: flex; align-items: center; gap: 12px; padding: 0 24px 10px; }
 .section-title  { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
 .table-wrap { padding: 0 24px 32px; overflow-x: auto; }
-table.main-table { width: 100%; border-collapse: collapse; min-width: 640px; }
+table.main-table { width: 100%; border-collapse: collapse; min-width: 700px; }
 table.main-table th {
   font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
   color: var(--muted); padding: 8px 12px; text-align: left;
@@ -199,8 +216,9 @@ table.main-table th {
 }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--accent); }
-table.main-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
-table.main-table tr:hover td { background: rgba(255,255,255,.02); }
+table.main-table td { padding: 8px 12px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
+[data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
+table.main-table tr:hover td { background: rgba(0,0,0,.02); }
 table.main-table tr:last-child td { border-bottom: none; }
 
 .area-name { font-weight: 600; font-size: 13px; }
@@ -209,11 +227,9 @@ table.main-table tr:last-child td { border-bottom: none; }
 .zone-volumoso { background: rgba(34,197,94,.15);   color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
 .zone-cop      { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
 .zone-other    { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
-
 .occ-bar-wrap { display: flex; align-items: center; gap: 6px; }
-.occ-bar  { width: 70px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.occ-bar  { width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
 .occ-fill2 { height: 100%; border-radius: 3px; }
-
 .aging-val  { font-family: monospace; font-size: 12px; }
 .aging-ok   { color: var(--muted); }
 .aging-warn { color: var(--yellow); }
@@ -229,6 +245,7 @@ table.main-table tr:last-child td { border-bottom: none; }
   text-align: left; line-height: 1.8;
 }
 
+@media (max-width: 1100px) { .stats { grid-template-columns: repeat(3,1fr); } }
 @media (max-width: 700px) {
   .stats { grid-template-columns: repeat(2,1fr); }
   .panel-row { grid-template-columns: 1fr; }
@@ -246,6 +263,7 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">—</span>
+    <button class="theme-btn" id="themeBtn" title="Alternar tema" onclick="toggleTheme()">☀️</button>
     <div class="live-badge">
       <div class="live-dot" id="liveDot"></div>
       <span id="lastUpdated">Aguardando...</span>
@@ -260,12 +278,22 @@ table.main-table tr:last-child td { border-bottom: none; }
   <div class="stat">
     <div class="stat-label">Total TOs</div>
     <div class="stat-value" id="sTOs" style="color:var(--accent)">—</div>
-    <div class="stat-sub">TOs em staging</div>
+    <div class="stat-sub">em staging agora</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total Pacotes</div>
+    <div class="stat-value" id="sTotalPacotes" style="color:var(--purple)">—</div>
+    <div class="stat-sub">da planilha Report</div>
   </div>
   <div class="stat">
     <div class="stat-label">Ruas Ativas</div>
     <div class="stat-value" id="sRuas" style="color:var(--blue)">—</div>
     <div class="stat-sub">com TOs alocados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Turno Endereçou</div>
+    <div class="stat-value" id="sTurno" style="color:var(--orange);font-size:20px">—</div>
+    <div class="stat-sub" id="sTurnoSub">—</div>
   </div>
   <div class="stat">
     <div class="stat-label">Maior Aging</div>
@@ -281,7 +309,7 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- Visão por Zona -->
 <div class="section" id="zonaSection" style="display:none">
-  <div class="section-label">Visão por Zona · Distribuição de TOs</div>
+  <div class="section-label">Visão por Zona · Distribuição de Pacotes</div>
   <div class="zone-cards" id="zoneCards"></div>
   <div class="crosstab-wrap">
     <table class="crosstab" id="crosstabTable"></table>
@@ -294,10 +322,10 @@ table.main-table tr:last-child td { border-bottom: none; }
     <div class="panel-title">Top 5 Ruas por Aging</div>
     <table class="top5-table">
       <thead>
-        <tr><th>Rua</th><th>Zona</th><th style="text-align:center">TOs</th><th>Aging</th></tr>
+        <tr><th>Rua</th><th>Zona</th><th style="text-align:center">TOs</th><th style="text-align:center">Pacotes</th><th>Aging</th></tr>
       </thead>
       <tbody id="top5Body">
-        <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">—</td></tr>
+        <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">—</td></tr>
       </tbody>
     </table>
   </div>
@@ -342,6 +370,27 @@ table.main-table tr:last-child td { border-bottom: none; }
 </div>
 
 <script>
+// ── Theme ──────────────────────────────────────────────────────────────
+(function () {
+  const saved = localStorage.getItem('siTheme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  const html    = document.documentElement;
+  const isLight = html.getAttribute('data-theme') === 'light';
+  const next    = isLight ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('siTheme', next);
+}
+
+// Set initial icon
+document.addEventListener('DOMContentLoaded', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = t === 'light' ? '🌙' : '☀️';
+});
+
 // ── Helpers ────────────────────────────────────────────────────────────
 function fmtDur(s) {
   if (!s || s <= 0) return '—';
@@ -351,9 +400,6 @@ function fmtDur(s) {
   if (d > 0) return `${d}d ${h}h`;
   return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
 }
-function fmtNum(n) {
-  return n ? n.toLocaleString('pt-BR') : '—';
-}
 function agingClass(s) {
   if (!s || s <= 0) return 'aging-ok';
   const h = s / 3600;
@@ -362,12 +408,8 @@ function agingClass(s) {
   if (h < 13) return 'aging-hot';
   return 'aging-crit';
 }
-function parseOcc(s) {
-  return parseFloat((s || '0').replace(/\s*%/, '')) || 0;
-}
-function occClass(pct) {
-  return pct < 60 ? 'occ-low' : pct < 85 ? 'occ-mid' : 'occ-high';
-}
+function parseOcc(s)  { return parseFloat((s || '0').replace(/\s*%/, '')) || 0; }
+function occClass(p)  { return p < 60 ? 'occ-low' : p < 85 ? 'occ-mid' : 'occ-high'; }
 function zoneKey(name) {
   if (!name) return 'other';
   const n = name.toLowerCase();
@@ -378,18 +420,21 @@ function zoneKey(name) {
 }
 function zoneCardClass(name) { return 'zc-' + zoneKey(name); }
 function zonePillClass(name) { return 'zone-' + zoneKey(name); }
-function zoneShort(name) { return (name || '').replace('ZONA ', '').trim() || '—'; }
-
-// Mapeia nome do staging API → nome na aba Report (podem diferir)
-function reportZoneName(stagingName) {
-  const n = (stagingName || '').toLowerCase().trim();
-  if (n.includes('linear')) return 'ZONA LMH';
-  if (n.includes('volumoso')) return 'ZONA VOLUMOSO';
-  if (n.includes('cop')) return 'ZONA COP';
-  return stagingName?.trim();
-}
+function zoneShort(name)     { return (name || '').replace('ZONA ', '').trim() || '—'; }
 function cleanOp(s) {
   return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
+}
+
+// Lookup report zone: exact match first, then fuzzy fallback
+function getReportZone(stagingName) {
+  if (!reportData) return null;
+  const exact = reportData.byZone[(stagingName || '').trim()];
+  if (exact) return exact;
+  const n = (stagingName || '').toLowerCase().trim();
+  if (n.includes('linear'))   return reportData.byZone['ZONA LMH']      || null;
+  if (n.includes('volumoso')) return reportData.byZone['ZONA VOLUMOSO']  || null;
+  if (n.includes('cop'))      return reportData.byZone['ZONA COP']       || null;
+  return null;
 }
 
 // ── Zone cell colors ───────────────────────────────────────────────────
@@ -402,7 +447,7 @@ const ZONE_RGBA = {
 
 // ── State ──────────────────────────────────────────────────────────────
 let allAreas   = [];
-let reportData = null; // { byZone, byArea } from /api/report-data
+let reportData = null;
 let activeZone = 'all';
 let sortCol    = 'to_quantity';
 let sortAsc    = false;
@@ -430,26 +475,54 @@ function buildZoneTabs() {
     const z = (a.staging_group_name || 'OUTRAS').trim();
     zoneMap[z] = (zoneMap[z] || 0) + (a.to_quantity || 0);
   });
-  // Prefer pacotes from report sheet when available
-  const totalPac = reportData
-    ? Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0)
-    : null;
-  const totalCount = totalPac ?? allAreas.reduce((s, a) => s + (a.to_quantity || 0), 0);
-  const tabs = [{ key: 'all', label: 'Todas', count: totalCount }];
-  Object.entries(zoneMap).sort((a, b) => b[1] - a[1])
-    .forEach(([z, tos]) => {
-      const rd = reportData?.byZone?.[reportZoneName(z)];
-      tabs.push({ key: z, label: zoneShort(z), count: rd ? rd.pacotes : tos });
-    });
+
+  const tabs = [];
+  let totalCount = 0;
+  Object.entries(zoneMap).sort((a, b) => b[1] - a[1]).forEach(([z, tos]) => {
+    const rd    = getReportZone(z);
+    const count = rd ? rd.pacotes : tos;
+    totalCount += count;
+    tabs.push({ key: z, label: zoneShort(z), count });
+  });
+  tabs.unshift({ key: 'all', label: 'Todas', count: totalCount });
 
   const container = document.getElementById('zoneTabs');
   container.innerHTML = tabs.map(t => `
     <button class="zone-tab${t.key === activeZone ? ' active' : ''}" data-zone="${t.key}">
-      ${t.label}<span class="tab-count">${t.count}</span>
+      ${t.label}<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>
     </button>`).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
     btn.addEventListener('click', () => { activeZone = btn.dataset.zone; render(); });
   });
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────────
+function updateStats(areas) {
+  const active   = areas.filter(a => a.to_quantity > 0);
+  const totalTOs = active.reduce((s, a) => s + a.to_quantity, 0);
+  const maxArea  = active.reduce((b, a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
+  const avgAging = active.length ? active.reduce((s, a) => s + a.staging_duration_time, 0) / active.length : 0;
+
+  document.getElementById('sTOs').textContent         = totalTOs;
+  document.getElementById('sRuas').textContent        = active.length;
+  document.getElementById('sMaxAging').textContent    = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
+  document.getElementById('sMaxAgingRua').textContent = maxArea ? maxArea.area_name : '—';
+  document.getElementById('sAvgAging').textContent    = avgAging ? fmtDur(Math.round(avgAging)) : '—';
+
+  if (reportData) {
+    const totalPac = Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
+    document.getElementById('sTotalPacotes').textContent = totalPac.toLocaleString('pt-BR');
+
+    if (reportData.byTurno) {
+      const turnos = Object.entries(reportData.byTurno).sort((a, b) => b[1].pacotes - a[1].pacotes);
+      if (turnos.length) {
+        const [topName, topVal] = turnos[0];
+        document.getElementById('sTurno').textContent    = topName;
+        const breakdown = turnos.map(([t, v]) => `${t}: ${v.pacotes.toLocaleString('pt-BR')}`).join(' · ');
+        document.getElementById('sTurnoSub').textContent = breakdown;
+      }
+    }
+  }
 }
 
 // ── Visão por Zona ─────────────────────────────────────────────────────
@@ -458,7 +531,7 @@ function buildZonaSection(areas) {
   if (!active.length) { document.getElementById('zonaSection').style.display = 'none'; return; }
   document.getElementById('zonaSection').style.display = '';
 
-  // Aggregate per zone
+  // Aggregate per zone (from staging API)
   const zones = {};
   active.forEach(a => {
     const z = (a.staging_group_name || 'OUTRAS').trim();
@@ -469,20 +542,23 @@ function buildZonaSection(areas) {
   });
 
   // Zone cards
-  const cardHtml = Object.values(zones).sort((a, b) => b.tos - a.tos).map(z => {
+  const cardHtml = Object.values(zones).sort((a, b) => {
+    const rdA = getReportZone(a.name);
+    const rdB = getReportZone(b.name);
+    return (rdB ? rdB.pacotes : b.tos) - (rdA ? rdA.pacotes : a.tos);
+  }).map(z => {
     const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
     const pico = z.agings.length ? Math.max(...z.agings) : 0;
-    const rd   = reportData?.byZone?.[reportZoneName(z.name)]; // pacotes from sheet
-    const mainVal  = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
-    const mainLabel= rd ? 'pacotes' : 'TOs';
-    const tosLine  = rd ? `<span>${z.tos} TOs</span>` : '';
+    const rd   = getReportZone(z.name);
+    const mainVal   = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
+    const mainLabel = rd ? 'pacotes' : 'TOs';
+    const tosLine   = rd ? `<span>${z.tos} TOs</span>` : '';
     return `
       <div class="zone-card ${zoneCardClass(z.name)}">
         <div class="zone-card-label">${zoneShort(z.name)}</div>
         <div class="zone-card-value">${mainVal}</div>
         <div class="zone-card-meta">
-          <span>${mainLabel}</span>
-          ${tosLine}
+          <span>${mainLabel}</span>${tosLine}
           ${avg  ? `<span>avg <strong>${fmtDur(Math.round(avg))}</strong></span>` : ''}
           ${pico ? `<span>pico <strong>${fmtDur(pico)}</strong></span>` : ''}
         </div>
@@ -490,36 +566,34 @@ function buildZonaSection(areas) {
   }).join('');
   document.getElementById('zoneCards').innerHTML = cardHtml;
 
-  // Cross-tab
+  // Cross-tab: value = pacotes (from report by area+staging aging bin) or TOs fallback
   const zoneNames = Object.keys(zones);
-  // counts[binIdx][zoneName] = sum of to_quantity
   const counts = BINS.map(() => {
     const row = {};
     zoneNames.forEach(z => { row[z] = 0; });
     return row;
   });
   active.forEach(a => {
-    const z = (a.staging_group_name || 'OUTRAS').trim();
-    const s = a.staging_duration_time || 0;
-    const i = BINS.findIndex(b => s >= b.min && s < b.max);
-    if (i >= 0) counts[i][z] = (counts[i][z] || 0) + a.to_quantity;
+    const z   = (a.staging_group_name || 'OUTRAS').trim();
+    const s   = a.staging_duration_time || 0;
+    const idx = BINS.findIndex(b => s >= b.min && s < b.max);
+    if (idx < 0) return;
+    const rd  = reportData?.byArea?.[a.area_name];
+    counts[idx][z] = (counts[idx][z] || 0) + (rd ? rd.pacotes : a.to_quantity);
   });
 
-  // Column maxes for color intensity
   const colMax = {};
+  zoneNames.forEach(z => { colMax[z] = Math.max(...counts.map(r => r[z] || 0), 1); });
+
+  const colTotals = {};
   zoneNames.forEach(z => {
-    colMax[z] = Math.max(...counts.map(r => r[z] || 0), 1);
+    colTotals[z] = counts.reduce((s, r) => s + (r[z] || 0), 0);
   });
 
-  // Column totals
-  const colTotals = {};
-  zoneNames.forEach(z => { colTotals[z] = active.filter(a => (a.staging_group_name||'OUTRAS').trim() === z).reduce((s, a) => s + a.to_quantity, 0); });
-
-  // Build table header
   const zoneHeaders = zoneNames.map(z => {
-    const rgb  = ZONE_RGBA[zoneKey(z)] || [139,92,246];
-    const rdZ  = reportData?.byZone?.[reportZoneName(z)];
-    const sub  = rdZ
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    const rdZ = getReportZone(z);
+    const sub = rdZ
       ? `${rdZ.pacotes.toLocaleString('pt-BR')} pcts`
       : `${(colTotals[z]||0).toLocaleString('pt-BR')} TOs`;
     return `<th class="col-zone" style="color:rgb(${rgb.join(',')})">
@@ -527,31 +601,24 @@ function buildZonaSection(areas) {
     </th>`;
   }).join('');
 
-  // Build rows (skip bins with all zeros)
   const rows = BINS.map((b, i) => {
     const rowTotal = zoneNames.reduce((s, z) => s + (counts[i][z] || 0), 0);
     if (rowTotal === 0) return '';
     const cells = zoneNames.map(z => {
       const v   = counts[i][z] || 0;
-      const pct = v / colMax[z];
       const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
-      const bg  = v > 0 ? `background:rgba(${rgb.join(',')},${(pct * 0.55 + 0.06).toFixed(2)})` : '';
+      const bg  = v > 0 ? `background:rgba(${rgb.join(',')},${(v / colMax[z] * 0.55 + 0.06).toFixed(2)})` : '';
       return `<td class="zone-cell">
         <span class="cell-inner ${v === 0 ? 'cell-zero' : ''}" style="${bg}">
           ${v > 0 ? v.toLocaleString('pt-BR') : '—'}
         </span>
       </td>`;
     }).join('');
-    return `<tr>
-      <td class="faixa">${b.label}</td>
-      ${cells}
-      <td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td>
-    </tr>`;
+    return `<tr><td class="faixa">${b.label}</td>${cells}<td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td></tr>`;
   }).join('');
 
-  // Total row
-  const grandTotal = zoneNames.reduce((s, z) => s + (colTotals[z] || 0), 0);
-  const totalCells = zoneNames.map(z => {
+  const grandTotal  = zoneNames.reduce((s, z) => s + (colTotals[z] || 0), 0);
+  const totalCells  = zoneNames.map(z => {
     const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
     return `<td class="zone-cell total-cell" style="color:rgb(${rgb.join(',')});font-weight:800">
       ${(colTotals[z]||0).toLocaleString('pt-BR')}
@@ -559,37 +626,29 @@ function buildZonaSection(areas) {
   }).join('');
 
   document.getElementById('crosstabTable').innerHTML = `
-    <thead>
-      <tr>
-        <th>Faixa Aging</th>
-        ${zoneHeaders}
-        <th class="col-total">Total</th>
-      </tr>
-    </thead>
+    <thead><tr><th>Faixa Aging</th>${zoneHeaders}<th class="col-total">Total</th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot>
-      <tr class="row-total">
-        <td class="faixa">Total</td>
-        ${totalCells}
-        <td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td>
-      </tr>
-    </tfoot>`;
+    <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td></tr></tfoot>`;
 }
 
-// ── Top 5 aging ─────────────────────────────────────────────────────────
+// ── Top 5 ──────────────────────────────────────────────────────────────
 function buildTop5(areas) {
   const top = [...areas]
     .filter(a => a.to_quantity > 0)
     .sort((a, b) => b.staging_duration_time - a.staging_duration_time)
     .slice(0, 5);
   document.getElementById('top5Body').innerHTML = top.length
-    ? top.map((a, i) => `<tr>
-        <td><span class="rank-num">${i+1}</span><span style="font-weight:600">${a.area_name}</span></td>
-        <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
-        <td style="font-family:monospace;text-align:center">${a.to_quantity}</td>
-        <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
-      </tr>`).join('')
-    : '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma rua ativa</td></tr>';
+    ? top.map((a, i) => {
+        const pac = reportData?.byArea?.[a.area_name]?.pacotes;
+        return `<tr>
+          <td><span class="rank-num">${i+1}</span><span style="font-weight:600">${a.area_name}</span></td>
+          <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+          <td style="font-family:monospace;text-align:center">${a.to_quantity}</td>
+          <td style="font-family:monospace;text-align:center;font-weight:600">${pac != null ? pac.toLocaleString('pt-BR') : '—'}</td>
+          <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma rua ativa</td></tr>';
 }
 
 // ── Ocupação por Zona ─────────────────────────────────────────────────
@@ -609,28 +668,12 @@ function buildOccByZone(areas) {
       const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
       return `<div class="occ-row">
         <span class="occ-label" style="color:rgb(${rgb.join(',')})">${zoneShort(z)}</span>
-        <div class="occ-track">
-          <div class="occ-fill ${oc}" style="width:${Math.min(pct,100).toFixed(1)}%"></div>
-        </div>
+        <div class="occ-track"><div class="occ-fill ${oc}" style="width:${Math.min(pct,100).toFixed(1)}%"></div></div>
         <span class="occ-val">${pct.toFixed(1)}%</span>
       </div>`;
     }).join('');
   document.getElementById('occByZone').innerHTML = rows ||
     '<div style="color:var(--muted);text-align:center;padding:20px">—</div>';
-}
-
-// ── KPIs ────────────────────────────────────────────────────────────────
-function updateStats(areas) {
-  const active   = areas.filter(a => a.to_quantity > 0);
-  const totalTOs = active.reduce((s, a) => s + a.to_quantity, 0);
-  const maxArea  = active.reduce((b, a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
-  const avgAging = active.length ? active.reduce((s, a) => s + a.staging_duration_time, 0) / active.length : 0;
-
-  document.getElementById('sTOs').textContent         = totalTOs;
-  document.getElementById('sRuas').textContent        = active.length;
-  document.getElementById('sMaxAging').textContent    = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
-  document.getElementById('sMaxAgingRua').textContent = maxArea ? maxArea.area_name : '—';
-  document.getElementById('sAvgAging').textContent    = avgAging ? fmtDur(Math.round(avgAging)) : '—';
 }
 
 // ── Main table ──────────────────────────────────────────────────────────
@@ -703,7 +746,7 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
   });
 });
 
-// ── Render all ──────────────────────────────────────────────────────────
+// ── Render ──────────────────────────────────────────────────────────────
 function render() {
   const areas = filteredAreas();
   buildZoneTabs();
