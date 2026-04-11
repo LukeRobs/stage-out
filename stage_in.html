@@ -504,16 +504,13 @@ function cleanOp(s) {
   return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
 }
 
-// Lookup report zone: exact match first, then fuzzy fallback
+// Lookup report zone: exact match only (trimmed).
+// Each staging zone maps only to its exact counterpart in the report sheet.
+// ZONA LINEAR shows its own data when the report has it; BUFFER zones never
+// inherit data from ZONA VOLUMOSO etc.
 function getReportZone(stagingName) {
   if (!reportData) return null;
-  const exact = reportData.byZone[(stagingName || '').trim()];
-  if (exact) return exact;
-  const n = (stagingName || '').toLowerCase().trim();
-  if (n.includes('linear'))   return reportData.byZone['ZONA LMH']      || null;
-  if (n.includes('volumoso')) return reportData.byZone['ZONA VOLUMOSO']  || null;
-  if (n.includes('cop'))      return reportData.byZone['ZONA COP']       || null;
-  return null;
+  return reportData.byZone[(stagingName || '').trim()] || null;
 }
 
 // ── Zone cell colors ───────────────────────────────────────────────────
