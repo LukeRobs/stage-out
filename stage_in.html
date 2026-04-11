@@ -379,6 +379,15 @@ function zoneKey(name) {
 function zoneCardClass(name) { return 'zc-' + zoneKey(name); }
 function zonePillClass(name) { return 'zone-' + zoneKey(name); }
 function zoneShort(name) { return (name || '').replace('ZONA ', '').trim() || '—'; }
+
+// Mapeia nome do staging API → nome na aba Report (podem diferir)
+function reportZoneName(stagingName) {
+  const n = (stagingName || '').toLowerCase().trim();
+  if (n.includes('linear')) return 'ZONA LMH';
+  if (n.includes('volumoso')) return 'ZONA VOLUMOSO';
+  if (n.includes('cop')) return 'ZONA COP';
+  return stagingName?.trim();
+}
 function cleanOp(s) {
   return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
 }
@@ -421,10 +430,17 @@ function buildZoneTabs() {
     const z = (a.staging_group_name || 'OUTRAS').trim();
     zoneMap[z] = (zoneMap[z] || 0) + (a.to_quantity || 0);
   });
-  const totalTOs = allAreas.reduce((s, a) => s + (a.to_quantity || 0), 0);
-  const tabs = [{ key: 'all', label: 'Todas', count: totalTOs }];
+  // Prefer pacotes from report sheet when available
+  const totalPac = reportData
+    ? Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0)
+    : null;
+  const totalCount = totalPac ?? allAreas.reduce((s, a) => s + (a.to_quantity || 0), 0);
+  const tabs = [{ key: 'all', label: 'Todas', count: totalCount }];
   Object.entries(zoneMap).sort((a, b) => b[1] - a[1])
-    .forEach(([z, c]) => tabs.push({ key: z, label: zoneShort(z), count: c }));
+    .forEach(([z, tos]) => {
+      const rd = reportData?.byZone?.[reportZoneName(z)];
+      tabs.push({ key: z, label: zoneShort(z), count: rd ? rd.pacotes : tos });
+    });
 
   const container = document.getElementById('zoneTabs');
   container.innerHTML = tabs.map(t => `
@@ -456,7 +472,7 @@ function buildZonaSection(areas) {
   const cardHtml = Object.values(zones).sort((a, b) => b.tos - a.tos).map(z => {
     const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
     const pico = z.agings.length ? Math.max(...z.agings) : 0;
-    const rd   = reportData?.byZone?.[z.name]; // pacotes from sheet
+    const rd   = reportData?.byZone?.[reportZoneName(z.name)]; // pacotes from sheet
     const mainVal  = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
     const mainLabel= rd ? 'pacotes' : 'TOs';
     const tosLine  = rd ? `<span>${z.tos} TOs</span>` : '';
@@ -502,7 +518,7 @@ function buildZonaSection(areas) {
   // Build table header
   const zoneHeaders = zoneNames.map(z => {
     const rgb  = ZONE_RGBA[zoneKey(z)] || [139,92,246];
-    const rdZ  = reportData?.byZone?.[z];
+    const rdZ  = reportData?.byZone?.[reportZoneName(z)];
     const sub  = rdZ
       ? `${rdZ.pacotes.toLocaleString('pt-BR')} pcts`
       : `${(colTotals[z]||0).toLocaleString('pt-BR')} TOs`;
