@@ -646,20 +646,51 @@ function buildZonaSection(areas) {
   }).join('');
   document.getElementById('zoneCards').innerHTML = cardHtml;
 
-  // Cross-tab: value = pacotes (from report by area+staging aging bin) or TOs fallback
-  const zoneNames = Object.keys(zones);
+  // Cross-tab: itera diretamente do reportData.byArea para não perder nenhum pacote.
+  // Usa staging_duration_time da API para o bin; fallback = max aging_h dos TOs da rua.
+  // Zonas vêm do campo `zona` do byArea (report), não da staging API.
+  const stagingMap = {};
+  allAreas.forEach(a => { stagingMap[a.area_name] = a; });
+
+  // Coleta zonas do report (byArea.zona) para as colunas do cross-tab
+  const reportZoneSet = new Set();
+  if (reportData?.byArea) {
+    Object.values(reportData.byArea).forEach(ad => { if (ad.zona) reportZoneSet.add(ad.zona); });
+  }
+  // Mantém zonas da staging API sem dados de report (para exibir TOs)
+  Object.keys(zones).forEach(z => { if (!getReportZone(z)) reportZoneSet.add(z); });
+
+  const zoneNames = [...reportZoneSet].sort();
   const counts = BINS.map(() => {
     const row = {};
     zoneNames.forEach(z => { row[z] = 0; });
     return row;
   });
+
+  if (reportData?.byArea) {
+    Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+      const z = ad.zona;
+      if (!z) return;
+      // Aging: usa staging_duration_time se disponível, senão max aging_h dos TOs da planilha
+      const staging = stagingMap[rua];
+      let duration  = staging?.staging_duration_time || 0;
+      if (!duration) {
+        const tos = reportData.byAreaTOs?.[rua] || [];
+        duration  = tos.length ? Math.max(...tos.map(t => t.aging_h * 3600)) : 0;
+      }
+      const idx = BINS.findIndex(b => duration >= b.min && duration < b.max);
+      if (idx < 0) return;
+      counts[idx][z] = (counts[idx][z] || 0) + ad.pacotes;
+    });
+  }
+  // Staging areas sem dados de report: usa TOs como fallback
   active.forEach(a => {
-    const z   = (a.staging_group_name || 'OUTRAS').trim();
+    const z  = (a.staging_group_name || 'OUTRAS').trim();
+    if (reportData?.byArea?.[a.area_name] || getReportZone(z)) return; // já contabilizado
     const s   = a.staging_duration_time || 0;
     const idx = BINS.findIndex(b => s >= b.min && s < b.max);
     if (idx < 0) return;
-    const rd  = reportData?.byArea?.[a.area_name];
-    counts[idx][z] = (counts[idx][z] || 0) + (rd ? rd.pacotes : a.to_quantity);
+    counts[idx][z] = (counts[idx][z] || 0) + a.to_quantity;
   });
 
   const colMax = {};

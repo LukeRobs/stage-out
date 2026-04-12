@@ -317,7 +317,7 @@ async function getReportData() {
       byZone[zona].pacotes += pacotes;
     }
     if (rua) {
-      if (!byArea[rua]) byArea[rua] = { tos: 0, pacotes: 0 };
+      if (!byArea[rua]) byArea[rua] = { tos: 0, pacotes: 0, zona };
       byArea[rua].tos++;
       byArea[rua].pacotes += pacotes;
       if (!byAreaTOs[rua]) byAreaTOs[rua] = [];
