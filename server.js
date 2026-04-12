@@ -336,10 +336,18 @@ async function getReportData() {
     }
   });
 
-  reportCache      = { byZone, byArea, byTurno, byAreaTOs, rowCount: rows.length, fetchedAt: Date.now() };
-  reportFetchedAt  = Date.now();
+  const result = { byZone, byArea, byTurno, byAreaTOs, rowCount: rows.length, fetchedAt: Date.now() };
   console.log(`[report] ${rows.length} linhas lidas — ${Object.keys(byZone).length} zonas, ${Object.keys(byArea).length} ruas`);
-  return reportCache;
+
+  // Só cacheia se tiver dados reais — evita envenar o cache com resultado
+  // vazio quando a planilha ainda está calculando após reinício do servidor
+  if (rows.length > 0) {
+    reportCache     = result;
+    reportFetchedAt = Date.now();
+  } else {
+    console.warn('[report] rowCount=0 — resultado não cacheado, próxima req tentará novamente');
+  }
+  return result;
 }
 
 // ── HTTP server ────────────────────────────────────────────────────────
