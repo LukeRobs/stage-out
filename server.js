@@ -295,11 +295,12 @@ async function getSeaTalkToken() {
   const res  = await fetchWithTimeout('https://openapi.seatalk.io/oauth2/access_token', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ app_id: appId, app_secret: appSecret, grant_type: 'client_credential' }),
+    body:    JSON.stringify({ app_id: appId, app_secret: appSecret, grant_type: 'client_credentials' }),
   }, 10000);
-  const data = await res.json();
-  console.log('[seatalk] token response:', JSON.stringify(data));
-  if (!data.access_token) throw new Error(`Token falhou: ${JSON.stringify(data)}`);
+  const text = await res.text();
+  console.log('[seatalk] token raw:', res.status, text.substring(0, 300));
+  const data = JSON.parse(text);
+  if (!data.access_token) throw new Error(`Token falhou: ${text.substring(0, 200)}`);
   return data.access_token;
 }
 
@@ -314,9 +315,9 @@ async function seaTalkSendText(token, text) {
         content:    JSON.stringify({ text }),
       }),
     }, 10000);
-  const data = await res.json();
-  console.log('[seatalk] sendText response:', JSON.stringify(data));
-  return data;
+  const raw = await res.text();
+  console.log('[seatalk] sendText raw:', res.status, raw.substring(0, 300));
+  return JSON.parse(raw);
 }
 
 async function seaTalkSendImage(token, imgBuffer) {
