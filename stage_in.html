@@ -280,6 +280,15 @@ table.main-table tr:last-child td { border-bottom: none; }
 }
 .fpill:hover { border-color: var(--border2); color: var(--text); }
 .fpill.active { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: var(--accent); }
+.aging-sort-btn {
+  display: flex; align-items: center; gap: 5px; margin-left: auto;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.aging-sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.aging-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
+.aging-sort-btn.asc  { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.25); color: var(--accent); }
 
 /* ── Expandable TO rows ── */
 .area-row { cursor: pointer; }
@@ -420,6 +429,7 @@ table.main-table tr:last-child td { border-bottom: none; }
     <input class="search-input" id="tableSearch" type="text" placeholder="Buscar rua, operador...">
   </div>
   <div class="filter-pills" id="tableZonePills"></div>
+  <button class="aging-sort-btn desc" id="agingSortBtn">↓ Aging mais antigo</button>
 </div>
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
@@ -436,11 +446,11 @@ table.main-table tr:last-child td { border-bottom: none; }
       <tr>
         <th data-col="area_name">Rua <span class="sa"></span></th>
         <th data-col="staging_group_name">Zona <span class="sa"></span></th>
-        <th data-col="to_quantity" class="sorted" style="text-align:center">TOs <span class="sa">↓</span></th>
+        <th data-col="to_quantity" style="text-align:center">TOs <span class="sa"></span></th>
         <th data-col="pacotes" style="text-align:center">Pacotes <span class="sa"></span></th>
         <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
         <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
-        <th data-col="staging_duration_time">Aging <span class="sa"></span></th>
+        <th data-col="staging_duration_time" class="sorted">Aging <span class="sa">↓</span></th>
         <th data-col="operator">Operador <span class="sa"></span></th>
       </tr>
     </thead>
@@ -525,8 +535,8 @@ const ZONE_RGBA = {
 let allAreas       = [];
 let reportData     = null;
 let activeZone     = 'all';
-let sortCol        = 'to_quantity';
-let sortAsc        = false;
+let sortCol        = 'staging_duration_time'; // default: aging mais antigo
+let sortAsc        = false;                    // false = decrescente (maior aging primeiro)
 let lastAt         = null;
 let tableSearch    = '';
 let tableZoneFilter = '';
@@ -917,6 +927,7 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
     });
     th.classList.add('sorted');
     th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
+    updateAgingSortBtn();
     buildMainTable(filteredAreas());
   });
 });
@@ -924,6 +935,27 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
 // ── Search input ───────────────────────────────────────────────────────
 document.getElementById('tableSearch').addEventListener('input', e => {
   tableSearch = e.target.value;
+  buildMainTable(filteredAreas());
+});
+
+// ── Aging sort toggle ──────────────────────────────────────────────────
+function updateAgingSortBtn() {
+  const btn = document.getElementById('agingSortBtn');
+  if (!btn) return;
+  if (sortCol !== 'staging_duration_time') return; // managed by column headers
+  if (sortAsc) {
+    btn.textContent = '↑ Aging mais novo';
+    btn.className   = 'aging-sort-btn asc';
+  } else {
+    btn.textContent = '↓ Aging mais antigo';
+    btn.className   = 'aging-sort-btn desc';
+  }
+}
+
+document.getElementById('agingSortBtn').addEventListener('click', () => {
+  sortCol = 'staging_duration_time';
+  sortAsc = !sortAsc;
+  updateAgingSortBtn();
   buildMainTable(filteredAreas());
 });
 
