@@ -210,7 +210,8 @@ body {
     <input type="text" id="search" placeholder="Buscar por destino ou TO...">
   </div>
   <div class="sort-btns">
-    <button class="sort-btn active" data-sort="tos">TOs <span class="arrow">↓</span></button>
+    <button class="sort-btn active" data-sort="duracao">Duração <span class="arrow">↓</span></button>
+    <button class="sort-btn" data-sort="tos">TOs <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="pacotes">Pacotes <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="peso">Peso <span class="arrow">↕</span></button>
   </div>
@@ -262,7 +263,7 @@ function packClass(name) {
 
 // ── State ──────────────────────────────────────────────────────────────
 let groups  = [];
-let sortKey = 'tos';
+let sortKey = 'duracao';
 let sortAsc = false;
 let lastAt  = null;
 
@@ -279,6 +280,7 @@ function buildGroups(list) {
     ...g,
     totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
     totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
+    maxDur:     Math.max(...g.tos.map(t => (t.complete_time || 0) - t.ctime), 0),
   }));
 }
 
@@ -290,8 +292,8 @@ function sortedGroups(g) {
                     String(d.id).includes(q) ||
                     d.tos.some(t => t.to_number.toLowerCase().includes(q)))
     : g;
-  const keyMap = { tos: 'tos', pacotes: 'totPacotes', peso: 'totPeso' };
-  const key = keyMap[sortKey];
+  const keyMap = { tos: 'tos', pacotes: 'totPacotes', peso: 'totPeso', duracao: 'maxDur' };
+  const key = keyMap[sortKey] || 'maxDur';
   filtered.sort((a, b) => {
     const av = key === 'tos' ? a.tos.length : a[key];
     const bv = key === 'tos' ? b.tos.length : b[key];
@@ -303,7 +305,7 @@ function sortedGroups(g) {
 // ── Render card ────────────────────────────────────────────────────────
 function renderCard(g, expanded) {
   const toRows = g.tos
-    .sort((a, b) => b.complete_time - a.complete_time)
+    .sort((a, b) => ((b.complete_time||0) - b.ctime) - ((a.complete_time||0) - a.ctime))
     .map(to => {
       const packSec = (to.complete_time || 0) - to.ctime;
       const dc = durClass(packSec);

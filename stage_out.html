@@ -343,7 +343,8 @@ body {
     <input type="text" id="search" placeholder="Buscar por destino, ID ou rua...">
   </div>
   <div class="sort-btns">
-    <button class="sort-btn active" data-sort="ruas">Ruas <span class="arrow">↓</span></button>
+    <button class="sort-btn active" data-sort="tempo">Tempo <span class="arrow">↓</span></button>
+    <button class="sort-btn" data-sort="ruas">Ruas <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="gaiolas">Gaiolas <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="tos">TOs <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="occ">Ocupação <span class="arrow">↕</span></button>
@@ -395,7 +396,7 @@ function parseDestId(to_destination) {
 
 // ── State ──────────────────────────────────────────────────────────────
 let groups    = [];   // [{id, name, ruas:[...], totRuas, totGaiolas, totTOs, avgOcc}]
-let sortKey   = 'ruas';
+let sortKey   = 'tempo';
 let sortAsc   = false;
 let lastAt    = null;
 
@@ -414,7 +415,8 @@ function buildGroups(list) {
     const totCap     = g.ruas.reduce((s,r) => s + (r.capacity||0), 0);
     const totUsed    = g.ruas.reduce((s,r) => s + Math.round(parsePct(r.occupancy_percentage)/100*(r.capacity||0)), 0);
     const avgOcc     = totCap > 0 ? Math.round(totUsed/totCap*100) : 0;
-    return { ...g, totGaiolas, totTOs, avgOcc };
+    const maxDur = Math.max(...g.ruas.map(r => r.staging_duration_time || 0), 0);
+    return { ...g, totGaiolas, totTOs, avgOcc, maxDur };
   });
 }
 
@@ -426,7 +428,7 @@ function sortedGroups(g) {
                     d.ruas.some(r => r.staging_area_name.toLowerCase().includes(q)))
     : g;
 
-  const key = { ruas:'ruas', gaiolas:'totGaiolas', tos:'totTOs', occ:'avgOcc' }[sortKey];
+  const key = { ruas:'ruas', gaiolas:'totGaiolas', tos:'totTOs', occ:'avgOcc', tempo:'maxDur' }[sortKey] || 'maxDur';
   filtered.sort((a,b) => {
     let av = key==='ruas' ? a.ruas.length : a[key];
     let bv = key==='ruas' ? b.ruas.length : b[key];
@@ -449,7 +451,7 @@ function renderCard(g, expanded) {
   const statusLabel = {1:'Aberto',2:'Fechado',3:'Despacho'};
 
   const ruasRows = g.ruas
-    .sort((a,b) => a.staging_area_name.localeCompare(b.staging_area_name))
+    .sort((a,b) => (b.staging_duration_time||0) - (a.staging_duration_time||0))
     .map(r => {
       const pct = parsePct(r.occupancy_percentage);
       const col = occColor(pct);
