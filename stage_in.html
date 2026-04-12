@@ -290,6 +290,31 @@ table.main-table tr:last-child td { border-bottom: none; }
 .aging-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
 .aging-sort-btn.asc  { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.25); color: var(--accent); }
 
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  padding: 12px 24px; border-top: 1px solid var(--border);
+}
+.pag-info { font-size: 12px; color: var(--muted); }
+.pag-pages { display: flex; align-items: center; gap: 4px; }
+.pag-btn {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 7px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center;
+}
+.pag-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.pag-btn:disabled { opacity: .35; cursor: default; }
+.pag-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pag-ellipsis { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.pag-size { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.pag-size select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 7px; font-size: 12px; cursor: pointer; outline: none;
+}
+.pag-size select:focus { border-color: var(--accent); }
+
 /* ── Expandable TO rows ── */
 .area-row { cursor: pointer; }
 .area-row:hover td { background: rgba(34,197,94,.04); }
@@ -456,6 +481,18 @@ table.main-table tr:last-child td { border-bottom: none; }
     </thead>
     <tbody id="mainBody"></tbody>
   </table>
+  <div class="pagination-bar" id="paginationBar" style="display:none">
+    <span class="pag-info" id="pagInfo"></span>
+    <div class="pag-pages" id="pagPages"></div>
+    <div class="pag-size">
+      Por página:
+      <select id="pagSizeSelect">
+        <option value="10" selected>10</option>
+        <option value="24">24</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -541,6 +578,8 @@ let lastAt         = null;
 let tableSearch    = '';
 let tableZoneFilter = '';
 let expandedAreas  = new Set();
+let currentPage    = 1;
+let pageSize       = 10;
 
 // ── Histogram bins ─────────────────────────────────────────────────────
 const BINS = [
@@ -581,7 +620,7 @@ function buildZoneTabs() {
       ${t.label}<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>
     </button>`).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
-    btn.addEventListener('click', () => { activeZone = btn.dataset.zone; render(); });
+    btn.addEventListener('click', () => { activeZone = btn.dataset.zone; currentPage = 1; render(); });
   });
 }
 
@@ -862,7 +901,7 @@ function buildTableZonePills() {
     <button class="fpill${p.key === tableZoneFilter ? ' active' : ''}" data-zone="${p.key}">${p.label}</button>
   `).join('');
   document.querySelectorAll('.fpill').forEach(btn => {
-    btn.addEventListener('click', () => { tableZoneFilter = btn.dataset.zone; buildMainTable(filteredAreas()); });
+    btn.addEventListener('click', () => { tableZoneFilter = btn.dataset.zone; currentPage = 1; buildMainTable(filteredAreas()); });
   });
 }
 
@@ -895,11 +934,53 @@ function fmtDurH(h) {
   return fmtDur(Math.round(h * 3600));
 }
 
+// ── Pagination helper ───────────────────────────────────────────────────
+function buildPaginationBar(total, page, size) {
+  const bar   = document.getElementById('paginationBar');
+  const info  = document.getElementById('pagInfo');
+  const pages = document.getElementById('pagPages');
+  if (total === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+
+  const totalPages = Math.ceil(total / size);
+  const from = (page - 1) * size + 1;
+  const to   = Math.min(page * size, total);
+  info.textContent = `Mostrando ${from}–${to} de ${total} ruas`;
+
+  // Build page number buttons (max 7 visible: prev ... 1 2 3 ... next)
+  let btns = '';
+  const mkBtn = (label, p, active = false, disabled = false) =>
+    `<button class="pag-btn${active ? ' active' : ''}" data-page="${p}" ${disabled ? 'disabled' : ''}>${label}</button>`;
+
+  btns += mkBtn('‹', page - 1, false, page === 1);   // prev
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) btns += mkBtn(i, i, i === page);
+  } else {
+    btns += mkBtn(1, 1, page === 1);
+    if (page > 3) btns += `<span class="pag-ellipsis">…</span>`;
+    const start = Math.max(2, page - 1);
+    const end   = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) btns += mkBtn(i, i, i === page);
+    if (page < totalPages - 2) btns += `<span class="pag-ellipsis">…</span>`;
+    btns += mkBtn(totalPages, totalPages, page === totalPages);
+  }
+  btns += mkBtn('›', page + 1, false, page === totalPages);  // next
+
+  pages.innerHTML = btns;
+  pages.querySelectorAll('.pag-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPage = parseInt(btn.dataset.page);
+      buildMainTable(filteredAreas());
+    });
+  });
+}
+
 // ── Main table ──────────────────────────────────────────────────────────
 function buildMainTable(areas) {
   if (allAreas.length === 0) {
-    document.getElementById('mainTable').style.display = 'none';
-    document.getElementById('emptyMsg').style.display  = '';
+    document.getElementById('mainTable').style.display      = 'none';
+    document.getElementById('emptyMsg').style.display       = '';
+    document.getElementById('paginationBar').style.display  = 'none';
     return;
   }
   document.getElementById('mainTable').style.display = '';
@@ -911,9 +992,18 @@ function buildMainTable(areas) {
   if (q)             vis = vis.filter(a => a.area_name.toLowerCase().includes(q) || (a.staging_group_name||'').toLowerCase().includes(q) || cleanOp(a.operator).toLowerCase().includes(q));
   if (tableZoneFilter) vis = vis.filter(a => (a.staging_group_name||'').trim() === tableZoneFilter);
 
-  document.getElementById('tableCount').textContent = `${vis.length} ruas`;
+  const total = vis.length;
+  // Clamp currentPage to valid range after filtering
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
 
-  document.getElementById('mainBody').innerHTML = vis.map(a => {
+  document.getElementById('tableCount').textContent = `${total} ruas`;
+
+  // Slice to current page
+  const start = (currentPage - 1) * pageSize;
+  const page  = vis.slice(start, start + pageSize);
+
+  document.getElementById('mainBody').innerHTML = page.map(a => {
     const occ = parseOcc(a.occupy_percentage);
     const pac = reportData?.byArea?.[a.area_name]?.pacotes;
     const isExp = expandedAreas.has(a.area_name);
@@ -934,6 +1024,8 @@ function buildMainTable(areas) {
       <td style="font-size:11px;color:var(--muted)">${cleanOp(a.operator)}</td>
     </tr>${expandRow}`;
   }).join('');
+
+  buildPaginationBar(total, currentPage, pageSize);
 
   // Expand click
   document.querySelectorAll('.area-row').forEach(row => {
@@ -959,6 +1051,7 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
     th.classList.add('sorted');
     th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
     updateAgingSortBtn();
+    currentPage = 1;
     buildMainTable(filteredAreas());
   });
 });
@@ -966,6 +1059,14 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
 // ── Search input ───────────────────────────────────────────────────────
 document.getElementById('tableSearch').addEventListener('input', e => {
   tableSearch = e.target.value;
+  currentPage = 1;
+  buildMainTable(filteredAreas());
+});
+
+// ── Page size selector ─────────────────────────────────────────────────
+document.getElementById('pagSizeSelect').addEventListener('change', e => {
+  pageSize    = parseInt(e.target.value);
+  currentPage = 1;
   buildMainTable(filteredAreas());
 });
 
@@ -986,6 +1087,7 @@ function updateAgingSortBtn() {
 document.getElementById('agingSortBtn').addEventListener('click', () => {
   sortCol = 'staging_duration_time';
   sortAsc = !sortAsc;
+  currentPage = 1;
   updateAgingSortBtn();
   buildMainTable(filteredAreas());
 });
