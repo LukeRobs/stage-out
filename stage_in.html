@@ -315,6 +315,18 @@ table.main-table tr:last-child td { border-bottom: none; }
 }
 .pag-size select:focus { border-color: var(--accent); }
 
+/* ── VOLUMOSO specific ── */
+.vol-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); }
+.vol-row:last-child { border-bottom:none; }
+.vol-label { min-width:60px; font-size:12px; font-weight:600; color:var(--muted); }
+.vol-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:10px; overflow:hidden; }
+.vol-bar { height:100%; border-radius:4px; background:var(--green); transition:width .4s ease; }
+.vol-val { min-width:110px; text-align:right; font-family:monospace; font-size:12px; font-weight:700; }
+.vol-pct { color:var(--muted); font-weight:400; font-size:11px; }
+.vol-hist-label { min-width:72px; font-size:11px; color:var(--muted); flex-shrink:0; }
+.vol-turno-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.vol-turno-row:last-child { border-bottom:none; }
+
 /* ── Expandable TO rows ── */
 .area-row { cursor: pointer; }
 .area-row:hover td { background: rgba(34,197,94,.04); }
@@ -366,6 +378,7 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <div class="zone-tabs" id="zoneTabs"></div>
 
+<div id="defaultView">
 <!-- KPIs -->
 <div class="stats">
   <div class="stat">
@@ -440,6 +453,42 @@ table.main-table tr:last-child td { border-bottom: none; }
         <div style="color:var(--muted);font-size:11px">—</div>
       </div>
     </div>
+  </div>
+</div>
+</div><!-- end #defaultView -->
+
+<div id="volumosoView" style="display:none">
+  <!-- 7 KPI cards -->
+  <div class="stats" style="grid-template-columns:repeat(7,1fr)">
+    <div class="stat"><div class="stat-label">Total TOs</div><div class="stat-value" id="vTOs" style="color:var(--accent)">—</div><div class="stat-sub">na VOLUMOSO</div></div>
+    <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="vPacotes" style="color:var(--purple)">—</div><div class="stat-sub">soma geral</div></div>
+    <div class="stat"><div class="stat-label">TOs &lt; 30 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
+    <div class="stat"><div class="stat-label">TOs = 30 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
+    <div class="stat"><div class="stat-label">TOs &gt; 30 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
+    <div class="stat"><div class="stat-label">Média por TO</div><div class="stat-value" id="vMedia" style="color:var(--yellow)">—</div><div class="stat-sub">pacotes/TO</div></div>
+    <div class="stat"><div class="stat-label">Maior TO</div><div class="stat-value" id="vMaior" style="color:var(--orange)">—</div><div class="stat-sub">pacotes</div></div>
+  </div>
+
+  <!-- 3 panels: Distribuição | Turno Ofensor | Top 5 -->
+  <div class="panel-row" style="grid-template-columns:1fr 1fr 1.5fr">
+    <div class="panel">
+      <div class="panel-title">Distribuição por Faixa de Pacotes</div>
+      <div id="vDistrib"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Turno Ofensor (TOs &gt; 30 pcts)</div>
+      <div id="vTurnoOfensor"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Top 5 TOs com Maior Volume (&gt; 30 pcts)</div>
+      <div id="vTop5"></div>
+    </div>
+  </div>
+
+  <!-- Aging histogram (full width) -->
+  <div class="section">
+    <div class="section-label">Histograma por Faixa de Aging</div>
+    <div id="vAgingHist" style="padding:8px 0"></div>
   </div>
 </div>
 
@@ -596,6 +645,20 @@ const BINS = [
   { label: '>4d',    min: 345600,  max: Infinity },
 ];
 
+const VOL_BINS = [
+  { label: '0–4h',   min: 0,       max: 14400   },
+  { label: '4–7h',   min: 14400,   max: 25200   },
+  { label: '7–10h',  min: 25200,   max: 36000   },
+  { label: '10–13h', min: 36000,   max: 46800   },
+  { label: '13–16h', min: 46800,   max: 57600   },
+  { label: '16–21h', min: 57600,   max: 75600   },
+  { label: '21–24h', min: 75600,   max: 86400   },
+  { label: '1–2d',   min: 86400,   max: 172800  },
+  { label: '2–3d',   min: 172800,  max: 259200  },
+  { label: '3–4d',   min: 259200,  max: 345600  },
+  { label: '>4d',    min: 345600,  max: Infinity },
+];
+
 // ── Zone tabs ──────────────────────────────────────────────────────────
 function buildZoneTabs() {
   const zoneMap = {};
@@ -620,7 +683,12 @@ function buildZoneTabs() {
       ${t.label}<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>
     </button>`).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
-    btn.addEventListener('click', () => { activeZone = btn.dataset.zone; currentPage = 1; render(); });
+    btn.addEventListener('click', () => {
+      activeZone = btn.dataset.zone;
+      currentPage = 1;
+      if (!btn.dataset.zone.toLowerCase().includes('volumoso')) expandedAreas.clear();
+      render();
+    });
   });
 }
 
@@ -1092,15 +1160,140 @@ document.getElementById('agingSortBtn').addEventListener('click', () => {
   buildMainTable(filteredAreas());
 });
 
+// ── VOLUMOSO helpers ────────────────────────────────────────────────────────
+function isVolumoso() {
+  return activeZone.toLowerCase().includes('volumoso');
+}
+
+function getVolumosoTOs() {
+  if (!reportData?.byArea) return [];
+  const result = [];
+  Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+    if (!(ad.zona || '').toLowerCase().includes('volumoso')) return;
+    (reportData.byAreaTOs?.[rua] || []).forEach(t => result.push({ ...t, rua }));
+  });
+  return result;
+}
+
+function buildVolumoso() {
+  const tos = getVolumosoTOs();
+  const total    = tos.length;
+  const totalPac = tos.reduce((s, t) => s + t.pacotes, 0);
+  const lt30 = tos.filter(t => t.pacotes < 30).length;
+  const eq30 = tos.filter(t => t.pacotes === 30).length;
+  const gt30 = tos.filter(t => t.pacotes > 30).length;
+  const media = total ? (totalPac / total).toFixed(1) : '0';
+  const maior = total ? Math.max(...tos.map(t => t.pacotes)) : 0;
+
+  // KPIs
+  document.getElementById('vTOs').textContent    = total.toLocaleString('pt-BR');
+  document.getElementById('vPacotes').textContent = totalPac.toLocaleString('pt-BR');
+  document.getElementById('vLt30').textContent   = lt30.toLocaleString('pt-BR');
+  document.getElementById('vEq30').textContent   = eq30.toLocaleString('pt-BR');
+  document.getElementById('vGt30').textContent   = gt30.toLocaleString('pt-BR');
+  document.getElementById('vMedia').textContent  = media;
+  document.getElementById('vMaior').textContent  = maior.toLocaleString('pt-BR');
+
+  // Distribuição por faixa de pacotes
+  const distBands = [
+    { label: '0–9',   min: 0,  max: 10,       color: 'var(--accent)' },
+    { label: '10–19', min: 10, max: 20,        color: 'var(--blue)'   },
+    { label: '20–30', min: 20, max: 31,        color: 'var(--yellow)' },
+    { label: '>30',   min: 31, max: Infinity,  color: 'var(--red)'    },
+  ];
+  const dCounts = distBands.map(b => tos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
+  const dMax    = Math.max(...dCounts, 1);
+  document.getElementById('vDistrib').innerHTML = distBands.map((b, i) => {
+    const pct  = total ? Math.round(dCounts[i] / total * 100) : 0;
+    const barW = (dCounts[i] / dMax * 100).toFixed(1);
+    return `<div class="vol-row">
+      <span class="vol-label">${b.label}</span>
+      <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${b.color}"></div></div>
+      <span class="vol-val">${dCounts[i].toLocaleString('pt-BR')} <span class="vol-pct">(${pct}%)</span></span>
+    </div>`;
+  }).join('');
+
+  // Turno Ofensor (TOs > 30 pacotes)
+  const heavy = tos.filter(t => t.pacotes > 30);
+  const byTurno = {};
+  heavy.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
+  const turnoSorted = Object.entries(byTurno).sort((a, b) => b[1] - a[1]);
+  const heavyTotal  = heavy.length;
+  document.getElementById('vTurnoOfensor').innerHTML = turnoSorted.length
+    ? turnoSorted.map(([turno, cnt]) => {
+        const pct  = heavyTotal ? Math.round(cnt / heavyTotal * 100) : 0;
+        const barW = pct;
+        const tColor = turno==='T1' ? 'var(--blue)' : turno==='T2' ? 'var(--yellow)' : turno==='T3' ? 'var(--accent)' : 'var(--muted)';
+        return `<div class="vol-turno-row">
+          <span class="turno-tag ${turno==='T1'?'t-t1':turno==='T2'?'t-t2':turno==='T3'?'t-t3':'t-other'}">${turno}</span>
+          <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${tColor}"></div></div>
+          <span class="vol-val">${cnt} TOs <span class="vol-pct">(${pct}%)</span></span>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhuma TO &gt; 30 pacotes</div>';
+
+  // Top 5 TOs > 30 pacotes
+  const top5 = [...tos].filter(t => t.pacotes > 30).sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
+  document.getElementById('vTop5').innerHTML = top5.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--muted);font-size:11px">
+          <th style="text-align:left;padding:4px 6px">#</th>
+          <th style="text-align:left;padding:4px 6px">TO</th>
+          <th style="text-align:left;padding:4px 6px">Rua</th>
+          <th style="text-align:center;padding:4px 6px">Pacotes</th>
+          <th style="text-align:left;padding:4px 6px">Aging</th>
+          <th style="text-align:left;padding:4px 6px">Turno</th>
+        </tr></thead>
+        <tbody>${top5.map((t, i) => `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:5px 6px"><span class="rank-num">${i+1}</span></td>
+          <td style="padding:5px 6px;font-family:monospace;font-size:11px">${t.to}</td>
+          <td style="padding:5px 6px;font-weight:600">${t.rua}</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:800;color:var(--red)">${t.pacotes}</td>
+          <td style="padding:5px 6px">${fmtDurH(t.aging_h)}</td>
+          <td style="padding:5px 6px">${turnoTag(t.turno)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`
+    : '<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhuma TO acima de 30 pacotes</div>';
+
+  // Histograma de Aging (usando aging_h dos TOs individuais)
+  const hCounts = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
+  const hMax    = Math.max(...hCounts, 1);
+  document.getElementById('vAgingHist').innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 20px">` +
+    VOL_BINS.map((b, i) => {
+      const pct  = total ? Math.round(hCounts[i] / total * 100) : 0;
+      const barW = (hCounts[i] / hMax * 100).toFixed(1);
+      const color = i < 2 ? 'var(--accent)' : i < 5 ? 'var(--yellow)' : 'var(--red)';
+      return `<div class="vol-row">
+        <span class="vol-hist-label">${b.label}</span>
+        <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${color}"></div></div>
+        <span class="vol-val" style="min-width:90px">${hCounts[i].toLocaleString('pt-BR')} <span class="vol-pct">(${pct}%)</span></span>
+      </div>`;
+    }).join('') + `</div>`;
+
+  // Auto-expand all VOLUMOSO ruas in the detail table
+  if (reportData?.byArea) {
+    Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+      if ((ad.zona || '').toLowerCase().includes('volumoso')) expandedAreas.add(rua);
+    });
+  }
+}
+
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
   const areas = filteredAreas();
   buildZoneTabs();
-  updateStats(areas);
-  buildZonaSection(areas);
-  buildTop5(areas);
-  buildOccByZone(areas);
-  buildTurnoDonut();
+  const vol = isVolumoso();
+  document.getElementById('defaultView').style.display  = vol ? 'none' : '';
+  document.getElementById('volumosoView').style.display = vol ? '' : 'none';
+  if (vol) {
+    buildVolumoso();
+  } else {
+    updateStats(areas);
+    buildZonaSection(areas);
+    buildTop5(areas);
+    buildOccByZone(areas);
+    buildTurnoDonut();
+  }
   buildTableZonePills();
   buildMainTable(areas);
 }
