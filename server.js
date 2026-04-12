@@ -284,12 +284,11 @@ const SEATALK_PHRASES = {
 const screenshotStore = {}; // { todas: Buffer, volumoso: Buffer }
 
 async function sendSeaTalkWebhook(body) {
-  const r = await fetch(SEATALK_WEBHOOK, {
+  return fetchWithTimeout(SEATALK_WEBHOOK, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(body),
-  });
-  return r;
+  }, 10000);
 }
 
 function fetchWithTimeout(url, opts, ms = 10000) {
