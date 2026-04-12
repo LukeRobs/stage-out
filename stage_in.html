@@ -1288,12 +1288,6 @@ function buildVolumoso() {
       </div>`;
     }).join('') + `</div>`;
 
-  // Auto-expand all VOLUMOSO ruas in the detail table
-  if (reportData?.byArea) {
-    Object.entries(reportData.byArea).forEach(([rua, ad]) => {
-      if ((ad.zona || '').toLowerCase().includes('volumoso')) expandedAreas.add(rua);
-    });
-  }
 }
 
 // ── Render ──────────────────────────────────────────────────────────────

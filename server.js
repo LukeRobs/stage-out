@@ -283,24 +283,78 @@ const SEATALK_PHRASES = {
 };
 const screenshotStore = {}; // { todas: Buffer, volumoso: Buffer }
 
-async function sendSeaTalkReport(tab, screenshotUrl) {
+async function sendSeaTalkWebhook(body) {
+  const r = await fetch(SEATALK_WEBHOOK, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  });
+  return r;
+}
+
+async function sendSeaTalkReport(tab, imgBuffer) {
   const phrase = SEATALK_PHRASES[tab] || tab;
-  // 1 — imagem (como URL clicável que o SeaTalk pode pré-visualizar)
-  const imgMsg  = { tag: 'text', text: { content: screenshotUrl } };
-  // 2 — frase
-  const textMsg = { tag: 'text', text: { content: phrase } };
-  for (const body of [imgMsg, textMsg]) {
+
+  // ── Tenta upload da imagem via Bot API para obter image_key ───────────
+  // Requer SEATALK_APP_ID e SEATALK_APP_SECRET configurados no Render.
+  // Se não configurados, cai no fallback de link de texto.
+  const appId     = process.env.SEATALK_APP_ID;
+  const appSecret = process.env.SEATALK_APP_SECRET;
+
+  let sentImage = false;
+
+  if (appId && appSecret && imgBuffer) {
     try {
-      await fetch(SEATALK_WEBHOOK, {
+      // 1. Obter access token
+      const tokenRes = await fetch('https://openapi.seatalk.io/oauth2/token', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(body),
+        body:    JSON.stringify({ app_id: appId, app_secret: appSecret, grant_type: 'client_credentials' }),
       });
-      await new Promise(r => setTimeout(r, 800)); // small delay between msgs
+      const tokenData = await tokenRes.json();
+      const token = tokenData.access_token;
+      if (!token) throw new Error('Token não retornado: ' + JSON.stringify(tokenData));
+
+      // 2. Upload da imagem para obter image_key
+      const boundary = '----SeaTalkBoundary' + Date.now();
+      const bodyParts = [
+        `--${boundary}\r\nContent-Disposition: form-data; name="image_type"\r\n\r\nmessage\r\n`,
+        `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="report_${tab}.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`,
+      ];
+      const prefix = Buffer.from(bodyParts.join(''));
+      const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+      const formBody = Buffer.concat([prefix, imgBuffer, suffix]);
+
+      const uploadRes = await fetch('https://openapi.seatalk.io/open-apis/im/v1/images', {
+        method:  'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type':  `multipart/form-data; boundary=${boundary}`,
+        },
+        body: formBody,
+      });
+      const uploadData = await uploadRes.json();
+      const imageKey = uploadData?.data?.image_key;
+      if (!imageKey) throw new Error('image_key não retornado: ' + JSON.stringify(uploadData));
+
+      // 3. Envia a imagem no grupo via webhook
+      await sendSeaTalkWebhook({ tag: 'image', image: { image_key: imageKey } });
+      await new Promise(r => setTimeout(r, 800));
+      sentImage = true;
     } catch (e) {
-      console.error('[seatalk] Erro ao enviar:', e.message);
+      console.error('[seatalk] Falha no upload da imagem, usando fallback:', e.message);
     }
   }
+
+  // ── Fallback: envia URL da imagem como texto se upload falhou ─────────
+  if (!sentImage) {
+    const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
+    await sendSeaTalkWebhook({ tag: 'text', text: { content: url } }).catch(() => {});
+    await new Promise(r => setTimeout(r, 800));
+  }
+
+  // ── Frase do report ───────────────────────────────────────────────────
+  await sendSeaTalkWebhook({ tag: 'text', text: { content: phrase } }).catch(() => {});
   console.log(`[seatalk] Report "${tab}" enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
 }
 
@@ -578,11 +632,11 @@ const server = http.createServer((req, res) => {
         if (!tab || !image) throw new Error('tab e image são obrigatórios');
         // Salva o screenshot em memória (servido como PNG na URL abaixo)
         const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
-        screenshotStore[tab] = Buffer.from(b64, 'base64');
-        // URL pública do screenshot neste servidor
-        const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
+        const imgBuffer = Buffer.from(b64, 'base64');
+        screenshotStore[tab] = imgBuffer; // guardado também para servir via GET
         // Dispara o envio ao SeaTalk (não bloqueia a resposta)
-        sendSeaTalkReport(tab, url).catch(e => console.error('[seatalk]', e.message));
+        sendSeaTalkReport(tab, imgBuffer).catch(e => console.error('[seatalk]', e.message));
+        const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, url }));
       } catch (e) {
