@@ -728,12 +728,15 @@ function buildZonaSection(areas) {
     if (a.staging_duration_time > 0) zones[z].agings.push(a.staging_duration_time);
   });
 
-  // Zone cards
-  const cardHtml = Object.values(zones).sort((a, b) => {
+  // Zone cards — quando aba específica ativa, exibe apenas aquela zona
+  const zoneFilter  = activeZone !== 'all' ? activeZone : null;
+  const zoneValues  = Object.values(zones).sort((a, b) => {
     const rdA = getReportZone(a.name);
     const rdB = getReportZone(b.name);
     return (rdB ? rdB.pacotes : b.tos) - (rdA ? rdA.pacotes : a.tos);
-  }).map(z => {
+  }).filter(z => !zoneFilter || z.name === zoneFilter);
+
+  const cardHtml = zoneValues.map(z => {
     const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
     const pico = z.agings.length ? Math.max(...z.agings) : 0;
     const rd   = getReportZone(z.name);
@@ -767,7 +770,9 @@ function buildZonaSection(areas) {
   // Mantém zonas da staging API sem dados de report (para exibir TOs)
   Object.keys(zones).forEach(z => { if (!getReportZone(z)) reportZoneSet.add(z); });
 
-  const zoneNames = [...reportZoneSet].sort();
+  // Filtra colunas do cross-tab pela zona ativa (se não for "Todas")
+  let zoneNames = [...reportZoneSet].sort();
+  if (zoneFilter) zoneNames = zoneNames.filter(z => z === zoneFilter || z.toLowerCase().includes(zoneFilter.toLowerCase().replace('zona ', '')));
   const counts = BINS.map(() => {
     const row = {};
     zoneNames.forEach(z => { row[z] = 0; });
@@ -963,9 +968,13 @@ function sortedAreas(areas) {
 
 // ── Zone filter pills (table) ──────────────────────────────────────────
 function buildTableZonePills() {
+  const el = document.getElementById('tableZonePills');
+  // Se uma zona específica está selecionada nos tabs, os pills de zona na tabela
+  // são redundantes — esconde para não poluir a interface
+  if (activeZone !== 'all') { el.innerHTML = ''; tableZoneFilter = ''; return; }
   const zones = [...new Set(allAreas.map(a => (a.staging_group_name || 'OUTRAS').trim()))];
   const pills = [{ key: '', label: 'Todas' }, ...zones.map(z => ({ key: z, label: zoneShort(z) }))];
-  document.getElementById('tableZonePills').innerHTML = pills.map(p => `
+  el.innerHTML = pills.map(p => `
     <button class="fpill${p.key === tableZoneFilter ? ' active' : ''}" data-zone="${p.key}">${p.label}</button>
   `).join('');
   document.querySelectorAll('.fpill').forEach(btn => {
@@ -1255,18 +1264,27 @@ function buildVolumoso() {
       </table>`
     : '<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhuma TO acima de 30 pacotes</div>';
 
-  // Histograma de Aging (usando aging_h dos TOs individuais)
+  // Histograma de Aging — barras full-width com gradiente de cor
   const hCounts = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
   const hMax    = Math.max(...hCounts, 1);
-  document.getElementById('vAgingHist').innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px 20px">` +
+  const HIST_COLORS = ['#22c55e','#4ade80','#a3e635','#facc15','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c','#7f1d1d'];
+  document.getElementById('vAgingHist').innerHTML =
+    `<div style="display:flex;flex-direction:column;gap:7px;padding:4px 0">` +
     VOL_BINS.map((b, i) => {
       const pct  = total ? Math.round(hCounts[i] / total * 100) : 0;
       const barW = (hCounts[i] / hMax * 100).toFixed(1);
-      const color = i < 2 ? 'var(--accent)' : i < 5 ? 'var(--yellow)' : 'var(--red)';
-      return `<div class="vol-row">
-        <span class="vol-hist-label">${b.label}</span>
-        <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${color}"></div></div>
-        <span class="vol-val" style="min-width:90px">${hCounts[i].toLocaleString('pt-BR')} <span class="vol-pct">(${pct}%)</span></span>
+      const color = HIST_COLORS[i] || '#7f1d1d';
+      const inside = parseFloat(barW) > 28;
+      return `<div style="display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:10px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-align:right;letter-spacing:.3px">${b.label}</span>
+        <div style="position:relative;background:var(--surface2);border-radius:8px;height:32px;overflow:hidden">
+          <div style="width:${barW}%;background:${color};height:100%;border-radius:8px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:10px">
+            ${inside && hCounts[i] > 0 ? `<span style="font-size:13px;font-weight:800;color:rgba(0,0,0,.75);white-space:nowrap">${hCounts[i].toLocaleString('pt-BR')}</span>` : ''}
+          </div>
+          ${!inside && hCounts[i] > 0 ? `<span style="position:absolute;left:calc(${barW}% + 8px);top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">${hCounts[i].toLocaleString('pt-BR')}</span>` : ''}
+          ${hCounts[i] === 0 ? `<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)">—</span>` : ''}
+        </div>
+        <span style="font-size:12px;font-weight:600;color:${pct>0?color:'var(--muted)'};text-align:right">${pct > 0 ? pct+'%' : '—'}</span>
       </div>`;
     }).join('') + `</div>`;
 
