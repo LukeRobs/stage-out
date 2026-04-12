@@ -292,70 +292,62 @@ async function sendSeaTalkWebhook(body) {
   return r;
 }
 
-async function sendSeaTalkReport(tab, imgBuffer) {
-  const phrase = SEATALK_PHRASES[tab] || tab;
+function fetchWithTimeout(url, opts, ms = 10000) {
+  const ctrl = new AbortController();
+  const tid  = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(tid));
+}
 
-  // ── Tenta upload da imagem via Bot API para obter image_key ───────────
-  // Requer SEATALK_APP_ID e SEATALK_APP_SECRET configurados no Render.
-  // Se não configurados, cai no fallback de link de texto.
+async function sendSeaTalkReport(tab, imgBuffer) {
+  const phrase    = SEATALK_PHRASES[tab] || tab;
   const appId     = process.env.SEATALK_APP_ID;
   const appSecret = process.env.SEATALK_APP_SECRET;
+  const imgUrl    = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
 
-  let sentImage = false;
+  // ── 1. Sempre envia o link da imagem + frase via webhook (rápido, confiável) ──
+  await sendSeaTalkWebhook({ tag: 'text', text: { content: imgUrl } }).catch(e =>
+    console.error('[seatalk] webhook img-url falhou:', e.message));
+  await new Promise(r => setTimeout(r, 600));
+  await sendSeaTalkWebhook({ tag: 'text', text: { content: phrase } }).catch(e =>
+    console.error('[seatalk] webhook phrase falhou:', e.message));
+  console.log(`[seatalk] Report "${tab}" enviado via webhook — ${new Date().toLocaleTimeString('pt-BR')}`);
 
-  if (appId && appSecret && imgBuffer) {
-    try {
-      // 1. Obter access token
-      const tokenRes = await fetch('https://openapi.seatalk.io/oauth2/token', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ app_id: appId, app_secret: appSecret, grant_type: 'client_credentials' }),
-      });
-      const tokenData = await tokenRes.json();
-      const token = tokenData.access_token;
-      if (!token) throw new Error('Token não retornado: ' + JSON.stringify(tokenData));
+  // ── 2. Tenta também enviar imagem real via Bot API (com timeout 10s) ──
+  if (!appId || !appSecret || !imgBuffer) return;
+  try {
+    // Token
+    const tokenRes  = await fetchWithTimeout('https://openapi.seatalk.io/oauth2/access_token', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ app_id: appId, app_secret: appSecret, grant_type: 'client_credential' }),
+    }, 10000);
+    const { access_token: token } = await tokenRes.json();
+    if (!token) { console.warn('[seatalk] Token não obtido'); return; }
 
-      // 2. Upload da imagem para obter image_key
-      const boundary = '----SeaTalkBoundary' + Date.now();
-      const bodyParts = [
-        `--${boundary}\r\nContent-Disposition: form-data; name="image_type"\r\n\r\nmessage\r\n`,
-        `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="report_${tab}.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`,
-      ];
-      const prefix = Buffer.from(bodyParts.join(''));
-      const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
-      const formBody = Buffer.concat([prefix, imgBuffer, suffix]);
+    // Upload imagem
+    const boundary = '----STBoundary' + Date.now();
+    const pre = Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="image_type"\r\n\r\nmessage\r\n` +
+      `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="report.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`
+    );
+    const suf      = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const formBody = Buffer.concat([pre, imgBuffer, suf]);
 
-      const uploadRes = await fetch('https://openapi.seatalk.io/open-apis/im/v1/images', {
-        method:  'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type':  `multipart/form-data; boundary=${boundary}`,
-        },
-        body: formBody,
-      });
-      const uploadData = await uploadRes.json();
-      const imageKey = uploadData?.data?.image_key;
-      if (!imageKey) throw new Error('image_key não retornado: ' + JSON.stringify(uploadData));
+    const upRes  = await fetchWithTimeout('https://openapi.seatalk.io/open-apis/im/v1/images', {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+      body:    formBody,
+    }, 15000);
+    const { data } = await upRes.json();
+    const imageKey = data?.image_key;
+    if (!imageKey) { console.warn('[seatalk] image_key não obtido:', JSON.stringify(data)); return; }
 
-      // 3. Envia a imagem no grupo via webhook
-      await sendSeaTalkWebhook({ tag: 'image', image: { image_key: imageKey } });
-      await new Promise(r => setTimeout(r, 800));
-      sentImage = true;
-    } catch (e) {
-      console.error('[seatalk] Falha no upload da imagem, usando fallback:', e.message);
-    }
+    // Envia imagem real (substitui o link já enviado)
+    await sendSeaTalkWebhook({ tag: 'image', image: { image_key: imageKey } }).catch(() => {});
+    console.log('[seatalk] Imagem real enviada via Bot API ✅');
+  } catch (e) {
+    console.error('[seatalk] Bot API falhou (imagem não enviada):', e.message);
   }
-
-  // ── Fallback: envia URL da imagem como texto se upload falhou ─────────
-  if (!sentImage) {
-    const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
-    await sendSeaTalkWebhook({ tag: 'text', text: { content: url } }).catch(() => {});
-    await new Promise(r => setTimeout(r, 800));
-  }
-
-  // ── Frase do report ───────────────────────────────────────────────────
-  await sendSeaTalkWebhook({ tag: 'text', text: { content: phrase } }).catch(() => {});
-  console.log(`[seatalk] Report "${tab}" enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
 }
 
 // ── Stage-out cache (fed by Tampermonkey) ─────────────────────────────
