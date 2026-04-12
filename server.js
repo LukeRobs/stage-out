@@ -318,19 +318,36 @@ async function seaTalkSendText(token, text) {
   return raw;
 }
 
-async function seaTalkSendImage(token, imgBuffer) {
-  // Envia imagem como texto com URL (Bot API de imagem não documentada publicamente)
-  const imgUrl = `https://stage-out.onrender.com/api/screenshot/${Date.now()}.png`;
+async function seaTalkSendImage(token, tab) {
+  const imgUrl = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
+  // Tenta enviar como imagem nativa; se não suportado, cai para URL de texto
   const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
     method:  'POST',
     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify({
       group_id: SEATALK_GROUP_ID,
-      message:  { tag: 'text', text: { content: imgUrl } },
+      message:  { tag: 'image', image: { url: imgUrl } },
     }),
   }, 10000);
   const raw = await res.text();
   console.log('[seatalk] sendImg raw:', res.status, raw.substring(0, 300));
+
+  // Se tag 'image' não for suportado, envia URL como texto
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (_) { parsed = {}; }
+  if (parsed.code !== 0) {
+    console.log('[seatalk] tag image falhou, enviando URL como texto');
+    const res2 = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        group_id: SEATALK_GROUP_ID,
+        message:  { tag: 'text', text: { content: imgUrl } },
+      }),
+    }, 10000);
+    const raw2 = await res2.text();
+    console.log('[seatalk] sendImgUrl raw:', res2.status, raw2.substring(0, 200));
+  }
 }
 
 async function sendSeaTalkReport(tab, imgBuffer) {
@@ -338,12 +355,12 @@ async function sendSeaTalkReport(tab, imgBuffer) {
   try {
     const token = await getSeaTalkToken();
 
-    // 1. Frase
-    await seaTalkSendText(token, phrase);
-    await new Promise(r => setTimeout(r, 800));
+    // 1. Imagem primeiro (contexto visual antes da frase)
+    if (imgBuffer) await seaTalkSendImage(token, tab);
+    await new Promise(r => setTimeout(r, 500));
 
-    // 2. Imagem (melhor esforço)
-    if (imgBuffer) await seaTalkSendImage(token, imgBuffer);
+    // 2. Frase
+    await seaTalkSendText(token, phrase);
 
     console.log(`[seatalk] ✅ Report "${tab}" enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
   } catch (e) {
