@@ -274,6 +274,36 @@ getData((err, data) => {
   else     console.log(`[startup] Data ready — ${data.rowCount} rows across ${data.DATES.length} dates`);
 });
 
+// ── SeaTalk report ────────────────────────────────────────────────────
+const SEATALK_WEBHOOK = process.env.SEATALK_WEBHOOK ||
+  'https://openapi.seatalk.io/webhook/group/k5I70tzASiqWTp0_PuqNDg';
+const SEATALK_PHRASES = {
+  todas:    'Time segue Report Geral Stage_IN',
+  volumoso: 'Time segue Report SPP Volumoso',
+};
+const screenshotStore = {}; // { todas: Buffer, volumoso: Buffer }
+
+async function sendSeaTalkReport(tab, screenshotUrl) {
+  const phrase = SEATALK_PHRASES[tab] || tab;
+  // 1 — imagem (como URL clicável que o SeaTalk pode pré-visualizar)
+  const imgMsg  = { tag: 'text', text: { content: screenshotUrl } };
+  // 2 — frase
+  const textMsg = { tag: 'text', text: { content: phrase } };
+  for (const body of [imgMsg, textMsg]) {
+    try {
+      await fetch(SEATALK_WEBHOOK, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      });
+      await new Promise(r => setTimeout(r, 800)); // small delay between msgs
+    } catch (e) {
+      console.error('[seatalk] Erro ao enviar:', e.message);
+    }
+  }
+  console.log(`[seatalk] Report "${tab}" enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
+}
+
 // ── Stage-out cache (fed by Tampermonkey) ─────────────────────────────
 let stageCache      = null; // { list, total, fetchedAt }
 let toPackingCache  = null; // { list, total, fetchedAt }
@@ -535,6 +565,45 @@ const server = http.createServer((req, res) => {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       });
+    return;
+  }
+
+  // POST /api/seatalk-report — recebe screenshot do Tampermonkey e envia ao SeaTalk
+  if (urlPath === '/api/seatalk-report' && req.method === 'POST') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', async () => {
+      try {
+        const { tab, image } = JSON.parse(body);
+        if (!tab || !image) throw new Error('tab e image são obrigatórios');
+        // Salva o screenshot em memória (servido como PNG na URL abaixo)
+        const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
+        screenshotStore[tab] = Buffer.from(b64, 'base64');
+        // URL pública do screenshot neste servidor
+        const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
+        // Dispara o envio ao SeaTalk (não bloqueia a resposta)
+        sendSeaTalkReport(tab, url).catch(e => console.error('[seatalk]', e.message));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, url }));
+      } catch (e) {
+        console.error('[seatalk-report]', e.message);
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/screenshot/:tab.png — serve o último screenshot em memória
+  if (urlPath.startsWith('/api/screenshot/') && req.method === 'GET') {
+    const tab = urlPath.replace('/api/screenshot/', '').replace('.png', '');
+    const buf = screenshotStore[tab];
+    if (!buf) {
+      res.writeHead(404); res.end('Screenshot not found');
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache' });
+    res.end(buf);
     return;
   }
 
