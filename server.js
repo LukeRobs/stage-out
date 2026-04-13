@@ -318,55 +318,22 @@ async function seaTalkSendText(token, text) {
   return raw;
 }
 
-async function seaTalkUploadImage(token, imgBuffer) {
-  const form = new FormData();
-  form.append('image', new Blob([imgBuffer], { type: 'image/png' }), 'report.png');
-  const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v1/resource/image', {
-    method:  'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-    body:    form,
-  }, 15000);
-  const raw = await res.text();
-  console.log('[seatalk] uploadImage raw:', res.status, raw.substring(0, 300));
-  const data = JSON.parse(raw);
-  if (data.code !== 0 || !data.image_key) throw new Error(`Upload falhou: ${raw.substring(0, 200)}`);
-  return data.image_key;
-}
-
 async function seaTalkSendImage(token, tab) {
   const buf = screenshotStore[tab];
   if (!buf) { console.warn('[seatalk] sem buffer de imagem para', tab); return; }
 
-  try {
-    // 1. Faz upload do PNG para obter image_key
-    const imageKey = await seaTalkUploadImage(token, buf);
-
-    // 2. Envia mensagem com image_key
-    const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
-      method:  'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        group_id: SEATALK_GROUP_ID,
-        message:  { tag: 'image', image: { image_key: imageKey } },
-      }),
-    }, 10000);
-    const raw = await res.text();
-    console.log('[seatalk] sendImg raw:', res.status, raw.substring(0, 300));
-  } catch (e) {
-    // Fallback: envia URL pública como texto
-    console.warn('[seatalk] envio de imagem falhou, enviando URL:', e.message);
-    const imgUrl = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
-    const res2 = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
-      method:  'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        group_id: SEATALK_GROUP_ID,
-        message:  { tag: 'text', text: { content: imgUrl } },
-      }),
-    }, 10000);
-    const raw2 = await res2.text();
-    console.log('[seatalk] sendImgUrl raw:', res2.status, raw2.substring(0, 200));
-  }
+  // API do SeaTalk aceita Base64 direto no campo image.content (PNG/JPG/GIF, max 5MB)
+  const b64 = buf.toString('base64');
+  const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
+    method:  'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify({
+      group_id: SEATALK_GROUP_ID,
+      message:  { tag: 'image', image: { content: b64 } },
+    }),
+  }, 20000);
+  const raw = await res.text();
+  console.log('[seatalk] sendImg raw:', res.status, raw.substring(0, 300));
 }
 
 async function getVolumosoStats() {
