@@ -275,12 +275,14 @@ getData((err, data) => {
 });
 
 // ── SeaTalk report ────────────────────────────────────────────────────
-const SEATALK_GROUP_ID = process.env.SEATALK_GROUP_ID || 'MzU3MzMwNjU4MjU1';
+const SEATALK_GROUP_ID = process.env.SEATALK_GROUP_ID || 'NDE4NzU0MDM1NDEy';
 const SEATALK_PHRASES  = {
   todas:    'Time segue Report Geral Stage_IN',
   volumoso: 'Time segue Report SPP Volumoso',
 };
-const screenshotStore = {}; // { todas: Buffer, volumoso: Buffer }
+const screenshotStore  = {}; // { todas: Buffer, volumoso: Buffer }
+const lastReportSent   = {}; // { todas: timestamp, volumoso: timestamp }
+const REPORT_COOLDOWN  = 2 * 60 * 1000; // 2 minutos — evita duplicatas
 
 function fetchWithTimeout(url, opts, ms = 10000) {
   const ctrl = new AbortController();
@@ -664,6 +666,15 @@ const server = http.createServer((req, res) => {
         const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
         const imgBuffer = Buffer.from(b64, 'base64');
         screenshotStore[tab] = imgBuffer; // guardado também para servir via GET
+        // Cooldown: ignora se já foi enviado nos últimos 2 minutos (evita duplicatas)
+        const now = Date.now();
+        if (lastReportSent[tab] && now - lastReportSent[tab] < REPORT_COOLDOWN) {
+          console.log(`[seatalk] Report "${tab}" ignorado — cooldown ativo (${Math.round((REPORT_COOLDOWN - (now - lastReportSent[tab])) / 1000)}s restantes)`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, skipped: true }));
+          return;
+        }
+        lastReportSent[tab] = now;
         // Dispara o envio ao SeaTalk (não bloqueia a resposta)
         sendSeaTalkReport(tab, imgBuffer, text).catch(e => console.error('[seatalk]', e.message));
         const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
