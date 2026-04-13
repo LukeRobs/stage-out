@@ -54,14 +54,36 @@
     return canvas.toDataURL('image/jpeg', 0.85);
   }
 
+  /* ── Stats Volumoso ─────────────────────────────────────────────── */
+  async function fetchVolumosoText() {
+    const resp = await fetch(`${SERVER}/api/report-data`);
+    if (!resp.ok) throw new Error(`report-data HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    const volRuas = Object.entries(data.byArea || {})
+      .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
+      .map(([rua]) => rua);
+
+    let totalTOs = 0, tosGt30 = 0, totalAging = 0;
+    for (const rua of volRuas) {
+      for (const to of (data.byAreaTOs[rua] || [])) {
+        totalTOs++;
+        if (to.pacotes > 30) tosGt30++;
+        totalAging += to.aging_h;
+      }
+    }
+    const agingMedio = totalTOs > 0 ? (totalAging / totalTOs).toFixed(1) : '0.0';
+    return `Report SPP Volumoso:\nTotal TO's: ${totalTOs}\nTO's > 30: ${tosGt30}\nAging Médio: ${agingMedio}h`;
+  }
+
   /* ── Envio ao servidor (que repassa ao SeaTalk via Bot API) ─────── */
-  function postReport(tab, image) {
+  function postReport(tab, image, text) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method:  'POST',
         url:     `${SERVER}/api/seatalk-report`,
         headers: { 'Content-Type': 'application/json' },
-        data:    JSON.stringify({ tab, image }),
+        data:    JSON.stringify({ tab, image, text }),
         timeout: 60000,
         onload: r => {
           console.log(`[Server] seatalk-report (${tab}):`, r.status, r.responseText);
@@ -94,8 +116,12 @@
       setBadge('📸 Capturando Volumoso...', '#f59e0b');
       const imgVol = await captureTab('ZONA VOLUMOSO');
       if (imgVol) {
+        setBadge('📊 Buscando stats...', '#a855f7');
+        let volText;
+        try   { volText = await fetchVolumosoText(); }
+        catch (e) { console.warn('[Report] stats fallback:', e.message); volText = 'Time segue Report SPP Volumoso'; }
         setBadge('📤 Enviando Volumoso...', '#3b82f6');
-        await postReport('volumoso', imgVol);
+        await postReport('volumoso', imgVol, volText);
         setBadge('✅ Volumoso enviado!', '#22c55e');
       }
 

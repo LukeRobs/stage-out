@@ -318,25 +318,44 @@ async function seaTalkSendText(token, text) {
   return raw;
 }
 
-async function seaTalkSendImage(token, tab) {
-  const imgUrl = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
-  // Tenta enviar como imagem nativa; se não suportado, cai para URL de texto
-  const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
+async function seaTalkUploadImage(token, imgBuffer) {
+  const form = new FormData();
+  form.append('image', new Blob([imgBuffer], { type: 'image/png' }), 'report.png');
+  const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v1/resource/image', {
     method:  'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify({
-      group_id: SEATALK_GROUP_ID,
-      message:  { tag: 'image', image: { url: imgUrl } },
-    }),
-  }, 10000);
+    headers: { 'Authorization': `Bearer ${token}` },
+    body:    form,
+  }, 15000);
   const raw = await res.text();
-  console.log('[seatalk] sendImg raw:', res.status, raw.substring(0, 300));
+  console.log('[seatalk] uploadImage raw:', res.status, raw.substring(0, 300));
+  const data = JSON.parse(raw);
+  if (data.code !== 0 || !data.image_key) throw new Error(`Upload falhou: ${raw.substring(0, 200)}`);
+  return data.image_key;
+}
 
-  // Se tag 'image' não for suportado, envia URL como texto
-  let parsed;
-  try { parsed = JSON.parse(raw); } catch (_) { parsed = {}; }
-  if (parsed.code !== 0) {
-    console.log('[seatalk] tag image falhou, enviando URL como texto');
+async function seaTalkSendImage(token, tab) {
+  const buf = screenshotStore[tab];
+  if (!buf) { console.warn('[seatalk] sem buffer de imagem para', tab); return; }
+
+  try {
+    // 1. Faz upload do PNG para obter image_key
+    const imageKey = await seaTalkUploadImage(token, buf);
+
+    // 2. Envia mensagem com image_key
+    const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        group_id: SEATALK_GROUP_ID,
+        message:  { tag: 'image', image: { image_key: imageKey } },
+      }),
+    }, 10000);
+    const raw = await res.text();
+    console.log('[seatalk] sendImg raw:', res.status, raw.substring(0, 300));
+  } catch (e) {
+    // Fallback: envia URL pública como texto
+    console.warn('[seatalk] envio de imagem falhou, enviando URL:', e.message);
+    const imgUrl = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
     const res2 = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
       method:  'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -350,17 +369,51 @@ async function seaTalkSendImage(token, tab) {
   }
 }
 
-async function sendSeaTalkReport(tab, imgBuffer) {
-  const phrase = SEATALK_PHRASES[tab] || tab;
+async function getVolumosoStats() {
+  const data = await getReportData();
+  // Ruas pertencentes à ZONA VOLUMOSO
+  const volRuas = Object.entries(data.byArea)
+    .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
+    .map(([rua]) => rua);
+
+  let totalTOs = 0, tosGt30 = 0, totalAging = 0;
+  for (const rua of volRuas) {
+    for (const to of (data.byAreaTOs[rua] || [])) {
+      totalTOs++;
+      if (to.pacotes > 30) tosGt30++;
+      totalAging += to.aging_h;
+    }
+  }
+  const agingMedio = totalTOs > 0 ? (totalAging / totalTOs).toFixed(1) : '0.0';
+  return { totalTOs, tosGt30, agingMedio };
+}
+
+async function sendSeaTalkReport(tab, imgBuffer, overrideText) {
   try {
     const token = await getSeaTalkToken();
 
-    // 1. Imagem primeiro (contexto visual antes da frase)
+    // Texto: usa override do Tampermonkey se presente; senão calcula no servidor
+    let text = overrideText;
+    if (!text) {
+      if (tab === 'volumoso') {
+        try {
+          const s = await getVolumosoStats();
+          text = `Report SPP Volumoso:\nTotal TO's: ${s.totalTOs}\nTO's > 30: ${s.tosGt30}\nAging Médio: ${s.agingMedio}h`;
+        } catch (e) {
+          console.error('[seatalk] Erro ao buscar stats volumoso:', e.message);
+          text = SEATALK_PHRASES[tab] || tab;
+        }
+      } else {
+        text = SEATALK_PHRASES[tab] || tab;
+      }
+    }
+
+    // 1. Imagem primeiro (contexto visual antes do texto)
     if (imgBuffer) await seaTalkSendImage(token, tab);
     await new Promise(r => setTimeout(r, 500));
 
-    // 2. Frase
-    await seaTalkSendText(token, phrase);
+    // 2. Texto
+    await seaTalkSendText(token, text);
 
     console.log(`[seatalk] ✅ Report "${tab}" enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
   } catch (e) {
@@ -638,14 +691,14 @@ const server = http.createServer((req, res) => {
     req.on('data', d => { body += d; });
     req.on('end', async () => {
       try {
-        const { tab, image } = JSON.parse(body);
+        const { tab, image, text } = JSON.parse(body);
         if (!tab || !image) throw new Error('tab e image são obrigatórios');
         // Salva o screenshot em memória (servido como PNG na URL abaixo)
         const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
         const imgBuffer = Buffer.from(b64, 'base64');
         screenshotStore[tab] = imgBuffer; // guardado também para servir via GET
         // Dispara o envio ao SeaTalk (não bloqueia a resposta)
-        sendSeaTalkReport(tab, imgBuffer).catch(e => console.error('[seatalk]', e.message));
+        sendSeaTalkReport(tab, imgBuffer, text).catch(e => console.error('[seatalk]', e.message));
         const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, url }));
