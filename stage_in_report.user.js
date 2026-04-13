@@ -19,11 +19,11 @@
   /* ── Badge de status ─────────────────────────────────────────────── */
   const badge = document.createElement('div');
   badge.style.cssText = [
-    'position:fixed', 'bottom:144px', 'right:16px',
+    'position:fixed', 'top:6px', 'right:220px',
     'background:#1a1a2e', 'border:1px solid #334', 'color:#aaa',
-    'padding:5px 11px', 'border-radius:20px', 'font-size:11px',
+    'padding:3px 10px', 'border-radius:20px', 'font-size:11px',
     'font-family:monospace', 'z-index:9999', 'cursor:pointer',
-    'user-select:none', 'transition:all .2s',
+    'user-select:none', 'transition:all .2s', 'line-height:20px',
   ].join(';');
   badge.title = 'Clique para enviar report agora';
   badge.textContent = '📊 Report Auto';
