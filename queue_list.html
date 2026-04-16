@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Queue List · Staging Inbound</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --accent: #22c55e;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --orange: #ee4d2d;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --teal: #14b8a6;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px; min-height: 100vh;
+  transition: background .2s, color .2s;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 24px; display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
+}
+.header-icon {
+  width: 34px; height: 34px; background: var(--blue);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 17px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 14px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+.theme-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  font-size: 14px; color: var(--muted); transition: all .15s; line-height: 1;
+}
+.theme-btn:hover { border-color: var(--border2); color: var(--text); }
+
+/* ── Zone tabs ── */
+.zone-tabs {
+  padding: 0 24px; display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.zone-tab {
+  background: transparent; border: none; color: var(--muted);
+  padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.zone-tab:hover { color: var(--text); }
+.zone-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.zone-tab .tab-count {
+  background: var(--surface2); color: var(--muted);
+  font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border);
+}
+.zone-tab.active .tab-count {
+  background: rgba(59,130,246,.12); color: var(--blue); border-color: rgba(59,130,246,.25);
+}
+
+/* ── KPIs ── */
+.stats {
+  display: grid; grid-template-columns: repeat(7,1fr);
+  gap: 10px; padding: 14px 24px;
+}
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ── Zone overview cards ── */
+.section { padding: 0 24px 14px; }
+.section-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::before {
+  content: ''; width: 8px; height: 8px; border-radius: 2px;
+  background: var(--blue); display: inline-block;
+}
+
+.zone-ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px; }
+.zone-ov-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; border-top: 3px solid var(--blue);
+}
+.zone-ov-name  { font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: .6px; margin-bottom: 8px; }
+.zone-ov-stats { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+.zone-ov-stat  { display: flex; flex-direction: column; }
+.zone-ov-stat-val { font-size: 18px; font-weight: 700; line-height: 1; }
+.zone-ov-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.occ-bar-row  { display: flex; align-items: center; gap: 8px; }
+.occ-track    { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.occ-fill     { height: 100%; border-radius: 3px; transition: width .4s; }
+.occ-fill.low  { background: var(--green); }
+.occ-fill.mid  { background: var(--yellow); }
+.occ-fill.high { background: var(--red); }
+.occ-pct      { font-size: 11px; font-family: monospace; min-width: 38px; text-align: right; }
+
+/* ── Capacity grid ── */
+.cap-grid-wrap { overflow-x: auto; margin-bottom: 4px; }
+.cap-grid      { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px; min-width: 0; }
+.cap-tile {
+  width: 44px; height: 44px; border-radius: 7px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; cursor: default;
+  border: 1px solid transparent; transition: transform .1s;
+  position: relative;
+}
+.cap-tile:hover { transform: scale(1.12); z-index: 2; }
+.cap-tile .tile-name { font-size: 9px; font-weight: 700; line-height: 1.1; text-align: center; }
+.cap-tile .tile-tos  { font-size: 11px; font-weight: 800; line-height: 1; }
+/* occupied */
+.tile-occ  { background: rgba(34,197,94,.15);  border-color: rgba(34,197,94,.4);  color: var(--green); }
+/* full */
+.tile-full { background: rgba(239,68,68,.15);   border-color: rgba(239,68,68,.4);  color: var(--red); }
+/* empty active */
+.tile-free { background: rgba(59,130,246,.08);  border-color: rgba(59,130,246,.25); color: var(--blue); }
+/* inactive */
+.tile-off  { background: rgba(107,114,128,.08); border-color: rgba(107,114,128,.15); color: var(--muted); }
+
+/* ── Legend ── */
+.legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 0 24px 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.legend-dot  { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.ld-occ  { background: rgba(34,197,94,.3); border: 1px solid rgba(34,197,94,.5); }
+.ld-full { background: rgba(239,68,68,.3); border: 1px solid rgba(239,68,68,.5); }
+.ld-free { background: rgba(59,130,246,.2); border: 1px solid rgba(59,130,246,.4); }
+.ld-off  { background: rgba(107,114,128,.15); border: 1px solid rgba(107,114,128,.3); }
+
+/* ── Table toolbar ── */
+.table-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 0 24px 10px;
+}
+.search-wrap { position: relative; min-width: 200px; max-width: 280px; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-input:focus { border-color: var(--blue); }
+.filter-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+.fpill {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.fpill:hover { border-color: var(--border2); color: var(--text); }
+.fpill.active { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.3); color: var(--blue); }
+.aging-sort-btn {
+  display: flex; align-items: center; gap: 5px; margin-left: auto;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.aging-sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.aging-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
+.aging-sort-btn.asc  { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.25);  color: var(--accent); }
+
+/* ── Main table ── */
+.section-header { display: flex; align-items: center; gap: 12px; padding: 0 24px 10px; }
+.section-title  { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
+.table-wrap { padding: 0 24px 32px; overflow-x: auto; }
+table.main-table { width: 100%; border-collapse: collapse; min-width: 760px; }
+table.main-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+table.main-table th:hover { color: var(--text); }
+table.main-table th.sorted { color: var(--blue); }
+table.main-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
+[data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
+table.main-table tr:hover td { background: rgba(0,0,0,.02); }
+table.main-table tr:last-child td { border-bottom: none; }
+table.main-table tr.row-inactive td { opacity: .45; }
+
+.area-name { font-weight: 600; font-size: 13px; }
+.zone-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+.zone-volumoso { background: rgba(34,197,94,.15);   color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
+.zone-lmh      { background: rgba(59,130,246,.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.zone-cop      { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.zone-linear   { background: rgba(20,184,166,.15);  color: #2dd4bf; border: 1px solid rgba(20,184,166,.25); }
+.zone-buffer   { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.zone-soc      { background: rgba(236,72,153,.15);  color: #f472b6; border: 1px solid rgba(236,72,153,.25); }
+.zone-other    { background: rgba(107,114,128,.15); color: #9ca3af; border: 1px solid rgba(107,114,128,.25); }
+
+.status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.st-occupied { background: rgba(34,197,94,.12);  color: var(--green); border: 1px solid rgba(34,197,94,.25); }
+.st-full     { background: rgba(239,68,68,.12);  color: var(--red);   border: 1px solid rgba(239,68,68,.25); }
+.st-free     { background: rgba(59,130,246,.10); color: var(--blue);  border: 1px solid rgba(59,130,246,.2); }
+.st-inactive { background: rgba(107,114,128,.1); color: var(--muted); border: 1px solid rgba(107,114,128,.2); }
+
+.occ-bar-wrap2 { display: flex; align-items: center; gap: 6px; }
+.occ-bar2  { width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.occ-fill2 { height: 100%; border-radius: 3px; }
+
+.aging-val  { font-family: monospace; font-size: 12px; }
+.aging-ok   { color: var(--muted); }
+.aging-warn { color: var(--yellow); }
+.aging-hot  { color: var(--orange); }
+.aging-crit { color: var(--red); font-weight: 700; }
+
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  padding: 12px 24px; border-top: 1px solid var(--border);
+}
+.pag-info { font-size: 12px; color: var(--muted); }
+.pag-pages { display: flex; align-items: center; gap: 4px; }
+.pag-btn {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 7px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center;
+}
+.pag-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+.pag-btn:disabled { opacity: .35; cursor: default; }
+.pag-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pag-ellipsis { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.pag-size { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.pag-size select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 7px; font-size: 12px; cursor: pointer; outline: none;
+}
+.pag-size select:focus { border-color: var(--blue); }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
+  text-align: left; line-height: 1.8;
+}
+
+@media (max-width: 1200px) { .stats { grid-template-columns: repeat(4,1fr); } }
+@media (max-width: 800px)  { .stats { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">📋</div>
+  <div class="header-title">
+    <h1>Queue List · Staging Inbound</h1>
+    <p>SPX EXPRESS · VISÃO DE CAPACIDADE E DISPONIBILIDADE</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">—</span>
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<div class="zone-tabs" id="zoneTabs"></div>
+
+<!-- KPIs -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Ruas Ativas</div>
+    <div class="stat-value" id="kActive" style="color:var(--blue)">—</div>
+    <div class="stat-sub">status ativo</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Com TOs</div>
+    <div class="stat-value" id="kOccupied" style="color:var(--accent)">—</div>
+    <div class="stat-sub">em uso</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Livres</div>
+    <div class="stat-value" id="kFree" style="color:var(--teal)">—</div>
+    <div class="stat-sub">disponíveis</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Inativas</div>
+    <div class="stat-value" id="kInactive" style="color:var(--muted)">—</div>
+    <div class="stat-sub">fechadas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total TOs</div>
+    <div class="stat-value" id="kTOs" style="color:var(--yellow)">—</div>
+    <div class="stat-sub">em staging</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Ocupação Global</div>
+    <div class="stat-value" id="kOcc" style="color:var(--orange)">—</div>
+    <div class="stat-sub" id="kOccSub">ruas ativas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Maior Aging</div>
+    <div class="stat-value" id="kMaxAging" style="color:var(--red)">—</div>
+    <div class="stat-sub" id="kMaxAgingRua">—</div>
+  </div>
+</div>
+
+<!-- Zone overview -->
+<div class="section" id="zoneOvSection">
+  <div class="section-label">Visão por Zona · Ocupação e Capacidade</div>
+  <div class="zone-ov-grid" id="zoneOvGrid"></div>
+</div>
+
+<!-- Capacity grid -->
+<div class="section">
+  <div class="section-label" style="margin-bottom:6px">Grid de Capacidade · Todas as Ruas</div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot ld-occ"></div>Ocupada (com TOs)</div>
+    <div class="legend-item"><div class="legend-dot ld-full"></div>100% Cheia</div>
+    <div class="legend-item"><div class="legend-dot ld-free"></div>Livre (ativa)</div>
+    <div class="legend-item"><div class="legend-dot ld-off"></div>Inativa</div>
+  </div>
+  <div class="cap-grid-wrap">
+    <div class="cap-grid" id="capGrid"></div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="section-header">
+  <span class="section-title">Detalhamento · Todas as Ruas</span>
+  <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
+</div>
+<div class="table-toolbar">
+  <div class="search-wrap">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar rua, operador...">
+  </div>
+  <div class="filter-pills">
+    <button class="fpill active" data-status="">Todas</button>
+    <button class="fpill" data-status="occupied">Com TOs</button>
+    <button class="fpill" data-status="free">Livres</button>
+    <button class="fpill" data-status="inactive">Inativas</button>
+  </div>
+  <button class="aging-sort-btn desc" id="agingSortBtn">↓ Aging mais antigo</button>
+</div>
+<div class="table-wrap">
+  <div class="empty" id="emptyMsg">
+    <h2>⏳ Aguardando sincronização</h2>
+    <p>O Tampermonkey ainda não enviou dados do Inbound Staging.</p>
+    <code>
+      1. Instale o script <b>stage_in_sync.user.js</b> no Tampermonkey<br>
+      2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
+      3. Aguarde o badge <b>✅ Stage In</b> aparecer
+    </code>
+  </div>
+  <table class="main-table" id="mainTable" style="display:none">
+    <thead>
+      <tr>
+        <th data-col="area_name">Rua <span class="sa"></span></th>
+        <th data-col="staging_group_name">Zona <span class="sa"></span></th>
+        <th>Status</th>
+        <th data-col="to_quantity" style="text-align:center">TOs <span class="sa"></span></th>
+        <th data-col="cage_quantity" style="text-align:center">Gaiolas <span class="sa"></span></th>
+        <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
+        <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
+        <th data-col="staging_duration_time" class="sorted">Aging <span class="sa">↓</span></th>
+        <th data-col="operator">Operador <span class="sa"></span></th>
+      </tr>
+    </thead>
+    <tbody id="mainBody"></tbody>
+  </table>
+  <div class="pagination-bar" id="paginationBar" style="display:none">
+    <span class="pag-info" id="pagInfo"></span>
+    <div class="pag-pages" id="pagPages"></div>
+    <div class="pag-size">
+      Por página:
+      <select id="pagSizeSelect">
+        <option value="10">10</option>
+        <option value="25" selected>25</option>
+        <option value="50">50</option>
+        <option value="0">Todas</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────────
+(function () {
+  const saved = localStorage.getItem('qlTheme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('qlTheme', next);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = t === 'light' ? '🌙' : '☀️';
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function fmtDur(s) {
+  if (!s || s <= 0) return '—';
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+function agingClass(s) {
+  if (!s || s <= 0) return 'aging-ok';
+  const h = s / 3600;
+  if (h < 4)  return 'aging-ok';
+  if (h < 7)  return 'aging-warn';
+  if (h < 13) return 'aging-hot';
+  return 'aging-crit';
+}
+function parseOcc(s) { return parseFloat((s || '0').replace(/\s*%/, '')) || 0; }
+function occFillClass(p) { return p < 60 ? 'low' : p < 85 ? 'mid' : 'high'; }
+function cleanOp(s) {
+  return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
+}
+
+function zoneKey(name) {
+  if (!name) return 'other';
+  const n = name.toLowerCase();
+  if (n.includes('volumoso')) return 'volumoso';
+  if (n.includes('lmh'))      return 'lmh';
+  if (n.includes('cop'))      return 'cop';
+  if (n.includes('linear'))   return 'linear';
+  if (n.includes('buffer'))   return 'buffer';
+  if (n.includes('soc') || n.includes('3pl')) return 'soc';
+  return 'other';
+}
+function zonePillClass(name) { return 'zone-' + zoneKey(name); }
+function zoneShort(name) { return (name || '').replace('ZONA ', '').trim() || '—'; }
+
+const ZONE_COLORS = {
+  volumoso: '#22c55e', lmh: '#3b82f6', cop: '#f59e0b',
+  linear: '#14b8a6', buffer: '#8b5cf6', soc: '#ec4899', other: '#6b7280',
+};
+
+function tileClass(a) {
+  if (a.status === 2) return 'tile-off';
+  if (a.to_quantity === 0) return 'tile-free';
+  const occ = parseOcc(a.occupy_percentage);
+  return occ >= 100 ? 'tile-full' : 'tile-occ';
+}
+function statusPill(a) {
+  if (a.status === 2) return `<span class="status-pill st-inactive">INATIVA</span>`;
+  if (a.to_quantity === 0) return `<span class="status-pill st-free">LIVRE</span>`;
+  const occ = parseOcc(a.occupy_percentage);
+  if (occ >= 100) return `<span class="status-pill st-full">CHEIA</span>`;
+  return `<span class="status-pill st-occupied">OCUPADA</span>`;
+}
+function areaStatus(a) {
+  if (a.status === 2) return 'inactive';
+  if (a.to_quantity === 0) return 'free';
+  return 'occupied';
+}
+
+// ── State ──────────────────────────────────────────────────────────────
+let allAreas    = [];
+let activeZone  = 'all';
+let statusFilter = '';
+let sortCol     = 'staging_duration_time';
+let sortAsc     = false;
+let tableSearch = '';
+let currentPage = 1;
+let pageSize    = 25;
+let lastAt      = null;
+
+// ── Zone tabs ──────────────────────────────────────────────────────────
+function buildZoneTabs() {
+  const zoneMap = {};
+  allAreas.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zoneMap[z]) zoneMap[z] = 0;
+    zoneMap[z] += a.to_quantity || 0;
+  });
+  const tabs = [{ key: 'all', label: 'Todas', count: allAreas.reduce((s,a)=>s+a.to_quantity,0) }];
+  Object.entries(zoneMap).sort((a,b)=>b[1]-a[1]).forEach(([z,c]) => tabs.push({ key: z, label: zoneShort(z), count: c }));
+
+  const el = document.getElementById('zoneTabs');
+  el.innerHTML = tabs.map(t => `
+    <button class="zone-tab${t.key === activeZone ? ' active' : ''}" data-zone="${t.key}">
+      ${t.label}<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>
+    </button>`).join('');
+  el.querySelectorAll('.zone-tab').forEach(btn => {
+    btn.addEventListener('click', () => { activeZone = btn.dataset.zone; currentPage = 1; render(); });
+  });
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────────
+function buildKPIs(areas) {
+  const active   = areas.filter(a => a.status === 1);
+  const occupied = active.filter(a => a.to_quantity > 0);
+  const free     = active.filter(a => a.to_quantity === 0);
+  const inactive = areas.filter(a => a.status === 2);
+  const totalTOs = areas.reduce((s,a) => s + (a.to_quantity || 0), 0);
+  const totalCap = active.reduce((s,a) => s + (a.capacity || 0), 0);
+  const totalTO2 = active.reduce((s,a) => s + (a.to_quantity || 0), 0);
+  const occ      = totalCap > 0 ? (totalTO2 / totalCap * 100) : 0;
+  const maxArea  = occupied.reduce((b,a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
+
+  document.getElementById('kActive').textContent    = active.length;
+  document.getElementById('kOccupied').textContent  = occupied.length;
+  document.getElementById('kFree').textContent      = free.length;
+  document.getElementById('kInactive').textContent  = inactive.length;
+  document.getElementById('kTOs').textContent       = totalTOs.toLocaleString('pt-BR');
+  document.getElementById('kOcc').textContent       = occ.toFixed(1) + '%';
+  document.getElementById('kOccSub').textContent    = `${totalTO2} TOs / ${totalCap} cap`;
+  document.getElementById('kMaxAging').textContent  = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
+  document.getElementById('kMaxAgingRua').textContent = maxArea ? maxArea.area_name : '—';
+}
+
+// ── Zone overview cards ────────────────────────────────────────────────
+function buildZoneOverview(areas) {
+  const zones = {};
+  areas.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { name: z, active: 0, occupied: 0, free: 0, inactive: 0, tos: 0, cap: 0 };
+    if (a.status === 2) { zones[z].inactive++; return; }
+    zones[z].active++;
+    zones[z].cap += a.capacity || 0;
+    zones[z].tos += a.to_quantity || 0;
+    if (a.to_quantity > 0) zones[z].occupied++;
+    else zones[z].free++;
+  });
+
+  const sorted = Object.values(zones).sort((a,b) => b.tos - a.tos);
+  const color  = z => ZONE_COLORS[zoneKey(z.name)] || '#6b7280';
+  const occ    = z => z.cap > 0 ? (z.tos / z.cap * 100) : 0;
+
+  document.getElementById('zoneOvGrid').innerHTML = sorted.map(z => {
+    const p = occ(z);
+    const fc = occFillClass(p);
+    return `
+    <div class="zone-ov-card" style="border-top-color:${color(z)}">
+      <div class="zone-ov-name" style="color:${color(z)}">${zoneShort(z.name)}</div>
+      <div class="zone-ov-stats">
+        <div class="zone-ov-stat">
+          <span class="zone-ov-stat-val" style="color:var(--accent)">${z.tos}</span>
+          <span class="zone-ov-stat-lbl">TOs</span>
+        </div>
+        <div class="zone-ov-stat">
+          <span class="zone-ov-stat-val" style="color:var(--blue)">${z.occupied}</span>
+          <span class="zone-ov-stat-lbl">Ocupadas</span>
+        </div>
+        <div class="zone-ov-stat">
+          <span class="zone-ov-stat-val" style="color:var(--teal)">${z.free}</span>
+          <span class="zone-ov-stat-lbl">Livres</span>
+        </div>
+        <div class="zone-ov-stat">
+          <span class="zone-ov-stat-val" style="color:var(--muted)">${z.inactive}</span>
+          <span class="zone-ov-stat-lbl">Inativas</span>
+        </div>
+      </div>
+      <div class="occ-bar-row">
+        <div class="occ-track"><div class="occ-fill ${fc}" style="width:${Math.min(p,100).toFixed(1)}%"></div></div>
+        <span class="occ-pct">${p.toFixed(1)}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Capacity grid ──────────────────────────────────────────────────────
+function buildCapGrid(areas) {
+  // Group by zone, sort zones by TOs desc, then areas within zone by name
+  const zones = {};
+  areas.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zones[z]) zones[z] = [];
+    zones[z].push(a);
+  });
+  Object.values(zones).forEach(list => list.sort((a,b) => a.area_name.localeCompare(b.area_name)));
+
+  const sortedZones = Object.entries(zones).sort((a,b) => {
+    const tosA = a[1].reduce((s,x)=>s+x.to_quantity,0);
+    const tosB = b[1].reduce((s,x)=>s+x.to_quantity,0);
+    return tosB - tosA;
+  });
+
+  const tiles = sortedZones.map(([zName, list]) => {
+    const color = ZONE_COLORS[zoneKey(zName)] || '#6b7280';
+    const ts = list.map(a => {
+      const cls = tileClass(a);
+      const dur = a.staging_duration_time;
+      const agCls = agingClass(dur);
+      const tip = `${a.area_name} · ${a.to_quantity}/${a.capacity} TOs · ${fmtDur(dur)} · ${cleanOp(a.operator)}`;
+      return `<div class="cap-tile ${cls}" title="${tip}">
+        <span class="tile-name">${a.area_name}</span>
+        ${a.to_quantity > 0 ? `<span class="tile-tos">${a.to_quantity}</span>` : ''}
+      </div>`;
+    }).join('');
+
+    return `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;width:100%">
+      <div style="width:100%;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${color};margin-bottom:2px">${zoneShort(zName)}</div>
+      ${ts}
+    </div>`;
+  }).join('');
+
+  document.getElementById('capGrid').innerHTML = tiles;
+}
+
+// ── Filtered / sorted areas ────────────────────────────────────────────
+function filteredAreas() {
+  let areas = activeZone === 'all' ? allAreas
+    : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
+  return areas;
+}
+
+function sortedAreas(areas) {
+  return [...areas].sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'occupy_pct') { av = parseOcc(a.occupy_percentage); bv = parseOcc(b.occupy_percentage); }
+    else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
+      av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    } else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
+    return sortAsc ? av - bv : bv - av;
+  });
+}
+
+// ── Main table ──────────────────────────────────────────────────────────
+function buildMainTable(areas) {
+  if (allAreas.length === 0) {
+    document.getElementById('mainTable').style.display     = 'none';
+    document.getElementById('emptyMsg').style.display      = '';
+    document.getElementById('paginationBar').style.display = 'none';
+    return;
+  }
+  document.getElementById('mainTable').style.display = '';
+  document.getElementById('emptyMsg').style.display  = 'none';
+
+  const q = tableSearch.toLowerCase();
+  let vis = sortedAreas(areas);
+  if (q)           vis = vis.filter(a => a.area_name.toLowerCase().includes(q) || cleanOp(a.operator).toLowerCase().includes(q) || (a.staging_group_name||'').toLowerCase().includes(q));
+  if (statusFilter) vis = vis.filter(a => areaStatus(a) === statusFilter);
+
+  const total      = vis.length;
+  const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  document.getElementById('tableCount').textContent = `${total} ruas`;
+
+  const start = pageSize > 0 ? (currentPage - 1) * pageSize : 0;
+  const page  = pageSize > 0 ? vis.slice(start, start + pageSize) : vis;
+
+  document.getElementById('mainBody').innerHTML = page.map(a => {
+    const occ      = parseOcc(a.occupy_percentage);
+    const inactive = a.status === 2;
+    return `<tr class="${inactive ? 'row-inactive' : ''}">
+      <td class="area-name">${a.area_name}</td>
+      <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+      <td>${statusPill(a)}</td>
+      <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity>0?'700':'400'}">${a.to_quantity||0}</td>
+      <td style="font-family:monospace;text-align:center;color:${a.cage_quantity>0?'var(--yellow)':'var(--muted)'}">${a.cage_quantity||0}</td>
+      <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
+      <td>
+        <div class="occ-bar-wrap2">
+          <div class="occ-bar2"><div class="occ-fill2 ${occFillClass(occ)}" style="width:${Math.min(occ,100).toFixed(1)}%"></div></div>
+          <span style="font-size:11px;font-family:monospace">${a.occupy_percentage||'0 %'}</span>
+        </div>
+      </td>
+      <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${cleanOp(a.operator)}</td>
+    </tr>`;
+  }).join('');
+
+  buildPaginationBar(total, currentPage, pageSize);
+}
+
+// ── Pagination ──────────────────────────────────────────────────────────
+function buildPaginationBar(total, page, size) {
+  const bar = document.getElementById('paginationBar');
+  if (total === 0 || size === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+  const totalPages = Math.ceil(total / size);
+  const from = (page - 1) * size + 1, to = Math.min(page * size, total);
+  document.getElementById('pagInfo').textContent = `Mostrando ${from}–${to} de ${total} ruas`;
+
+  const mkBtn = (label, p, active = false, disabled = false) =>
+    `<button class="pag-btn${active?' active':''}" data-page="${p}" ${disabled?'disabled':''}>${label}</button>`;
+  let btns = mkBtn('‹', page-1, false, page===1);
+  if (totalPages <= 7) {
+    for (let i=1; i<=totalPages; i++) btns += mkBtn(i, i, i===page);
+  } else {
+    btns += mkBtn(1, 1, page===1);
+    if (page > 3) btns += `<span class="pag-ellipsis">…</span>`;
+    const s = Math.max(2,page-1), e = Math.min(totalPages-1,page+1);
+    for (let i=s; i<=e; i++) btns += mkBtn(i,i,i===page);
+    if (page < totalPages-2) btns += `<span class="pag-ellipsis">…</span>`;
+    btns += mkBtn(totalPages, totalPages, page===totalPages);
+  }
+  btns += mkBtn('›', page+1, false, page===totalPages);
+  document.getElementById('pagPages').innerHTML = btns;
+  document.getElementById('pagPages').querySelectorAll('.pag-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => { currentPage = parseInt(btn.dataset.page); buildMainTable(filteredAreas()); });
+  });
+}
+
+// ── Sort headers ────────────────────────────────────────────────────────
+document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = false; }
+    document.querySelectorAll('table.main-table th').forEach(t => { t.classList.remove('sorted'); t.querySelector('.sa') && (t.querySelector('.sa').textContent=''); });
+    th.classList.add('sorted');
+    if (th.querySelector('.sa')) th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
+    updateAgingSortBtn(); currentPage = 1; buildMainTable(filteredAreas());
+  });
+});
+
+// ── Status filter pills ────────────────────────────────────────────────
+document.querySelectorAll('.fpill[data-status]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    statusFilter = btn.dataset.status;
+    document.querySelectorAll('.fpill[data-status]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPage = 1; buildMainTable(filteredAreas());
+  });
+});
+
+// ── Search ──────────────────────────────────────────────────────────────
+document.getElementById('tableSearch').addEventListener('input', e => {
+  tableSearch = e.target.value; currentPage = 1; buildMainTable(filteredAreas());
+});
+
+// ── Page size ──────────────────────────────────────────────────────────
+document.getElementById('pagSizeSelect').addEventListener('change', e => {
+  pageSize = parseInt(e.target.value) || 0; currentPage = 1; buildMainTable(filteredAreas());
+});
+
+// ── Aging sort toggle ──────────────────────────────────────────────────
+function updateAgingSortBtn() {
+  const btn = document.getElementById('agingSortBtn');
+  if (sortCol !== 'staging_duration_time') { btn.className = 'aging-sort-btn'; btn.textContent = '⇅ Aging'; return; }
+  if (sortAsc) { btn.textContent = '↑ Aging mais novo';  btn.className = 'aging-sort-btn asc'; }
+  else         { btn.textContent = '↓ Aging mais antigo'; btn.className = 'aging-sort-btn desc'; }
+}
+document.getElementById('agingSortBtn').addEventListener('click', () => {
+  sortCol = 'staging_duration_time'; sortAsc = !sortAsc;
+  currentPage = 1; updateAgingSortBtn(); buildMainTable(filteredAreas());
+});
+
+// ── Render ──────────────────────────────────────────────────────────────
+function render() {
+  const areas = filteredAreas();
+  buildZoneTabs();
+  buildKPIs(areas);
+  buildZoneOverview(areas);
+  buildCapGrid(areas);
+  buildMainTable(areas);
+}
+
+// ── Load ────────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch('/api/stage-in');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error || data.fetchedAt === lastAt) return;
+    lastAt   = data.fetchedAt;
+    allAreas = data.list || [];
+
+    const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('lastUpdated').textContent = ts;
+    document.getElementById('liveDot').className       = 'live-dot on';
+    document.getElementById('metaTag').textContent     = `inbound · ${allAreas.length} ruas · ${ts}`;
+    render();
+  } catch (e) {}
+}
+
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>
