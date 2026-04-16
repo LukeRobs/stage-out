@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Queue List · Staging Inbound</title>
+<title>Queue List · Veículos em Fila</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -15,7 +15,6 @@
   --border2: #353849;
   --text: #e2e8f0;
   --muted: #6b7280;
-  --accent: #22c55e;
   --green: #22c55e;
   --yellow: #f59e0b;
   --orange: #ee4d2d;
@@ -23,273 +22,148 @@
   --blue: #3b82f6;
   --purple: #8b5cf6;
   --teal: #14b8a6;
+  --accent: #3b82f6;
   --radius: 10px;
   --shadow: 0 2px 8px rgba(0,0,0,.4);
 }
 [data-theme="light"] {
-  --bg: #f1f5f9;
-  --surface: #ffffff;
-  --surface2: #f8fafc;
-  --border: #e2e8f0;
-  --border2: #cbd5e1;
-  --text: #0f172a;
-  --muted: #64748b;
-  --shadow: 0 2px 8px rgba(0,0,0,.08);
+  --bg: #f1f5f9; --surface: #ffffff; --surface2: #f8fafc;
+  --border: #e2e8f0; --border2: #cbd5e1; --text: #0f172a;
+  --muted: #64748b; --shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
-body {
-  background: var(--bg); color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  font-size: 13px; min-height: 100vh;
-  transition: background .2s, color .2s;
-}
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; min-height: 100vh; transition: background .2s, color .2s; }
 
 /* ── Header ── */
-.header {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 12px 24px; display: flex; align-items: center; gap: 14px;
-  position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
-}
-.header-icon {
-  width: 34px; height: 34px; background: var(--blue);
-  border-radius: 8px; display: flex; align-items: center;
-  justify-content: center; font-size: 17px; flex-shrink: 0;
-}
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.header-icon { width: 34px; height: 34px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
 .header-title h1 { font-size: 14px; font-weight: 700; }
 .header-title p  { font-size: 11px; color: var(--muted); }
-.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
 .live-dot.on { background: var(--green); animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-.meta-tag {
-  font-size: 11px; color: var(--muted);
-  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
-  border: 1px solid var(--border);
-}
-.theme-btn {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 5px 10px; cursor: pointer;
-  font-size: 14px; color: var(--muted); transition: all .15s; line-height: 1;
-}
+.meta-tag { font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border); }
+.theme-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 14px; color: var(--muted); transition: all .15s; line-height: 1; }
 .theme-btn:hover { border-color: var(--border2); color: var(--text); }
 
-/* ── Zone tabs ── */
-.zone-tabs {
-  padding: 0 24px; display: flex; gap: 4px; flex-wrap: wrap;
-  border-bottom: 1px solid var(--border); background: var(--surface);
-}
-.zone-tab {
-  background: transparent; border: none; color: var(--muted);
-  padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: all .15s; display: flex; align-items: center; gap: 5px;
-}
+/* ── Status tabs ── */
+.zone-tabs { padding: 0 24px; display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--surface); }
+.zone-tab { background: transparent; border: none; color: var(--muted); padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; display: flex; align-items: center; gap: 5px; }
 .zone-tab:hover { color: var(--text); }
 .zone-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
-.zone-tab .tab-count {
-  background: var(--surface2); color: var(--muted);
-  font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border);
-}
-.zone-tab.active .tab-count {
-  background: rgba(59,130,246,.12); color: var(--blue); border-color: rgba(59,130,246,.25);
-}
+.zone-tab.active.t-pending  { color: var(--yellow);  border-bottom-color: var(--yellow); }
+.zone-tab.active.t-inbound  { color: var(--green);   border-bottom-color: var(--green); }
+.zone-tab.active.t-outbound { color: var(--purple);  border-bottom-color: var(--purple); }
+.zone-tab.active.t-hold     { color: var(--orange);  border-bottom-color: var(--orange); }
+.tab-count { background: var(--surface2); color: var(--muted); font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); }
+.zone-tab.active .tab-count { background: rgba(59,130,246,.12); color: var(--blue); border-color: rgba(59,130,246,.25); }
 
 /* ── KPIs ── */
-.stats {
-  display: grid; grid-template-columns: repeat(7,1fr);
-  gap: 10px; padding: 14px 24px;
-}
-.stat {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 12px 16px;
-}
+.stats { display: grid; grid-template-columns: repeat(7,1fr); gap: 10px; padding: 14px 24px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
 .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-/* ── Zone overview cards ── */
-.section { padding: 0 24px 14px; }
-.section-label {
-  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
-  color: var(--muted); font-weight: 600; margin-bottom: 10px;
-  display: flex; align-items: center; gap: 8px;
-}
-.section-label::before {
-  content: ''; width: 8px; height: 8px; border-radius: 2px;
-  background: var(--blue); display: inline-block;
-}
+/* ── Panels row ── */
+.panel-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
 
-.zone-ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px; }
-.zone-ov-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 16px; border-top: 3px solid var(--blue);
-}
-.zone-ov-name  { font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: .6px; margin-bottom: 8px; }
-.zone-ov-stats { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-.zone-ov-stat  { display: flex; flex-direction: column; }
-.zone-ov-stat-val { font-size: 18px; font-weight: 700; line-height: 1; }
-.zone-ov-stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
-.occ-bar-row  { display: flex; align-items: center; gap: 8px; }
-.occ-track    { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
-.occ-fill     { height: 100%; border-radius: 3px; transition: width .4s; }
-.occ-fill.low  { background: var(--green); }
-.occ-fill.mid  { background: var(--yellow); }
-.occ-fill.high { background: var(--red); }
-.occ-pct      { font-size: 11px; font-family: monospace; min-width: 38px; text-align: right; }
+/* Flow row */
+.flow-row { display: flex; align-items: center; gap: 6px; padding: 0 24px 14px; flex-wrap: wrap; }
+.flow-step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 100px; }
+.flow-val   { font-size: 22px; font-weight: 800; }
+.flow-lbl   { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+.flow-arrow { font-size: 18px; color: var(--muted); flex-shrink: 0; }
 
-/* ── Capacity grid ── */
-.cap-grid-wrap { overflow-x: auto; margin-bottom: 4px; }
-.cap-grid      { display: flex; flex-wrap: wrap; gap: 5px; padding: 2px; min-width: 0; }
-.cap-tile {
-  width: 44px; height: 44px; border-radius: 7px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  font-size: 9px; font-weight: 700; cursor: default;
-  border: 1px solid transparent; transition: transform .1s;
-  position: relative;
-}
-.cap-tile:hover { transform: scale(1.12); z-index: 2; }
-.cap-tile .tile-name { font-size: 9px; font-weight: 700; line-height: 1.1; text-align: center; }
-.cap-tile .tile-tos  { font-size: 11px; font-weight: 800; line-height: 1; }
-/* occupied */
-.tile-occ  { background: rgba(34,197,94,.15);  border-color: rgba(34,197,94,.4);  color: var(--green); }
-/* full */
-.tile-full { background: rgba(239,68,68,.15);   border-color: rgba(239,68,68,.4);  color: var(--red); }
-/* empty active */
-.tile-free { background: rgba(59,130,246,.08);  border-color: rgba(59,130,246,.25); color: var(--blue); }
-/* inactive */
-.tile-off  { background: rgba(107,114,128,.08); border-color: rgba(107,114,128,.15); color: var(--muted); }
+/* Agency bars */
+.ag-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.ag-row:last-child { border-bottom: none; }
+.ag-label { min-width: 130px; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
+.ag-bar { height: 100%; border-radius: 4px; background: var(--blue); }
+.ag-val { min-width: 90px; text-align: right; font-size: 11px; font-family: monospace; color: var(--muted); }
 
-/* ── Legend ── */
-.legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 0 24px 12px; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-.legend-dot  { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.ld-occ  { background: rgba(34,197,94,.3); border: 1px solid rgba(34,197,94,.5); }
-.ld-full { background: rgba(239,68,68,.3); border: 1px solid rgba(239,68,68,.5); }
-.ld-free { background: rgba(59,130,246,.2); border: 1px solid rgba(59,130,246,.4); }
-.ld-off  { background: rgba(107,114,128,.15); border: 1px solid rgba(107,114,128,.3); }
+/* Dock list */
+.dock-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); gap: 8px; }
+.dock-item:last-child { border-bottom: none; }
+.dock-name { font-size: 12px; font-weight: 600; }
+.dock-sub  { font-size: 10px; color: var(--muted); }
 
 /* ── Table toolbar ── */
-.table-toolbar {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  padding: 0 24px 10px;
-}
-.search-wrap { position: relative; min-width: 200px; max-width: 280px; }
-.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.search-input {
-  width: 100%; background: var(--surface); border: 1px solid var(--border);
-  color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px;
-  font-size: 12px; outline: none; transition: border-color .15s;
-}
-.search-input:focus { border-color: var(--blue); }
-.filter-pills { display: flex; gap: 5px; flex-wrap: wrap; }
-.fpill {
-  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
-  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
-  cursor: pointer; transition: all .15s;
-}
-.fpill:hover { border-color: var(--border2); color: var(--text); }
-.fpill.active { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.3); color: var(--blue); }
-.aging-sort-btn {
-  display: flex; align-items: center; gap: 5px; margin-left: auto;
-  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
-  padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all .15s; white-space: nowrap;
-}
-.aging-sort-btn:hover { border-color: var(--border2); color: var(--text); }
-.aging-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
-.aging-sort-btn.asc  { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.25);  color: var(--accent); }
-
-/* ── Main table ── */
 .section-header { display: flex; align-items: center; gap: 12px; padding: 0 24px 10px; }
 .section-title  { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
+.table-toolbar  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
+.search-wrap { position: relative; min-width: 200px; max-width: 300px; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px; font-size: 12px; outline: none; transition: border-color .15s; }
+.search-input:focus { border-color: var(--blue); }
+.filter-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+.fpill { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.fpill:hover { border-color: var(--border2); color: var(--text); }
+.fpill.active { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.3); color: var(--blue); }
+.wait-sort-btn { display: flex; align-items: center; gap: 5px; margin-left: auto; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.wait-sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.wait-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
+.wait-sort-btn.asc  { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.25);  color: var(--green); }
+
+/* ── Main table ── */
 .table-wrap { padding: 0 24px 32px; overflow-x: auto; }
-table.main-table { width: 100%; border-collapse: collapse; min-width: 760px; }
-table.main-table th {
-  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
-  color: var(--muted); padding: 8px 12px; text-align: left;
-  border-bottom: 1px solid var(--border); font-weight: 500;
-  cursor: pointer; user-select: none; white-space: nowrap;
-}
+table.main-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap; }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
 table.main-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
 table.main-table tr:hover td { background: rgba(0,0,0,.02); }
 table.main-table tr:last-child td { border-bottom: none; }
-table.main-table tr.row-inactive td { opacity: .45; }
 
-.area-name { font-weight: 600; font-size: 13px; }
-.zone-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
-.zone-volumoso { background: rgba(34,197,94,.15);   color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
-.zone-lmh      { background: rgba(59,130,246,.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
-.zone-cop      { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
-.zone-linear   { background: rgba(20,184,166,.15);  color: #2dd4bf; border: 1px solid rgba(20,184,166,.25); }
-.zone-buffer   { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
-.zone-soc      { background: rgba(236,72,153,.15);  color: #f472b6; border: 1px solid rgba(236,72,153,.25); }
-.zone-other    { background: rgba(107,114,128,.15); color: #9ca3af; border: 1px solid rgba(107,114,128,.25); }
+/* Status pills */
+.st-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.st-pending  { background: rgba(245,158,11,.12); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); }
+.st-assigned { background: rgba(139,92,246,.12); color: var(--purple); border: 1px solid rgba(139,92,246,.25); }
+.st-inbound  { background: rgba(34,197,94,.12);  color: var(--green);  border: 1px solid rgba(34,197,94,.25); }
+.st-outbound { background: rgba(139,92,246,.12); color: var(--purple); border: 1px solid rgba(139,92,246,.25); }
+.st-hold     { background: rgba(238,77,45,.12);  color: var(--orange); border: 1px solid rgba(238,77,45,.25); }
 
-.status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
-.st-occupied { background: rgba(34,197,94,.12);  color: var(--green); border: 1px solid rgba(34,197,94,.25); }
-.st-full     { background: rgba(239,68,68,.12);  color: var(--red);   border: 1px solid rgba(239,68,68,.25); }
-.st-free     { background: rgba(59,130,246,.10); color: var(--blue);  border: 1px solid rgba(59,130,246,.2); }
-.st-inactive { background: rgba(107,114,128,.1); color: var(--muted); border: 1px solid rgba(107,114,128,.2); }
-
-.occ-bar-wrap2 { display: flex; align-items: center; gap: 6px; }
-.occ-bar2  { width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-.occ-fill2 { height: 100%; border-radius: 3px; }
-
-.aging-val  { font-family: monospace; font-size: 12px; }
-.aging-ok   { color: var(--muted); }
-.aging-warn { color: var(--yellow); }
-.aging-hot  { color: var(--orange); }
-.aging-crit { color: var(--red); font-weight: 700; }
+/* Wait time */
+.wait-ok   { color: var(--green); font-family: monospace; }
+.wait-mid  { color: var(--yellow); font-family: monospace; }
+.wait-high { color: var(--orange); font-family: monospace; font-weight: 700; }
+.wait-crit { color: var(--red); font-family: monospace; font-weight: 700; }
 
 /* ── Pagination ── */
-.pagination-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 10px;
-  padding: 12px 24px; border-top: 1px solid var(--border);
-}
+.pagination-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 24px; border-top: 1px solid var(--border); }
 .pag-info { font-size: 12px; color: var(--muted); }
 .pag-pages { display: flex; align-items: center; gap: 4px; }
-.pag-btn {
-  min-width: 32px; height: 32px; padding: 0 8px;
-  background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text); border-radius: 7px; font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center;
-}
+.pag-btn { min-width: 32px; height: 32px; padding: 0 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center; }
 .pag-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
 .pag-btn:disabled { opacity: .35; cursor: default; }
 .pag-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 .pag-ellipsis { font-size: 12px; color: var(--muted); padding: 0 4px; }
 .pag-size { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.pag-size select {
-  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-  padding: 4px 8px; border-radius: 7px; font-size: 12px; cursor: pointer; outline: none;
-}
+.pag-size select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 7px; font-size: 12px; cursor: pointer; outline: none; }
 .pag-size select:focus { border-color: var(--blue); }
 
 /* ── Empty ── */
 .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
-.empty code {
-  display: inline-block; background: var(--surface); border: 1px solid var(--border);
-  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
-  text-align: left; line-height: 1.8;
-}
+.empty code { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px; text-align: left; line-height: 1.8; }
 
-@media (max-width: 1200px) { .stats { grid-template-columns: repeat(4,1fr); } }
-@media (max-width: 800px)  { .stats { grid-template-columns: repeat(2,1fr); } }
+@media (max-width:1200px) { .stats { grid-template-columns: repeat(4,1fr); } .panel-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } .panel-row { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="header-icon">📋</div>
+  <div class="header-icon">🚛</div>
   <div class="header-title">
-    <h1>Queue List · Staging Inbound</h1>
-    <p>SPX EXPRESS · VISÃO DE CAPACIDADE E DISPONIBILIDADE</p>
+    <h1>Queue List · Veículos em Fila</h1>
+    <p>SPX EXPRESS · MONITORAMENTO DE DOCAS E TEMPOS DE ESPERA</p>
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">—</span>
@@ -301,107 +175,81 @@ table.main-table tr.row-inactive td { opacity: .45; }
   </div>
 </header>
 
-<div class="zone-tabs" id="zoneTabs"></div>
+<!-- Status tabs -->
+<div class="zone-tabs" id="statusTabs">
+  <button class="zone-tab active" data-filter="all">Todos<span class="tab-count" id="tc-all">—</span></button>
+  <button class="zone-tab t-pending"  data-filter="pending">Aguardando<span class="tab-count" id="tc-pending">—</span></button>
+  <button class="zone-tab t-inbound"  data-filter="inbound">Na Doca Inbound<span class="tab-count" id="tc-inbound">—</span></button>
+  <button class="zone-tab t-outbound" data-filter="outbound">Na Doca Outbound<span class="tab-count" id="tc-outbound">—</span></button>
+  <button class="zone-tab t-hold"     data-filter="hold">Em Espera<span class="tab-count" id="tc-hold">—</span></button>
+</div>
 
 <!-- KPIs -->
 <div class="stats">
-  <div class="stat">
-    <div class="stat-label">Ruas Ativas</div>
-    <div class="stat-value" id="kActive" style="color:var(--blue)">—</div>
-    <div class="stat-sub">status ativo</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Com TOs</div>
-    <div class="stat-value" id="kOccupied" style="color:var(--accent)">—</div>
-    <div class="stat-sub">em uso</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Livres</div>
-    <div class="stat-value" id="kFree" style="color:var(--teal)">—</div>
-    <div class="stat-sub">disponíveis</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Inativas</div>
-    <div class="stat-value" id="kInactive" style="color:var(--muted)">—</div>
-    <div class="stat-sub">fechadas</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Total TOs</div>
-    <div class="stat-value" id="kTOs" style="color:var(--yellow)">—</div>
-    <div class="stat-sub">em staging</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Ocupação Global</div>
-    <div class="stat-value" id="kOcc" style="color:var(--orange)">—</div>
-    <div class="stat-sub" id="kOccSub">ruas ativas</div>
-  </div>
-  <div class="stat">
-    <div class="stat-label">Maior Aging</div>
-    <div class="stat-value" id="kMaxAging" style="color:var(--red)">—</div>
-    <div class="stat-sub" id="kMaxAgingRua">—</div>
-  </div>
+  <div class="stat"><div class="stat-label">Total Ativo</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">na fila agora</div></div>
+  <div class="stat"><div class="stat-label">Aguardando</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">sem doca</div></div>
+  <div class="stat"><div class="stat-label">Doca Inbound</div><div class="stat-value" id="kInbound" style="color:var(--green)">—</div><div class="stat-sub">descarregando</div></div>
+  <div class="stat"><div class="stat-label">Doca Outbound</div><div class="stat-value" id="kOutbound" style="color:var(--purple)">—</div><div class="stat-sub">cross-dock/carregando</div></div>
+  <div class="stat"><div class="stat-label">Em Espera</div><div class="stat-value" id="kHold" style="color:var(--orange)">—</div><div class="stat-sub">on hold</div></div>
+  <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="kPkgs" style="color:var(--teal)">—</div><div class="stat-sub">na fila ativa</div></div>
+  <div class="stat"><div class="stat-label">Maior Espera</div><div class="stat-value" id="kMaxWait" style="color:var(--red)">—</div><div class="stat-sub" id="kMaxWaitSub">—</div></div>
 </div>
 
-<!-- Zone overview -->
-<div class="section" id="zoneOvSection">
-  <div class="section-label">Visão por Zona · Ocupação e Capacidade</div>
-  <div class="zone-ov-grid" id="zoneOvGrid"></div>
-</div>
-
-<!-- Capacity grid -->
-<div class="section">
-  <div class="section-label" style="margin-bottom:6px">Grid de Capacidade · Todas as Ruas</div>
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot ld-occ"></div>Ocupada (com TOs)</div>
-    <div class="legend-item"><div class="legend-dot ld-full"></div>100% Cheia</div>
-    <div class="legend-item"><div class="legend-dot ld-free"></div>Livre (ativa)</div>
-    <div class="legend-item"><div class="legend-dot ld-off"></div>Inativa</div>
+<!-- Panels -->
+<div class="panel-row">
+  <!-- Agency breakdown -->
+  <div class="panel">
+    <div class="panel-title">Agências · Veículos Ativos</div>
+    <div id="agencyBars"><div style="color:var(--muted);text-align:center;padding:20px">—</div></div>
   </div>
-  <div class="cap-grid-wrap">
-    <div class="cap-grid" id="capGrid"></div>
+
+  <!-- Docas ocupadas -->
+  <div class="panel">
+    <div class="panel-title">Docas Ocupadas · Inbound vs Outbound</div>
+    <div id="dockList"><div style="color:var(--muted);text-align:center;padding:20px">—</div></div>
+  </div>
+
+  <!-- Fluxo de espera -->
+  <div class="panel">
+    <div class="panel-title">Distribuição · Tempo de Espera</div>
+    <div id="waitHist"><div style="color:var(--muted);text-align:center;padding:20px">—</div></div>
   </div>
 </div>
 
 <!-- Table -->
 <div class="section-header">
-  <span class="section-title">Detalhamento · Todas as Ruas</span>
+  <span class="section-title">Detalhamento</span>
   <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
 </div>
 <div class="table-toolbar">
   <div class="search-wrap">
     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar rua, operador...">
+    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar motorista, placa, agência...">
   </div>
-  <div class="filter-pills">
-    <button class="fpill active" data-status="">Todas</button>
-    <button class="fpill" data-status="occupied">Com TOs</button>
-    <button class="fpill" data-status="free">Livres</button>
-    <button class="fpill" data-status="inactive">Inativas</button>
-  </div>
-  <button class="aging-sort-btn desc" id="agingSortBtn">↓ Aging mais antigo</button>
+  <button class="wait-sort-btn desc" id="waitSortBtn">↓ Maior espera</button>
 </div>
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
     <h2>⏳ Aguardando sincronização</h2>
-    <p>O Tampermonkey ainda não enviou dados do Inbound Staging.</p>
+    <p>O Tampermonkey ainda não enviou dados da Queue List.</p>
     <code>
-      1. Instale o script <b>stage_in_sync.user.js</b> no Tampermonkey<br>
+      1. Instale o script <b>queue_list_sync.user.js</b> no Tampermonkey<br>
       2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
-      3. Aguarde o badge <b>✅ Stage In</b> aparecer
+      3. Aguarde o badge <b>🚛 Queue List</b> aparecer
     </code>
   </div>
   <table class="main-table" id="mainTable" style="display:none">
     <thead>
       <tr>
-        <th data-col="area_name">Rua <span class="sa"></span></th>
-        <th data-col="staging_group_name">Zona <span class="sa"></span></th>
+        <th data-col="queue_number">Fila <span class="sa"></span></th>
+        <th data-col="driver_name">Motorista <span class="sa"></span></th>
+        <th data-col="agency">Agência <span class="sa"></span></th>
+        <th data-col="vehicle_number">Placa <span class="sa"></span></th>
         <th>Status</th>
-        <th data-col="to_quantity" style="text-align:center">TOs <span class="sa"></span></th>
-        <th data-col="cage_quantity" style="text-align:center">Gaiolas <span class="sa"></span></th>
-        <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
-        <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
-        <th data-col="staging_duration_time" class="sorted">Aging <span class="sa">↓</span></th>
-        <th data-col="operator">Operador <span class="sa"></span></th>
+        <th data-col="dockName">Doca <span class="sa"></span></th>
+        <th data-col="waiting_time" class="sorted">Espera <span class="sa">↓</span></th>
+        <th data-col="order_quantity" style="text-align:right">Pacotes <span class="sa"></span></th>
+        <th data-col="add_to_queue_time">Entrada <span class="sa"></span></th>
       </tr>
     </thead>
     <tbody id="mainBody"></tbody>
@@ -413,7 +261,7 @@ table.main-table tr.row-inactive td { opacity: .45; }
       Por página:
       <select id="pagSizeSelect">
         <option value="10">10</option>
-        <option value="25" selected>25</option>
+        <option value="20" selected>20</option>
         <option value="50">50</option>
         <option value="0">Todas</option>
       </select>
@@ -440,230 +288,226 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function fmtDur(s) {
-  if (!s || s <= 0) return '—';
-  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+function fmtWait(min) {
+  if (!min || min <= 0) return '—';
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return `${h}h${String(m).padStart(2,'0')}m`;
 }
-function agingClass(s) {
-  if (!s || s <= 0) return 'aging-ok';
-  const h = s / 3600;
-  if (h < 4)  return 'aging-ok';
-  if (h < 7)  return 'aging-warn';
-  if (h < 13) return 'aging-hot';
-  return 'aging-crit';
+function waitClass(min) {
+  if (!min || min <= 0) return 'wait-ok';
+  if (min < 30)  return 'wait-ok';
+  if (min < 60)  return 'wait-mid';
+  if (min < 120) return 'wait-high';
+  return 'wait-crit';
 }
-function parseOcc(s) { return parseFloat((s || '0').replace(/\s*%/, '')) || 0; }
-function occFillClass(p) { return p < 60 ? 'low' : p < 85 ? 'mid' : 'high'; }
-function cleanOp(s) {
-  return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
+function fmtTs(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
+function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
 
-function zoneKey(name) {
-  if (!name) return 'other';
-  const n = name.toLowerCase();
-  if (n.includes('volumoso')) return 'volumoso';
-  if (n.includes('lmh'))      return 'lmh';
-  if (n.includes('cop'))      return 'cop';
-  if (n.includes('linear'))   return 'linear';
-  if (n.includes('buffer'))   return 'buffer';
-  if (n.includes('soc') || n.includes('3pl')) return 'soc';
+// ── Status / dock helpers ──────────────────────────────────────────────
+// queue_status: 1=pending, 2=assigned, 3=occupied, 4=on_hold
+function dockType(item) {
+  if (item.queue_status !== 3) return 'none';
+  const dn = (item.occupied_dock_name || '').toLowerCase();
+  if (dn.includes('inbound'))  return 'inbound';
+  if (dn.includes('outbound')) return 'outbound';
   return 'other';
 }
-function zonePillClass(name) { return 'zone-' + zoneKey(name); }
-function zoneShort(name) { return (name || '').replace('ZONA ', '').trim() || '—'; }
-
-const ZONE_COLORS = {
-  volumoso: '#22c55e', lmh: '#3b82f6', cop: '#f59e0b',
-  linear: '#14b8a6', buffer: '#8b5cf6', soc: '#ec4899', other: '#6b7280',
-};
-
-function tileClass(a) {
-  if (a.status === 2) return 'tile-off';
-  if (a.to_quantity === 0) return 'tile-free';
-  const occ = parseOcc(a.occupy_percentage);
-  return occ >= 100 ? 'tile-full' : 'tile-occ';
+function itemFilter(item) {
+  switch (item.queue_status) {
+    case 1: return 'pending';
+    case 2: return 'assigned';
+    case 3: return dockType(item) === 'outbound' ? 'outbound' : 'inbound';
+    case 4: return 'hold';
+    default: return 'other';
+  }
 }
-function statusPill(a) {
-  if (a.status === 2) return `<span class="status-pill st-inactive">INATIVA</span>`;
-  if (a.to_quantity === 0) return `<span class="status-pill st-free">LIVRE</span>`;
-  const occ = parseOcc(a.occupy_percentage);
-  if (occ >= 100) return `<span class="status-pill st-full">CHEIA</span>`;
-  return `<span class="status-pill st-occupied">OCUPADA</span>`;
+function statusPill(item) {
+  switch (item.queue_status) {
+    case 1: return `<span class="st-pill st-pending">⏳ Aguardando</span>`;
+    case 2: return `<span class="st-pill st-assigned">📍 Atribuído</span>`;
+    case 3:
+      if (dockType(item) === 'inbound')  return `<span class="st-pill st-inbound">📥 Doca IB</span>`;
+      if (dockType(item) === 'outbound') return `<span class="st-pill st-outbound">📤 Doca OB</span>`;
+      return `<span class="st-pill st-inbound">🚛 Na Doca</span>`;
+    case 4: return `<span class="st-pill st-hold">⏸ Em Espera</span>`;
+    default: return `<span class="st-pill">—</span>`;
+  }
 }
-function areaStatus(a) {
-  if (a.status === 2) return 'inactive';
-  if (a.to_quantity === 0) return 'free';
-  return 'occupied';
+function dockName(item) {
+  if (item.queue_status === 3) return item.occupied_dock_name || '—';
+  if (item.queue_status === 2) return item.assigned_dock_name || '—';
+  if (item.queue_status === 4) return item.on_hold_dock_name || '—';
+  return '—';
 }
 
 // ── State ──────────────────────────────────────────────────────────────
-let allAreas    = [];
-let activeZone  = 'all';
-let statusFilter = '';
-let sortCol     = 'staging_duration_time';
+let allItems    = [];
+let activeFilter = 'all';
+let sortCol     = 'waiting_time';
 let sortAsc     = false;
 let tableSearch = '';
 let currentPage = 1;
-let pageSize    = 25;
+let pageSize    = 20;
 let lastAt      = null;
+let rawTotals   = {};
 
-// ── Zone tabs ──────────────────────────────────────────────────────────
-function buildZoneTabs() {
-  const zoneMap = {};
-  allAreas.forEach(a => {
-    const z = (a.staging_group_name || 'OUTRAS').trim();
-    if (!zoneMap[z]) zoneMap[z] = 0;
-    zoneMap[z] += a.to_quantity || 0;
+// ── Tabs ────────────────────────────────────────────────────────────────
+function buildTabs() {
+  const counts = { all: allItems.length, pending: 0, inbound: 0, outbound: 0, hold: 0 };
+  allItems.forEach(item => {
+    const f = itemFilter(item);
+    if (f === 'pending')  counts.pending++;
+    if (f === 'inbound')  counts.inbound++;
+    if (f === 'outbound') counts.outbound++;
+    if (f === 'hold')     counts.hold++;
   });
-  const tabs = [{ key: 'all', label: 'Todas', count: allAreas.reduce((s,a)=>s+a.to_quantity,0) }];
-  Object.entries(zoneMap).sort((a,b)=>b[1]-a[1]).forEach(([z,c]) => tabs.push({ key: z, label: zoneShort(z), count: c }));
-
-  const el = document.getElementById('zoneTabs');
-  el.innerHTML = tabs.map(t => `
-    <button class="zone-tab${t.key === activeZone ? ' active' : ''}" data-zone="${t.key}">
-      ${t.label}<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>
-    </button>`).join('');
-  el.querySelectorAll('.zone-tab').forEach(btn => {
-    btn.addEventListener('click', () => { activeZone = btn.dataset.zone; currentPage = 1; render(); });
+  Object.entries(counts).forEach(([k, v]) => {
+    const el = document.getElementById('tc-' + k);
+    if (el) el.textContent = v;
+  });
+  document.querySelectorAll('.zone-tab[data-filter]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === activeFilter);
   });
 }
 
 // ── KPIs ────────────────────────────────────────────────────────────────
-function buildKPIs(areas) {
-  const active   = areas.filter(a => a.status === 1);
-  const occupied = active.filter(a => a.to_quantity > 0);
-  const free     = active.filter(a => a.to_quantity === 0);
-  const inactive = areas.filter(a => a.status === 2);
-  const totalTOs = areas.reduce((s,a) => s + (a.to_quantity || 0), 0);
-  const totalCap = active.reduce((s,a) => s + (a.capacity || 0), 0);
-  const totalTO2 = active.reduce((s,a) => s + (a.to_quantity || 0), 0);
-  const occ      = totalCap > 0 ? (totalTO2 / totalCap * 100) : 0;
-  const maxArea  = occupied.reduce((b,a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
+function buildKPIs() {
+  const pending  = allItems.filter(i => i.queue_status === 1);
+  const occupied = allItems.filter(i => i.queue_status === 3);
+  const inbound  = occupied.filter(i => dockType(i) === 'inbound');
+  const outbound = occupied.filter(i => dockType(i) === 'outbound');
+  const hold     = allItems.filter(i => i.queue_status === 4);
+  const totalPkg = allItems.reduce((s, i) => s + (i.order_quantity || 0), 0);
+  const maxWait  = allItems.reduce((b, i) => i.waiting_time > (b?.waiting_time || 0) ? i : b, null);
 
-  document.getElementById('kActive').textContent    = active.length;
-  document.getElementById('kOccupied').textContent  = occupied.length;
-  document.getElementById('kFree').textContent      = free.length;
-  document.getElementById('kInactive').textContent  = inactive.length;
-  document.getElementById('kTOs').textContent       = totalTOs.toLocaleString('pt-BR');
-  document.getElementById('kOcc').textContent       = occ.toFixed(1) + '%';
-  document.getElementById('kOccSub').textContent    = `${totalTO2} TOs / ${totalCap} cap`;
-  document.getElementById('kMaxAging').textContent  = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
-  document.getElementById('kMaxAgingRua').textContent = maxArea ? maxArea.area_name : '—';
+  document.getElementById('kTotal').textContent   = allItems.length;
+  document.getElementById('kPending').textContent  = pending.length;
+  document.getElementById('kInbound').textContent  = inbound.length;
+  document.getElementById('kOutbound').textContent = outbound.length;
+  document.getElementById('kHold').textContent     = hold.length;
+  document.getElementById('kPkgs').textContent     = fmtNum(totalPkg);
+  document.getElementById('kMaxWait').textContent  = maxWait ? fmtWait(maxWait.waiting_time) : '—';
+  document.getElementById('kMaxWaitSub').textContent = maxWait ? maxWait.driver_name.split(' ').slice(0,2).join(' ') : '—';
 }
 
-// ── Zone overview cards ────────────────────────────────────────────────
-function buildZoneOverview(areas) {
-  const zones = {};
-  areas.forEach(a => {
-    const z = (a.staging_group_name || 'OUTRAS').trim();
-    if (!zones[z]) zones[z] = { name: z, active: 0, occupied: 0, free: 0, inactive: 0, tos: 0, cap: 0 };
-    if (a.status === 2) { zones[z].inactive++; return; }
-    zones[z].active++;
-    zones[z].cap += a.capacity || 0;
-    zones[z].tos += a.to_quantity || 0;
-    if (a.to_quantity > 0) zones[z].occupied++;
-    else zones[z].free++;
+// ── Agency bars ────────────────────────────────────────────────────────
+function buildAgencyBars() {
+  const agencies = {};
+  allItems.forEach(i => {
+    const ag = (i.agency || 'N/A').trim();
+    if (!agencies[ag]) agencies[ag] = { count: 0, pkgs: 0 };
+    agencies[ag].count++;
+    agencies[ag].pkgs += i.order_quantity || 0;
   });
+  const sorted = Object.entries(agencies).sort((a,b) => b[1].count - a[1].count).slice(0,8);
+  const maxCount = sorted[0]?.[1].count || 1;
+  document.getElementById('agencyBars').innerHTML = sorted.map(([name, v]) => `
+    <div class="ag-row">
+      <span class="ag-label" title="${name}">${name}</span>
+      <div class="ag-bar-wrap"><div class="ag-bar" style="width:${(v.count/maxCount*100).toFixed(1)}%"></div></div>
+      <span class="ag-val">${v.count} vei · ${fmtNum(v.pkgs)} pcts</span>
+    </div>`).join('') || '<div style="color:var(--muted);text-align:center;padding:20px">—</div>';
+}
 
-  const sorted = Object.values(zones).sort((a,b) => b.tos - a.tos);
-  const color  = z => ZONE_COLORS[zoneKey(z.name)] || '#6b7280';
-  const occ    = z => z.cap > 0 ? (z.tos / z.cap * 100) : 0;
+// ── Dock list ──────────────────────────────────────────────────────────
+function buildDockList() {
+  const occupied = allItems.filter(i => i.queue_status === 3);
+  const ibList   = occupied.filter(i => dockType(i) === 'inbound').sort((a,b) => b.order_quantity - a.order_quantity);
+  const obList   = occupied.filter(i => dockType(i) === 'outbound').sort((a,b) => b.order_quantity - a.order_quantity);
 
-  document.getElementById('zoneOvGrid').innerHTML = sorted.map(z => {
-    const p = occ(z);
-    const fc = occFillClass(p);
-    return `
-    <div class="zone-ov-card" style="border-top-color:${color(z)}">
-      <div class="zone-ov-name" style="color:${color(z)}">${zoneShort(z.name)}</div>
-      <div class="zone-ov-stats">
-        <div class="zone-ov-stat">
-          <span class="zone-ov-stat-val" style="color:var(--accent)">${z.tos}</span>
-          <span class="zone-ov-stat-lbl">TOs</span>
-        </div>
-        <div class="zone-ov-stat">
-          <span class="zone-ov-stat-val" style="color:var(--blue)">${z.occupied}</span>
-          <span class="zone-ov-stat-lbl">Ocupadas</span>
-        </div>
-        <div class="zone-ov-stat">
-          <span class="zone-ov-stat-val" style="color:var(--teal)">${z.free}</span>
-          <span class="zone-ov-stat-lbl">Livres</span>
-        </div>
-        <div class="zone-ov-stat">
-          <span class="zone-ov-stat-val" style="color:var(--muted)">${z.inactive}</span>
-          <span class="zone-ov-stat-lbl">Inativas</span>
-        </div>
+  const mkItem = (item, type) => {
+    const color = type === 'inbound' ? 'var(--green)' : 'var(--purple)';
+    const dn    = item.occupied_dock_name || '—';
+    const dNum  = dn.replace(/[^\d]/g,'');
+    return `<div class="dock-item">
+      <div>
+        <div class="dock-name" style="color:${color}">${dNum ? 'Doca ' + (type === 'inbound' ? 'IB' : 'OB') + ' ' + dNum : dn}</div>
+        <div class="dock-sub">${item.driver_name} · ${item.vehicle_number}</div>
       </div>
-      <div class="occ-bar-row">
-        <div class="occ-track"><div class="occ-fill ${fc}" style="width:${Math.min(p,100).toFixed(1)}%"></div></div>
-        <span class="occ-pct">${p.toFixed(1)}%</span>
+      <div style="text-align:right">
+        <div style="font-family:monospace;font-size:12px;font-weight:700">${fmtNum(item.order_quantity)}</div>
+        <div style="font-size:10px;color:var(--muted)">${fmtWait(item.waiting_time)}</div>
       </div>
     </div>`;
-  }).join('');
+  };
+
+  const ibHtml = ibList.length ? ibList.map(i => mkItem(i,'inbound')).join('') : '';
+  const obHtml = obList.length ? obList.map(i => mkItem(i,'outbound')).join('') : '';
+
+  const sep = ibList.length && obList.length
+    ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--purple);font-weight:700;margin:10px 0 4px">📤 Outbound (${obList.length})</div>`
+    : '';
+  const ibHeader = ibList.length
+    ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--green);font-weight:700;margin-bottom:4px">📥 Inbound (${ibList.length})</div>`
+    : '';
+
+  document.getElementById('dockList').innerHTML = (ibList.length + obList.length) > 0
+    ? ibHeader + ibHtml + sep + obHtml
+    : '<div style="color:var(--muted);text-align:center;padding:20px">Nenhum veículo na doca</div>';
 }
 
-// ── Capacity grid ──────────────────────────────────────────────────────
-function buildCapGrid(areas) {
-  // Group by zone, sort zones by TOs desc, then areas within zone by name
-  const zones = {};
-  areas.forEach(a => {
-    const z = (a.staging_group_name || 'OUTRAS').trim();
-    if (!zones[z]) zones[z] = [];
-    zones[z].push(a);
-  });
-  Object.values(zones).forEach(list => list.sort((a,b) => a.area_name.localeCompare(b.area_name)));
-
-  const sortedZones = Object.entries(zones).sort((a,b) => {
-    const tosA = a[1].reduce((s,x)=>s+x.to_quantity,0);
-    const tosB = b[1].reduce((s,x)=>s+x.to_quantity,0);
-    return tosB - tosA;
-  });
-
-  const tiles = sortedZones.map(([zName, list]) => {
-    const color = ZONE_COLORS[zoneKey(zName)] || '#6b7280';
-    const ts = list.map(a => {
-      const cls = tileClass(a);
-      const dur = a.staging_duration_time;
-      const agCls = agingClass(dur);
-      const tip = `${a.area_name} · ${a.to_quantity}/${a.capacity} TOs · ${fmtDur(dur)} · ${cleanOp(a.operator)}`;
-      return `<div class="cap-tile ${cls}" title="${tip}">
-        <span class="tile-name">${a.area_name}</span>
-        ${a.to_quantity > 0 ? `<span class="tile-tos">${a.to_quantity}</span>` : ''}
+// ── Wait histogram ─────────────────────────────────────────────────────
+const WAIT_BINS = [
+  { label: '0–15min',  min: 0,   max: 15,  color: '#22c55e' },
+  { label: '15–30min', min: 15,  max: 30,  color: '#4ade80' },
+  { label: '30–60min', min: 30,  max: 60,  color: '#f59e0b' },
+  { label: '1–2h',     min: 60,  max: 120, color: '#fb923c' },
+  { label: '2–4h',     min: 120, max: 240, color: '#ef4444' },
+  { label: '>4h',      min: 240, max: Infinity, color: '#b91c1c' },
+];
+function buildWaitHist() {
+  const counts = WAIT_BINS.map(b => allItems.filter(i => i.waiting_time >= b.min && i.waiting_time < b.max).length);
+  const maxC   = Math.max(...counts, 1);
+  document.getElementById('waitHist').innerHTML =
+    `<div style="display:flex;flex-direction:column;gap:7px">` +
+    WAIT_BINS.map((b, i) => {
+      const pct  = allItems.length ? Math.round(counts[i] / allItems.length * 100) : 0;
+      const barW = (counts[i] / maxC * 100).toFixed(1);
+      const inside = parseFloat(barW) > 30;
+      return `<div style="display:grid;grid-template-columns:72px 1fr 44px;align-items:center;gap:10px">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-align:right">${b.label}</span>
+        <div style="position:relative;background:var(--surface2);border-radius:6px;height:28px;overflow:hidden">
+          <div style="width:${barW}%;background:${b.color};height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">
+            ${inside && counts[i]>0 ? `<span style="font-size:12px;font-weight:800;color:rgba(0,0,0,.75)">${counts[i]}</span>` : ''}
+          </div>
+          ${!inside && counts[i]>0 ? `<span style="position:absolute;left:calc(${barW}% + 6px);top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--text)">${counts[i]}</span>` : ''}
+          ${counts[i]===0 ? `<span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)">—</span>` : ''}
+        </div>
+        <span style="font-size:11px;color:${pct>0?b.color:'var(--muted)'};text-align:right">${pct>0?pct+'%':'—'}</span>
       </div>`;
-    }).join('');
-
-    return `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;width:100%">
-      <div style="width:100%;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:${color};margin-bottom:2px">${zoneShort(zName)}</div>
-      ${ts}
-    </div>`;
-  }).join('');
-
-  document.getElementById('capGrid').innerHTML = tiles;
+    }).join('') + `</div>`;
 }
 
-// ── Filtered / sorted areas ────────────────────────────────────────────
-function filteredAreas() {
-  let areas = activeZone === 'all' ? allAreas
-    : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
-  return areas;
+// ── Filtered / sorted items ────────────────────────────────────────────
+function filteredItems() {
+  let items = activeFilter === 'all' ? allItems
+    : allItems.filter(i => itemFilter(i) === activeFilter);
+  return items;
 }
 
-function sortedAreas(areas) {
-  return [...areas].sort((a, b) => {
+function sortedItems(items) {
+  return [...items].sort((a, b) => {
     let av, bv;
-    if (sortCol === 'occupy_pct') { av = parseOcc(a.occupy_percentage); bv = parseOcc(b.occupy_percentage); }
-    else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
+    if (['queue_number','driver_name','agency','vehicle_number'].includes(sortCol)) {
       av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    } else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
+    }
+    if (sortCol === 'dockName') {
+      av = dockName(a).toLowerCase(); bv = dockName(b).toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    av = a[sortCol] || 0; bv = b[sortCol] || 0;
     return sortAsc ? av - bv : bv - av;
   });
 }
 
 // ── Main table ──────────────────────────────────────────────────────────
-function buildMainTable(areas) {
-  if (allAreas.length === 0) {
+function buildMainTable(items) {
+  if (allItems.length === 0) {
     document.getElementById('mainTable').style.display     = 'none';
     document.getElementById('emptyMsg').style.display      = '';
     document.getElementById('paginationBar').style.display = 'none';
@@ -673,36 +517,37 @@ function buildMainTable(areas) {
   document.getElementById('emptyMsg').style.display  = 'none';
 
   const q = tableSearch.toLowerCase();
-  let vis = sortedAreas(areas);
-  if (q)           vis = vis.filter(a => a.area_name.toLowerCase().includes(q) || cleanOp(a.operator).toLowerCase().includes(q) || (a.staging_group_name||'').toLowerCase().includes(q));
-  if (statusFilter) vis = vis.filter(a => areaStatus(a) === statusFilter);
+  let vis = sortedItems(items);
+  if (q) vis = vis.filter(i =>
+    i.driver_name.toLowerCase().includes(q) ||
+    i.vehicle_number.toLowerCase().includes(q) ||
+    (i.agency || '').toLowerCase().includes(q) ||
+    i.queue_number.toLowerCase().includes(q));
 
   const total      = vis.length;
   const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
   if (currentPage > totalPages) currentPage = totalPages;
-  document.getElementById('tableCount').textContent = `${total} ruas`;
+  document.getElementById('tableCount').textContent = `${total} veículos`;
 
   const start = pageSize > 0 ? (currentPage - 1) * pageSize : 0;
   const page  = pageSize > 0 ? vis.slice(start, start + pageSize) : vis;
 
-  document.getElementById('mainBody').innerHTML = page.map(a => {
-    const occ      = parseOcc(a.occupy_percentage);
-    const inactive = a.status === 2;
-    return `<tr class="${inactive ? 'row-inactive' : ''}">
-      <td class="area-name">${a.area_name}</td>
-      <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
-      <td>${statusPill(a)}</td>
-      <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity>0?'700':'400'}">${a.to_quantity||0}</td>
-      <td style="font-family:monospace;text-align:center;color:${a.cage_quantity>0?'var(--yellow)':'var(--muted)'}">${a.cage_quantity||0}</td>
-      <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
-      <td>
-        <div class="occ-bar-wrap2">
-          <div class="occ-bar2"><div class="occ-fill2 ${occFillClass(occ)}" style="width:${Math.min(occ,100).toFixed(1)}%"></div></div>
-          <span style="font-size:11px;font-family:monospace">${a.occupy_percentage||'0 %'}</span>
-        </div>
-      </td>
-      <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
-      <td style="font-size:11px;color:var(--muted)">${cleanOp(a.operator)}</td>
+  document.getElementById('mainBody').innerHTML = page.map((item, idx) => {
+    const dn  = dockName(item);
+    const dt  = dockType(item);
+    const dnColor = dt === 'inbound' ? 'var(--green)' : dt === 'outbound' ? 'var(--purple)' : 'var(--muted)';
+    const tripName = item.route_info?.lh_trip_name || '—';
+    const tripShort = tripName.length > 32 ? tripName.substring(0,32)+'…' : tripName;
+    return `<tr>
+      <td style="font-family:monospace;font-size:12px;font-weight:700;color:var(--blue)">${item.queue_number}</td>
+      <td style="font-weight:600">${item.driver_name}</td>
+      <td style="font-size:11px;color:var(--muted)">${item.agency || '—'}</td>
+      <td style="font-family:monospace;font-size:12px">${item.vehicle_number}</td>
+      <td>${statusPill(item)}</td>
+      <td style="font-size:11px;color:${dnColor};font-weight:600">${dn !== '—' ? dn : '<span style="color:var(--muted)">—</span>'}</td>
+      <td><span class="${waitClass(item.waiting_time)}">${fmtWait(item.waiting_time)}</span></td>
+      <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(item.order_quantity)}</td>
+      <td style="font-size:11px;color:var(--muted)" title="${tripName}">${fmtTs(item.add_to_queue_time)}</td>
     </tr>`;
   }).join('');
 
@@ -716,25 +561,24 @@ function buildPaginationBar(total, page, size) {
   bar.style.display = '';
   const totalPages = Math.ceil(total / size);
   const from = (page - 1) * size + 1, to = Math.min(page * size, total);
-  document.getElementById('pagInfo').textContent = `Mostrando ${from}–${to} de ${total} ruas`;
+  document.getElementById('pagInfo').textContent = `Mostrando ${from}–${to} de ${total} veículos`;
 
   const mkBtn = (label, p, active = false, disabled = false) =>
     `<button class="pag-btn${active?' active':''}" data-page="${p}" ${disabled?'disabled':''}>${label}</button>`;
   let btns = mkBtn('‹', page-1, false, page===1);
-  if (totalPages <= 7) {
-    for (let i=1; i<=totalPages; i++) btns += mkBtn(i, i, i===page);
-  } else {
-    btns += mkBtn(1, 1, page===1);
+  if (totalPages <= 7) { for (let i=1; i<=totalPages; i++) btns += mkBtn(i,i,i===page); }
+  else {
+    btns += mkBtn(1,1,page===1);
     if (page > 3) btns += `<span class="pag-ellipsis">…</span>`;
-    const s = Math.max(2,page-1), e = Math.min(totalPages-1,page+1);
+    const s=Math.max(2,page-1), e=Math.min(totalPages-1,page+1);
     for (let i=s; i<=e; i++) btns += mkBtn(i,i,i===page);
     if (page < totalPages-2) btns += `<span class="pag-ellipsis">…</span>`;
-    btns += mkBtn(totalPages, totalPages, page===totalPages);
+    btns += mkBtn(totalPages,totalPages,page===totalPages);
   }
   btns += mkBtn('›', page+1, false, page===totalPages);
   document.getElementById('pagPages').innerHTML = btns;
   document.getElementById('pagPages').querySelectorAll('.pag-btn[data-page]').forEach(btn => {
-    btn.addEventListener('click', () => { currentPage = parseInt(btn.dataset.page); buildMainTable(filteredAreas()); });
+    btn.addEventListener('click', () => { currentPage = parseInt(btn.dataset.page); buildMainTable(filteredItems()); });
   });
 }
 
@@ -746,66 +590,61 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
     document.querySelectorAll('table.main-table th').forEach(t => { t.classList.remove('sorted'); t.querySelector('.sa') && (t.querySelector('.sa').textContent=''); });
     th.classList.add('sorted');
     if (th.querySelector('.sa')) th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
-    updateAgingSortBtn(); currentPage = 1; buildMainTable(filteredAreas());
+    updateWaitSortBtn(); currentPage = 1; buildMainTable(filteredItems());
   });
 });
 
-// ── Status filter pills ────────────────────────────────────────────────
-document.querySelectorAll('.fpill[data-status]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    statusFilter = btn.dataset.status;
-    document.querySelectorAll('.fpill[data-status]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentPage = 1; buildMainTable(filteredAreas());
-  });
+// ── Tab filter ──────────────────────────────────────────────────────────
+document.querySelectorAll('.zone-tab[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => { activeFilter = btn.dataset.filter; currentPage = 1; render(); });
 });
 
 // ── Search ──────────────────────────────────────────────────────────────
 document.getElementById('tableSearch').addEventListener('input', e => {
-  tableSearch = e.target.value; currentPage = 1; buildMainTable(filteredAreas());
+  tableSearch = e.target.value; currentPage = 1; buildMainTable(filteredItems());
 });
 
 // ── Page size ──────────────────────────────────────────────────────────
 document.getElementById('pagSizeSelect').addEventListener('change', e => {
-  pageSize = parseInt(e.target.value) || 0; currentPage = 1; buildMainTable(filteredAreas());
+  pageSize = parseInt(e.target.value) || 0; currentPage = 1; buildMainTable(filteredItems());
 });
 
-// ── Aging sort toggle ──────────────────────────────────────────────────
-function updateAgingSortBtn() {
-  const btn = document.getElementById('agingSortBtn');
-  if (sortCol !== 'staging_duration_time') { btn.className = 'aging-sort-btn'; btn.textContent = '⇅ Aging'; return; }
-  if (sortAsc) { btn.textContent = '↑ Aging mais novo';  btn.className = 'aging-sort-btn asc'; }
-  else         { btn.textContent = '↓ Aging mais antigo'; btn.className = 'aging-sort-btn desc'; }
+// ── Wait sort toggle ────────────────────────────────────────────────────
+function updateWaitSortBtn() {
+  const btn = document.getElementById('waitSortBtn');
+  if (sortCol !== 'waiting_time') { btn.className = 'wait-sort-btn'; btn.textContent = '⇅ Espera'; return; }
+  if (sortAsc) { btn.textContent = '↑ Menor espera'; btn.className = 'wait-sort-btn asc'; }
+  else         { btn.textContent = '↓ Maior espera'; btn.className = 'wait-sort-btn desc'; }
 }
-document.getElementById('agingSortBtn').addEventListener('click', () => {
-  sortCol = 'staging_duration_time'; sortAsc = !sortAsc;
-  currentPage = 1; updateAgingSortBtn(); buildMainTable(filteredAreas());
+document.getElementById('waitSortBtn').addEventListener('click', () => {
+  sortCol = 'waiting_time'; sortAsc = !sortAsc;
+  currentPage = 1; updateWaitSortBtn(); buildMainTable(filteredItems());
 });
 
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
-  const areas = filteredAreas();
-  buildZoneTabs();
-  buildKPIs(areas);
-  buildZoneOverview(areas);
-  buildCapGrid(areas);
-  buildMainTable(areas);
+  buildTabs();
+  buildKPIs();
+  buildAgencyBars();
+  buildDockList();
+  buildWaitHist();
+  buildMainTable(filteredItems());
 }
 
 // ── Load ────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const res = await fetch('/api/stage-in');
+    const res = await fetch('/api/queue');
     if (!res.ok) return;
     const data = await res.json();
     if (data.error || data.fetchedAt === lastAt) return;
     lastAt   = data.fetchedAt;
-    allAreas = data.list || [];
+    allItems = data.list || [];
 
     const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
     document.getElementById('liveDot').className       = 'live-dot on';
-    document.getElementById('metaTag').textContent     = `inbound · ${allAreas.length} ruas · ${ts}`;
+    document.getElementById('metaTag').textContent     = `${allItems.length} veículos · ${ts}`;
     render();
   } catch (e) {}
 }

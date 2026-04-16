@@ -395,6 +395,7 @@ let stageCache      = null; // { list, total, fetchedAt }
 let toPackingCache  = null; // { list, total, fetchedAt }
 let toPackedCache   = null; // { list, total, fetchedAt }
 let stageInCache    = null; // { list, total, fetchedAt }
+let queueCache      = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
 
 // ── Report sheet (pacotes por TO) ─────────────────────────────────────
 const REPORT_SPREADSHEET_ID = '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E';
@@ -631,6 +632,36 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify(stageInCache));
+    return;
+  }
+
+  // POST /api/queue-data — receives vehicle queue from Tampermonkey
+  if (urlPath === '/api/queue-data' && req.method === 'POST') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', () => {
+      try {
+        queueCache = JSON.parse(body);
+        console.log(`[queue] Received ${queueCache.list?.length}/${queueCache.total} vehicles`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/queue — serves vehicle queue to dashboard
+  if (urlPath === '/api/queue') {
+    if (!queueCache) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(queueCache));
     return;
   }
 
