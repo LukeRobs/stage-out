@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Queue List · Veículos em Fila</title>
+<title>Queue List · Inbound</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -137,8 +137,8 @@ table.main-table tr:last-child td { border-bottom: none; }
 <header class="header">
   <div class="header-icon">🚛</div>
   <div class="header-title">
-    <h1>Queue List · Veículos em Fila</h1>
-    <p>SPX EXPRESS · MONITORAMENTO DE DOCAS E TEMPOS DE ESPERA</p>
+    <h1>Queue List · Inbound</h1>
+    <p>SPX EXPRESS · MONITORAMENTO INBOUND · DOCAS E TEMPOS DE ESPERA</p>
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">—</span>
@@ -525,7 +525,7 @@ async function loadData() {
     if (data.error || data.fetchedAt === lastAt) return;
     lastAt   = data.fetchedAt;
     // Only active statuses: 1=Pending 2=Assigned 3=Occupied 4=On-hold
-    allItems = (data.list || []).filter(v => v.queue_status >= 1 && v.queue_status <= 4);
+    allItems = (data.list || []).filter(v => v.queue_type === 1 && v.queue_status >= 1 && v.queue_status <= 4);
 
     const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
