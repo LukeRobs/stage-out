@@ -82,7 +82,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 /* ── Main table ── */
 .table-wrap { padding: 0 24px 32px; }
 table.main-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; white-space: normal; word-break: break-word; vertical-align: bottom; }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
 table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: normal; word-break: break-word; }
