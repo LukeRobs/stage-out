@@ -85,19 +85,20 @@ table.main-table { width: 100%; border-collapse: collapse; table-layout: fixed; 
 table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
-table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* larguras fixas das 11 colunas */
-table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 7%; }   /* Posição */
-table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 7%; }   /* Placa */
-table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 8%; }   /* T. Espera */
-table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 8%; }   /* T. em Espera */
-table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 10%; }  /* LH # */
-table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 8%; text-align:right; }  /* Pacotes */
-table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 14%; }  /* Motorista */
-table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 8%; }   /* Modalidade */
-table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 10%; }  /* Doca Atrib. */
-table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 10%; }  /* Doca Ocup. */
-table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 10%; }  /* Status */
+table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: normal; word-break: break-word; }
+/* larguras fixas das 12 colunas */
+table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 6%;  }  /* Placa */
+table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 8%;  }  /* Veículo */
+table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 9%;  }  /* LH # */
+table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 10%; }  /* Origem */
+table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 7%;  }  /* ETA */
+table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }  /* T. Espera */
+table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 7%;  }  /* T. em Espera */
+table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 7%; text-align:right; }  /* Pacotes */
+table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 14%; }  /* Motorista */
+table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 9%;  }  /* Doca Atrib. */
+table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 9%;  }  /* Doca Ocup. */
+table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 7%;  }  /* Status */
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
 table.main-table tr:hover td { background: rgba(255,255,255,.03); }
 table.main-table tr:last-child td { border-bottom: none; }
@@ -205,14 +206,15 @@ table.main-table tr:last-child td { border-bottom: none; }
   <table class="main-table" id="mainTable" style="display:none">
     <thead>
       <tr>
-        <th data-col="queue_number">Posição na Fila <span class="sa"></span></th>
         <th data-col="vehicle_number">Placa <span class="sa"></span></th>
+        <th data-col="trip_vehicles">Veículo <span class="sa"></span></th>
+        <th data-col="lh_trip_number">Número do LH <span class="sa"></span></th>
+        <th data-col="trip_origin">Origem da LT <span class="sa"></span></th>
+        <th data-col="trip_eta">ETA <span class="sa"></span></th>
         <th data-col="waiting_time" class="sorted">Tempo de Espera <span class="sa">↓</span></th>
         <th data-col="on_hold_time">Tempo em Espera <span class="sa"></span></th>
-        <th data-col="lh_trip_number">Número do LH <span class="sa"></span></th>
         <th data-col="order_quantity" style="text-align:right">Pacotes Pendentes <span class="sa"></span></th>
         <th data-col="driver_name">Nome do Motorista <span class="sa"></span></th>
-        <th data-col="arrival_type">Modalidade <span class="sa"></span></th>
         <th data-col="assigned_dock_name">Doca Atribuída <span class="sa"></span></th>
         <th data-col="occupied_dock_name">Doca Ocupada <span class="sa"></span></th>
         <th data-col="queue_status">Status <span class="sa"></span></th>
@@ -308,6 +310,32 @@ function fmtGeo(v) {
   return `<span class="geo-out">— Outside</span>`;
 }
 
+// ── Trip helpers ───────────────────────────────────────────────────────
+let tripMap = {}; // trip_number → trip object
+
+function buildTripMap(trips) {
+  tripMap = {};
+  (trips || []).forEach(t => { tripMap[t.trip_number] = t; });
+}
+
+function getTripDestStation(trip) {
+  if (!trip?.trip_station) return null;
+  return trip.trip_station.find(s => s.trip_station_status === 50)
+      || trip.trip_station[trip.trip_station.length - 1];
+}
+
+function getTripInfo(item) {
+  const tripNum = item.route_info?.lh_trip_number;
+  const trip    = tripNum ? tripMap[tripNum] : null;
+  if (!trip) return { origin: '—', eta: '—', vehicles: '—' };
+  const dest    = getTripDestStation(trip);
+  return {
+    origin:   trip.pre_station_name || '—',
+    eta:      dest?.eta ? fmtTs(dest.eta) : '—',
+    vehicles: (trip.vehicle_plate_number_list || []).join(' / ') || trip.vehicle_number || '—',
+  };
+}
+
 // ── State ──────────────────────────────────────────────────────────────
 let allItems     = [];
 let activeFilter = 'all';
@@ -372,6 +400,21 @@ function sortedItems(items) {
       bv = (b.route_info?.lh_trip_number || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
+    if (sortCol === 'trip_origin') {
+      av = getTripInfo(a).origin.toLowerCase(); bv = getTripInfo(b).origin.toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    if (sortCol === 'trip_vehicles') {
+      av = getTripInfo(a).vehicles.toLowerCase(); bv = getTripInfo(b).vehicles.toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    if (sortCol === 'trip_eta') {
+      const ta = tripMap[a.route_info?.lh_trip_number];
+      const tb = tripMap[b.route_info?.lh_trip_number];
+      av = getTripDestStation(ta)?.eta || 0;
+      bv = getTripDestStation(tb)?.eta || 0;
+      return sortAsc ? av - bv : bv - av;
+    }
     av = a[sortCol] ?? 0; bv = b[sortCol] ?? 0;
     return sortAsc ? av - bv : bv - av;
   });
@@ -410,16 +453,18 @@ function buildMainTable(items) {
   document.getElementById('mainBody').innerHTML = page.map(item => {
     const ri     = item.route_info || {};
     const onHold = item.on_hold_time ? fmtWait(item.on_hold_time) : '—';
+    const trip   = getTripInfo(item);
 
     return `<tr>
-      <td style="font-family:monospace;font-size:12px;font-weight:700;color:var(--blue)">${item.queue_number || '—'}</td>
       <td style="font-family:monospace;font-size:12px">${item.vehicle_number || '—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${trip.vehicles}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${trip.origin}</td>
+      <td style="font-size:11px;color:var(--blue)">${trip.eta}</td>
       <td><span class="${waitClass(item.waiting_time)}">${fmtWait(item.waiting_time)}</span></td>
       <td style="font-size:11px;color:var(--muted)">${onHold}</td>
-      <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
       <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(item.order_quantity)}</td>
       <td style="font-weight:600">${item.driver_name || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${fmtArrivalType(item.arrival_type)}</td>
       <td style="font-size:11px;color:var(--purple);font-weight:600">${item.assigned_dock_name || '—'}</td>
       <td style="font-size:11px;color:var(--green);font-weight:600">${item.occupied_dock_name || '—'}</td>
       <td>${statusPill(item.queue_status)}</td>
@@ -509,16 +554,20 @@ function render() {
 // ── Load ────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const res = await fetch('/api/queue');
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data.error || data.fetchedAt === lastAt) return;
-    lastAt   = data.fetchedAt;
-    // Only active statuses: 1=Pending 2=Assigned 3=Occupied 4=On-hold
-    // status 4 = ended (excluído) — ativos: 1=pending 2=assigned 3=occupied 5=on_hold
-    allItems = (data.list || []).filter(v => v.queue_type === 1 && [1, 2, 3, 5].includes(v.queue_status));
+    const [qRes, tRes] = await Promise.all([fetch('/api/queue'), fetch('/api/trips')]);
+    if (!qRes.ok) return;
 
-    const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const [qData, tData] = await Promise.all([qRes.json(), tRes.json()]);
+    if (qData.error || qData.fetchedAt === lastAt) return;
+    lastAt = qData.fetchedAt;
+
+    // Atualiza mapa de trips (trip_number → trip)
+    buildTripMap(tData.list || []);
+
+    // Apenas ativos inbound: status 1=Pendente 2=Atribuído 3=Ocupado 5=Em Espera
+    allItems = (qData.list || []).filter(v => v.queue_type === 1 && [1, 2, 3, 5].includes(v.queue_status));
+
+    const ts = new Date(qData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
     document.getElementById('liveDot').className       = 'live-dot on';
     document.getElementById('metaTag').textContent     = `${allItems.length} ativos · ${ts}`;
