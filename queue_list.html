@@ -80,12 +80,24 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .wait-sort-btn.asc  { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.25);  color: var(--green); }
 
 /* ── Main table ── */
-.table-wrap { padding: 0 24px 32px; overflow-x: auto; }
-table.main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
-table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap; }
+.table-wrap { padding: 0 24px 32px; }
+table.main-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
-table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: nowrap; }
+table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* larguras fixas das 11 colunas */
+table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 7%; }   /* Posição */
+table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 7%; }   /* Placa */
+table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 8%; }   /* T. Espera */
+table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 8%; }   /* T. em Espera */
+table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 10%; }  /* LH # */
+table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 8%; text-align:right; }  /* Pacotes */
+table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 14%; }  /* Motorista */
+table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 8%; }   /* Modalidade */
+table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 10%; }  /* Doca Atrib. */
+table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 10%; }  /* Doca Ocup. */
+table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 10%; }  /* Status */
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
 table.main-table tr:hover td { background: rgba(255,255,255,.03); }
 table.main-table tr:last-child td { border-bottom: none; }
