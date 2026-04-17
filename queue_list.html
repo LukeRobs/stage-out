@@ -86,19 +86,20 @@ table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
 table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: normal; word-break: break-word; }
-/* larguras fixas das 12 colunas */
+/* larguras fixas das 13 colunas */
 table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 6%;  }  /* Placa */
 table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 8%;  }  /* Veículo */
 table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 9%;  }  /* LH # */
-table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 10%; }  /* Origem */
-table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 7%;  }  /* ETA */
-table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }  /* T. Espera */
-table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 7%;  }  /* T. em Espera */
-table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 7%; text-align:right; }  /* Pacotes */
-table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 14%; }  /* Motorista */
-table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 9%;  }  /* Doca Atrib. */
-table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 9%;  }  /* Doca Ocup. */
-table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 7%;  }  /* Status */
+table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 9%;  }  /* Origem */
+table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 6%;  }  /* ETA */
+table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }  /* T. desde Chegada */
+table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 6%;  }  /* T. Espera */
+table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 6%;  }  /* T. em Espera */
+table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 6%; text-align:right; }  /* Pacotes */
+table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 13%; }  /* Motorista */
+table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 8%;  }  /* Doca Atrib. */
+table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 9%;  }  /* Doca Ocup. */
+table.main-table th:nth-child(13), table.main-table td:nth-child(13) { width: 7%;  }  /* Status */
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
 table.main-table tr:hover td { background: rgba(255,255,255,.03); }
 table.main-table tr:last-child td { border-bottom: none; }
@@ -211,7 +212,8 @@ table.main-table tr:last-child td { border-bottom: none; }
         <th data-col="lh_trip_number">Número do LH <span class="sa"></span></th>
         <th data-col="trip_origin">Origem da LT <span class="sa"></span></th>
         <th data-col="trip_eta">ETA <span class="sa"></span></th>
-        <th data-col="waiting_time" class="sorted">Tempo de Espera <span class="sa">↓</span></th>
+        <th data-col="trip_arrived" class="sorted">Tempo desde a Chegada <span class="sa">↓</span></th>
+        <th data-col="waiting_time">Tempo de Espera <span class="sa"></span></th>
         <th data-col="on_hold_time">Tempo em Espera <span class="sa"></span></th>
         <th data-col="order_quantity" style="text-align:right">Pacotes Pendentes <span class="sa"></span></th>
         <th data-col="driver_name">Nome do Motorista <span class="sa"></span></th>
@@ -327,25 +329,29 @@ function getTripDestStation(trip) {
 function getTripInfo(item) {
   const tripNum = item.route_info?.lh_trip_number;
   const trip    = tripNum ? tripMap[tripNum] : null;
-  if (!trip) return { origin: '—', eta: '—', vehicleType: '—' };
+  if (!trip) return { origin: '—', eta: '—', vehicleType: '—', arrivedMins: null };
   const dest    = getTripDestStation(trip);
   // Origem: pre_station_name ou 1ª estação do array
   const origin  = trip.pre_station_name
     || trip.trip_station?.find(s => s.sequence_number === 1)?.station_name
     || '—';
-  // Tipo de veículo: vehicle_type_name (ex: "CARRETA - EXPRESSA")
+  // Tipo de veículo
   const vehicleType = trip.vehicle_type_name || '—';
+  // Tempo desde a chegada: ata (Actual Time of Arrival) da estação destino
+  const ata         = dest?.ata || 0;
+  const arrivedMins = ata > 0 ? Math.floor((Date.now() / 1000 - ata) / 60) : null;
   return {
     origin,
-    eta:         dest?.eta ? fmtTs(dest.eta) : '—',
+    eta: dest?.eta ? fmtTs(dest.eta) : '—',
     vehicleType,
+    arrivedMins,
   };
 }
 
 // ── State ──────────────────────────────────────────────────────────────
 let allItems     = [];
 let activeFilter = 'all';
-let sortCol      = 'waiting_time';
+let sortCol      = 'trip_arrived';
 let sortAsc      = false;
 let tableSearch  = '';
 let currentPage  = 1;
@@ -421,6 +427,11 @@ function sortedItems(items) {
       bv = getTripDestStation(tb)?.eta || 0;
       return sortAsc ? av - bv : bv - av;
     }
+    if (sortCol === 'trip_arrived') {
+      av = getTripInfo(a).arrivedMins ?? -1;
+      bv = getTripInfo(b).arrivedMins ?? -1;
+      return sortAsc ? av - bv : bv - av;
+    }
     av = a[sortCol] ?? 0; bv = b[sortCol] ?? 0;
     return sortAsc ? av - bv : bv - av;
   });
@@ -467,6 +478,7 @@ function buildMainTable(items) {
       <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
       <td style="font-size:11px;color:var(--muted)">${trip.origin}</td>
       <td style="font-size:11px;color:var(--blue)">${trip.eta}</td>
+      <td>${trip.arrivedMins !== null ? `<span class="${waitClass(trip.arrivedMins)}">${fmtWait(trip.arrivedMins)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td><span class="${waitClass(item.waiting_time)}">${fmtWait(item.waiting_time)}</span></td>
       <td style="font-size:11px;color:var(--muted)">${onHold}</td>
       <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(item.order_quantity)}</td>
