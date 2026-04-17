@@ -152,20 +152,20 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- Status tabs -->
 <div class="zone-tabs" id="statusTabs">
-  <button class="zone-tab active"    data-filter="all">Todos <span class="tab-count" id="tc-all">—</span></button>
-  <button class="zone-tab t-pending" data-filter="pending">Pending <span class="tab-count" id="tc-pending">—</span></button>
-  <button class="zone-tab t-assigned" data-filter="assigned">Assigned <span class="tab-count" id="tc-assigned">—</span></button>
-  <button class="zone-tab t-occupied" data-filter="occupied">Occupied <span class="tab-count" id="tc-occupied">—</span></button>
-  <button class="zone-tab t-hold"    data-filter="hold">On-hold <span class="tab-count" id="tc-hold">—</span></button>
+  <button class="zone-tab active"     data-filter="all">Todos <span class="tab-count" id="tc-all">—</span></button>
+  <button class="zone-tab t-pending"  data-filter="pending">Pendente <span class="tab-count" id="tc-pending">—</span></button>
+  <button class="zone-tab t-assigned" data-filter="assigned">Atribuído <span class="tab-count" id="tc-assigned">—</span></button>
+  <button class="zone-tab t-occupied" data-filter="occupied">Ocupado <span class="tab-count" id="tc-occupied">—</span></button>
+  <button class="zone-tab t-hold"     data-filter="hold">Em Espera <span class="tab-count" id="tc-hold">—</span></button>
 </div>
 
 <!-- KPIs -->
 <div class="stats">
   <div class="stat"><div class="stat-label">Total Ativo</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">veículos na fila</div></div>
-  <div class="stat"><div class="stat-label">Pending</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">aguardando doca</div></div>
-  <div class="stat"><div class="stat-label">Assigned</div><div class="stat-value" id="kAssigned" style="color:var(--purple)">—</div><div class="stat-sub">doca atribuída</div></div>
-  <div class="stat"><div class="stat-label">Occupied</div><div class="stat-value" id="kOccupied" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
-  <div class="stat"><div class="stat-label">On-hold</div><div class="stat-value" id="kHold" style="color:var(--orange)">—</div><div class="stat-sub">em espera</div></div>
+  <div class="stat"><div class="stat-label">Pendente</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">aguardando doca</div></div>
+  <div class="stat"><div class="stat-label">Atribuído</div><div class="stat-value" id="kAssigned" style="color:var(--purple)">—</div><div class="stat-sub">doca atribuída</div></div>
+  <div class="stat"><div class="stat-label">Ocupado</div><div class="stat-value" id="kOccupied" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
+  <div class="stat"><div class="stat-label">Em Espera</div><div class="stat-value" id="kHold" style="color:var(--orange)">—</div><div class="stat-sub">on-hold</div></div>
   <div class="stat"><div class="stat-label">Maior Espera</div><div class="stat-value" id="kMaxWait" style="color:var(--red)">—</div><div class="stat-sub" id="kMaxWaitSub">—</div></div>
 </div>
 
@@ -193,26 +193,16 @@ table.main-table tr:last-child td { border-bottom: none; }
   <table class="main-table" id="mainTable" style="display:none">
     <thead>
       <tr>
-        <th data-col="queue_number">Queue # <span class="sa"></span></th>
-        <th data-col="vehicle_number">Vehicle # <span class="sa"></span></th>
-        <th data-col="waiting_time" class="sorted">Waiting Time <span class="sa">↓</span></th>
-        <th data-col="is_prioritized">Prioritised <span class="sa"></span></th>
-        <th>Prioritised Factors</th>
-        <th data-col="on_hold_time">On-hold Time <span class="sa"></span></th>
-        <th data-col="lh_trip_number">LH Trip # <span class="sa"></span></th>
-        <th>LH Trip Name</th>
-        <th data-col="handover_task_number">Handover Task # <span class="sa"></span></th>
-        <th data-col="order_quantity" style="text-align:right">Pending IB Parcel Qty <span class="sa"></span></th>
-        <th data-col="driver_name">Driver Name <span class="sa"></span></th>
-        <th data-col="arrival_type">Arrival Type <span class="sa"></span></th>
-        <th data-col="agency">Agency <span class="sa"></span></th>
-        <th data-col="is_printed">Print Tag <span class="sa"></span></th>
-        <th data-col="assigned_dock_name">Assigned Dock <span class="sa"></span></th>
-        <th data-col="assigned_dock_group_name">Assigned Dock Group <span class="sa"></span></th>
-        <th data-col="allocated_dock_name">Allocated Dock <span class="sa"></span></th>
-        <th data-col="occupied_dock_name">Occupied Dock <span class="sa"></span></th>
-        <th data-col="entry_tag">Entry Tag <span class="sa"></span></th>
-        <th data-col="geofencing_status">Geofencing <span class="sa"></span></th>
+        <th data-col="queue_number">Posição na Fila <span class="sa"></span></th>
+        <th data-col="vehicle_number">Placa <span class="sa"></span></th>
+        <th data-col="waiting_time" class="sorted">Tempo de Espera <span class="sa">↓</span></th>
+        <th data-col="on_hold_time">Tempo em Espera <span class="sa"></span></th>
+        <th data-col="lh_trip_number">Número do LH <span class="sa"></span></th>
+        <th data-col="order_quantity" style="text-align:right">Pacotes Pendentes <span class="sa"></span></th>
+        <th data-col="driver_name">Nome do Motorista <span class="sa"></span></th>
+        <th data-col="arrival_type">Modalidade <span class="sa"></span></th>
+        <th data-col="assigned_dock_name">Doca Atribuída <span class="sa"></span></th>
+        <th data-col="occupied_dock_name">Doca Ocupada <span class="sa"></span></th>
         <th data-col="queue_status">Status <span class="sa"></span></th>
       </tr>
     </thead>
@@ -280,10 +270,10 @@ function statusLabel(s) {
 }
 function statusPill(s) {
   switch (s) {
-    case 1: return `<span class="st-pill st-pending">⏳ Pending</span>`;
-    case 2: return `<span class="st-pill st-assigned">📍 Assigned</span>`;
-    case 3: return `<span class="st-pill st-occupied">🚛 Occupied</span>`;
-    case 5: return `<span class="st-pill st-hold">⏸ On-hold</span>`;
+    case 1: return `<span class="st-pill st-pending">⏳ Pendente</span>`;
+    case 2: return `<span class="st-pill st-assigned">📍 Atribuído</span>`;
+    case 3: return `<span class="st-pill st-occupied">🚛 Ocupado</span>`;
+    case 5: return `<span class="st-pill st-hold">⏸ Em Espera</span>`;
     default: return `<span class="st-pill">—</span>`;
   }
 }
@@ -406,32 +396,20 @@ function buildMainTable(items) {
   const page  = pageSize > 0 ? vis.slice(start, start + pageSize) : vis;
 
   document.getElementById('mainBody').innerHTML = page.map(item => {
-    const ri       = item.route_info || {};
-    const pTags    = (item.prioritised_tags || []).join(', ') || '—';
-    const onHold   = item.on_hold_time ? fmtTs(item.on_hold_time) : '—';
-    const entryTag = item.entry_tag != null && item.entry_tag !== -1 ? item.entry_tag : '—';
+    const ri     = item.route_info || {};
+    const onHold = item.on_hold_time ? fmtWait(item.on_hold_time) : '—';
 
     return `<tr>
       <td style="font-family:monospace;font-size:12px;font-weight:700;color:var(--blue)">${item.queue_number || '—'}</td>
       <td style="font-family:monospace;font-size:12px">${item.vehicle_number || '—'}</td>
       <td><span class="${waitClass(item.waiting_time)}">${fmtWait(item.waiting_time)}</span></td>
-      <td style="text-align:center">${fmtPrioritised(item.is_prioritized)}</td>
-      <td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${pTags}">${pTags}</td>
       <td style="font-size:11px;color:var(--muted)">${onHold}</td>
       <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
-      <td style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${ri.lh_trip_name || ''}">${ri.lh_trip_name || '—'}</td>
-      <td style="font-family:monospace;font-size:11px">${item.handover_task_number || '—'}</td>
       <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(item.order_quantity)}</td>
       <td style="font-weight:600">${item.driver_name || '—'}</td>
       <td style="font-size:11px;color:var(--muted)">${fmtArrivalType(item.arrival_type)}</td>
-      <td style="font-size:11px">${item.agency || '—'}</td>
-      <td style="text-align:center">${item.is_printed ? '<span class="tag-yes">✓ Yes</span>' : '<span class="tag-no">No</span>'}</td>
       <td style="font-size:11px;color:var(--purple);font-weight:600">${item.assigned_dock_name || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${item.assigned_dock_group_name || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${item.allocated_dock_name || '—'}</td>
       <td style="font-size:11px;color:var(--green);font-weight:600">${item.occupied_dock_name || '—'}</td>
-      <td style="font-size:11px;color:var(--muted);text-align:center">${entryTag}</td>
-      <td style="text-align:center">${fmtGeo(item.geofencing_status)}</td>
       <td>${statusPill(item.queue_status)}</td>
     </tr>`;
   }).join('');
