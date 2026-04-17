@@ -54,86 +54,61 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .zone-tab:hover { color: var(--text); }
 .zone-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
 .zone-tab.active.t-pending  { color: var(--yellow);  border-bottom-color: var(--yellow); }
-.zone-tab.active.t-inbound  { color: var(--green);   border-bottom-color: var(--green); }
-.zone-tab.active.t-outbound { color: var(--purple);  border-bottom-color: var(--purple); }
+.zone-tab.active.t-assigned { color: var(--purple);  border-bottom-color: var(--purple); }
+.zone-tab.active.t-occupied { color: var(--green);   border-bottom-color: var(--green); }
 .zone-tab.active.t-hold     { color: var(--orange);  border-bottom-color: var(--orange); }
 .tab-count { background: var(--surface2); color: var(--muted); font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); }
 .zone-tab.active .tab-count { background: rgba(59,130,246,.12); color: var(--blue); border-color: rgba(59,130,246,.25); }
 
 /* ── KPIs ── */
-.stats { display: grid; grid-template-columns: repeat(7,1fr); gap: 10px; padding: 14px 24px; }
+.stats { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; padding: 14px 24px; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
 .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
 
-/* ── Panels row ── */
-.panel-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-.panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
-
-/* Flow row */
-.flow-row { display: flex; align-items: center; gap: 6px; padding: 0 24px 14px; flex-wrap: wrap; }
-.flow-step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 100px; }
-.flow-val   { font-size: 22px; font-weight: 800; }
-.flow-lbl   { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
-.flow-arrow { font-size: 18px; color: var(--muted); flex-shrink: 0; }
-
-/* Agency bars */
-.ag-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
-.ag-row:last-child { border-bottom: none; }
-.ag-label { min-width: 130px; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ag-bar-wrap { flex: 1; background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
-.ag-bar { height: 100%; border-radius: 4px; background: var(--blue); }
-.ag-val { min-width: 90px; text-align: right; font-size: 11px; font-family: monospace; color: var(--muted); }
-
-/* Dock list */
-.dock-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); gap: 8px; }
-.dock-item:last-child { border-bottom: none; }
-.dock-name { font-size: 12px; font-weight: 600; }
-.dock-sub  { font-size: 10px; color: var(--muted); }
-
 /* ── Table toolbar ── */
-.section-header { display: flex; align-items: center; gap: 12px; padding: 0 24px 10px; }
-.section-title  { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
-.table-toolbar  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
-.search-wrap { position: relative; min-width: 200px; max-width: 300px; }
+.table-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
+.search-wrap { position: relative; min-width: 220px; max-width: 320px; }
 .search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
 .search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px; font-size: 12px; outline: none; transition: border-color .15s; }
 .search-input:focus { border-color: var(--blue); }
-.filter-pills { display: flex; gap: 5px; flex-wrap: wrap; }
-.fpill { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
-.fpill:hover { border-color: var(--border2); color: var(--text); }
-.fpill.active { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.3); color: var(--blue); }
-.wait-sort-btn { display: flex; align-items: center; gap: 5px; margin-left: auto; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
+.table-count { font-size: 12px; color: var(--muted); margin-left: auto; }
+.wait-sort-btn { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; white-space: nowrap; }
 .wait-sort-btn:hover { border-color: var(--border2); color: var(--text); }
 .wait-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
 .wait-sort-btn.asc  { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.25);  color: var(--green); }
 
 /* ── Main table ── */
 .table-wrap { padding: 0 24px 32px; overflow-x: auto; }
-table.main-table { width: 100%; border-collapse: collapse; min-width: 900px; }
-table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap; }
+table.main-table { width: 100%; border-collapse: collapse; min-width: 1800px; }
+table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap; }
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
-table.main-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
+table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: nowrap; }
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
-table.main-table tr:hover td { background: rgba(0,0,0,.02); }
+table.main-table tr:hover td { background: rgba(255,255,255,.03); }
 table.main-table tr:last-child td { border-bottom: none; }
 
 /* Status pills */
 .st-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .st-pending  { background: rgba(245,158,11,.12); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); }
 .st-assigned { background: rgba(139,92,246,.12); color: var(--purple); border: 1px solid rgba(139,92,246,.25); }
-.st-inbound  { background: rgba(34,197,94,.12);  color: var(--green);  border: 1px solid rgba(34,197,94,.25); }
-.st-outbound { background: rgba(139,92,246,.12); color: var(--purple); border: 1px solid rgba(139,92,246,.25); }
+.st-occupied { background: rgba(34,197,94,.12);  color: var(--green);  border: 1px solid rgba(34,197,94,.25); }
 .st-hold     { background: rgba(238,77,45,.12);  color: var(--orange); border: 1px solid rgba(238,77,45,.25); }
 
+/* Tag pills */
+.tag-yes  { display: inline-block; background: rgba(34,197,94,.12); color: var(--green);  border: 1px solid rgba(34,197,94,.25);  padding: 2px 7px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+.tag-no   { display: inline-block; background: var(--surface2);     color: var(--muted);  border: 1px solid var(--border);         padding: 2px 7px; border-radius: 12px; font-size: 10px; }
+.tag-prio { display: inline-block; background: rgba(245,158,11,.12); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); padding: 2px 7px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+.geo-ok   { color: var(--green);  font-size: 11px; font-weight: 600; }
+.geo-out  { color: var(--muted);  font-size: 11px; }
+
 /* Wait time */
-.wait-ok   { color: var(--green); font-family: monospace; }
+.wait-ok   { color: var(--green);  font-family: monospace; }
 .wait-mid  { color: var(--yellow); font-family: monospace; }
 .wait-high { color: var(--orange); font-family: monospace; font-weight: 700; }
-.wait-crit { color: var(--red); font-family: monospace; font-weight: 700; }
+.wait-crit { color: var(--red);    font-family: monospace; font-weight: 700; }
 
 /* ── Pagination ── */
 .pagination-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px 24px; border-top: 1px solid var(--border); }
@@ -153,8 +128,8 @@ table.main-table tr:last-child td { border-bottom: none; }
 .empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
 .empty code { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px; text-align: left; line-height: 1.8; }
 
-@media (max-width:1200px) { .stats { grid-template-columns: repeat(4,1fr); } .panel-row { grid-template-columns: 1fr 1fr; } }
-@media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } .panel-row { grid-template-columns: 1fr; } }
+@media (max-width:1200px) { .stats { grid-template-columns: repeat(3,1fr); } }
+@media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
@@ -177,57 +152,34 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- Status tabs -->
 <div class="zone-tabs" id="statusTabs">
-  <button class="zone-tab active" data-filter="all">Todos<span class="tab-count" id="tc-all">—</span></button>
-  <button class="zone-tab t-pending"  data-filter="pending">Aguardando<span class="tab-count" id="tc-pending">—</span></button>
-  <button class="zone-tab t-inbound"  data-filter="inbound">Na Doca Inbound<span class="tab-count" id="tc-inbound">—</span></button>
-  <button class="zone-tab t-outbound" data-filter="outbound">Na Doca Outbound<span class="tab-count" id="tc-outbound">—</span></button>
-  <button class="zone-tab t-hold"     data-filter="hold">Em Espera<span class="tab-count" id="tc-hold">—</span></button>
+  <button class="zone-tab active"    data-filter="all">Todos <span class="tab-count" id="tc-all">—</span></button>
+  <button class="zone-tab t-pending" data-filter="pending">Pending <span class="tab-count" id="tc-pending">—</span></button>
+  <button class="zone-tab t-assigned" data-filter="assigned">Assigned <span class="tab-count" id="tc-assigned">—</span></button>
+  <button class="zone-tab t-occupied" data-filter="occupied">Occupied <span class="tab-count" id="tc-occupied">—</span></button>
+  <button class="zone-tab t-hold"    data-filter="hold">On-hold <span class="tab-count" id="tc-hold">—</span></button>
 </div>
 
 <!-- KPIs -->
 <div class="stats">
-  <div class="stat"><div class="stat-label">Total Ativo</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">na fila agora</div></div>
-  <div class="stat"><div class="stat-label">Aguardando</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">sem doca</div></div>
-  <div class="stat"><div class="stat-label">Doca Inbound</div><div class="stat-value" id="kInbound" style="color:var(--green)">—</div><div class="stat-sub">descarregando</div></div>
-  <div class="stat"><div class="stat-label">Doca Outbound</div><div class="stat-value" id="kOutbound" style="color:var(--purple)">—</div><div class="stat-sub">cross-dock/carregando</div></div>
-  <div class="stat"><div class="stat-label">Em Espera</div><div class="stat-value" id="kHold" style="color:var(--orange)">—</div><div class="stat-sub">on hold</div></div>
-  <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="kPkgs" style="color:var(--teal)">—</div><div class="stat-sub">na fila ativa</div></div>
+  <div class="stat"><div class="stat-label">Total Ativo</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">veículos na fila</div></div>
+  <div class="stat"><div class="stat-label">Pending</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">aguardando doca</div></div>
+  <div class="stat"><div class="stat-label">Assigned</div><div class="stat-value" id="kAssigned" style="color:var(--purple)">—</div><div class="stat-sub">doca atribuída</div></div>
+  <div class="stat"><div class="stat-label">Occupied</div><div class="stat-value" id="kOccupied" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
+  <div class="stat"><div class="stat-label">On-hold</div><div class="stat-value" id="kHold" style="color:var(--orange)">—</div><div class="stat-sub">em espera</div></div>
   <div class="stat"><div class="stat-label">Maior Espera</div><div class="stat-value" id="kMaxWait" style="color:var(--red)">—</div><div class="stat-sub" id="kMaxWaitSub">—</div></div>
 </div>
 
-<!-- Panels -->
-<div class="panel-row">
-  <!-- Agency breakdown -->
-  <div class="panel">
-    <div class="panel-title">Agências · Veículos Ativos</div>
-    <div id="agencyBars"><div style="color:var(--muted);text-align:center;padding:20px">—</div></div>
-  </div>
-
-  <!-- Docas ocupadas -->
-  <div class="panel">
-    <div class="panel-title">Docas Ocupadas · Inbound vs Outbound</div>
-    <div id="dockList"><div style="color:var(--muted);text-align:center;padding:20px">—</div></div>
-  </div>
-
-  <!-- Fluxo de espera -->
-  <div class="panel">
-    <div class="panel-title">Distribuição · Tempo de Espera</div>
-    <div id="waitHist"><div style="color:var(--muted);text-align:center;padding:20px">—</div></div>
-  </div>
-</div>
-
-<!-- Table -->
-<div class="section-header">
-  <span class="section-title">Detalhamento</span>
-  <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
-</div>
+<!-- Toolbar -->
 <div class="table-toolbar">
   <div class="search-wrap">
     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar motorista, placa, agência...">
+    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar motorista, placa, agência, trip...">
   </div>
   <button class="wait-sort-btn desc" id="waitSortBtn">↓ Maior espera</button>
+  <span class="table-count" id="tableCount"></span>
 </div>
+
+<!-- Table -->
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
     <h2>⏳ Aguardando sincronização</h2>
@@ -241,15 +193,27 @@ table.main-table tr:last-child td { border-bottom: none; }
   <table class="main-table" id="mainTable" style="display:none">
     <thead>
       <tr>
-        <th data-col="queue_number">Fila <span class="sa"></span></th>
-        <th data-col="driver_name">Motorista <span class="sa"></span></th>
-        <th data-col="agency">Agência <span class="sa"></span></th>
-        <th data-col="vehicle_number">Placa <span class="sa"></span></th>
-        <th>Status</th>
-        <th data-col="dockName">Doca <span class="sa"></span></th>
-        <th data-col="waiting_time" class="sorted">Espera <span class="sa">↓</span></th>
-        <th data-col="order_quantity" style="text-align:right">Pacotes <span class="sa"></span></th>
-        <th data-col="add_to_queue_time">Entrada <span class="sa"></span></th>
+        <th data-col="queue_number">Queue # <span class="sa"></span></th>
+        <th data-col="vehicle_number">Vehicle # <span class="sa"></span></th>
+        <th data-col="waiting_time" class="sorted">Waiting Time <span class="sa">↓</span></th>
+        <th data-col="is_prioritized">Prioritised <span class="sa"></span></th>
+        <th>Prioritised Factors</th>
+        <th data-col="on_hold_time">On-hold Time <span class="sa"></span></th>
+        <th data-col="lh_trip_number">LH Trip # <span class="sa"></span></th>
+        <th>LH Trip Name</th>
+        <th data-col="handover_task_number">Handover Task # <span class="sa"></span></th>
+        <th data-col="order_quantity" style="text-align:right">Pending IB Parcel Qty <span class="sa"></span></th>
+        <th data-col="driver_name">Driver Name <span class="sa"></span></th>
+        <th data-col="arrival_type">Arrival Type <span class="sa"></span></th>
+        <th data-col="agency">Agency <span class="sa"></span></th>
+        <th data-col="is_printed">Print Tag <span class="sa"></span></th>
+        <th data-col="assigned_dock_name">Assigned Dock <span class="sa"></span></th>
+        <th data-col="assigned_dock_group_name">Assigned Dock Group <span class="sa"></span></th>
+        <th data-col="allocated_dock_name">Allocated Dock <span class="sa"></span></th>
+        <th data-col="occupied_dock_name">Occupied Dock <span class="sa"></span></th>
+        <th data-col="entry_tag">Entry Tag <span class="sa"></span></th>
+        <th data-col="geofencing_status">Geofencing <span class="sa"></span></th>
+        <th data-col="queue_status">Status <span class="sa"></span></th>
       </tr>
     </thead>
     <tbody id="mainBody"></tbody>
@@ -261,8 +225,9 @@ table.main-table tr:last-child td { border-bottom: none; }
       Por página:
       <select id="pagSizeSelect">
         <option value="10">10</option>
-        <option value="20" selected>20</option>
+        <option value="25" selected>25</option>
         <option value="50">50</option>
+        <option value="100">100</option>
         <option value="0">Todas</option>
       </select>
     </div>
@@ -306,64 +271,57 @@ function fmtTs(ts) {
   return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
+function dash(v) { return (v && v !== '' && v !== 0 && v !== -1) ? v : '—'; }
 
-// ── Status / dock helpers ──────────────────────────────────────────────
-// queue_status: 1=pending, 2=assigned, 3=occupied, 4=on_hold
-function dockType(item) {
-  if (item.queue_status !== 3) return 'none';
-  const dn = (item.occupied_dock_name || '').toLowerCase();
-  if (dn.includes('inbound'))  return 'inbound';
-  if (dn.includes('outbound')) return 'outbound';
-  return 'other';
+// ── Status helpers ─────────────────────────────────────────────────────
+// queue_status: 1=Pending 2=Assigned 3=Occupied 4=On-hold
+function statusLabel(s) {
+  return { 1: 'pending', 2: 'assigned', 3: 'occupied', 4: 'hold' }[s] || 'other';
 }
-function itemFilter(item) {
-  switch (item.queue_status) {
-    case 1: return 'pending';
-    case 2: return 'assigned';
-    case 3: return dockType(item) === 'outbound' ? 'outbound' : 'inbound';
-    case 4: return 'hold';
-    default: return 'other';
-  }
-}
-function statusPill(item) {
-  switch (item.queue_status) {
-    case 1: return `<span class="st-pill st-pending">⏳ Aguardando</span>`;
-    case 2: return `<span class="st-pill st-assigned">📍 Atribuído</span>`;
-    case 3:
-      if (dockType(item) === 'inbound')  return `<span class="st-pill st-inbound">📥 Doca IB</span>`;
-      if (dockType(item) === 'outbound') return `<span class="st-pill st-outbound">📤 Doca OB</span>`;
-      return `<span class="st-pill st-inbound">🚛 Na Doca</span>`;
-    case 4: return `<span class="st-pill st-hold">⏸ Em Espera</span>`;
+function statusPill(s) {
+  switch (s) {
+    case 1: return `<span class="st-pill st-pending">⏳ Pending</span>`;
+    case 2: return `<span class="st-pill st-assigned">📍 Assigned</span>`;
+    case 3: return `<span class="st-pill st-occupied">🚛 Occupied</span>`;
+    case 4: return `<span class="st-pill st-hold">⏸ On-hold</span>`;
     default: return `<span class="st-pill">—</span>`;
   }
 }
-function dockName(item) {
-  if (item.queue_status === 3) return item.occupied_dock_name || '—';
-  if (item.queue_status === 2) return item.assigned_dock_name || '—';
-  if (item.queue_status === 4) return item.on_hold_dock_name || '—';
-  return '—';
+
+// arrival_type: 1=Normal, 2=Agendado (aproximação)
+function fmtArrivalType(t) {
+  return { 1: 'Normal', 2: 'Scheduled' }[t] || (t != null ? t : '—');
+}
+
+// is_prioritized: 1=Sim, outros=Não
+function fmtPrioritised(v) {
+  return v === 1
+    ? `<span class="tag-prio">★ Yes</span>`
+    : `<span class="tag-no">No</span>`;
+}
+
+// geofencing_status: 0=Fora, 1=Dentro
+function fmtGeo(v) {
+  if (v === 1) return `<span class="geo-ok">● Inside</span>`;
+  return `<span class="geo-out">— Outside</span>`;
 }
 
 // ── State ──────────────────────────────────────────────────────────────
-let allItems    = [];
+let allItems     = [];
 let activeFilter = 'all';
-let sortCol     = 'waiting_time';
-let sortAsc     = false;
-let tableSearch = '';
-let currentPage = 1;
-let pageSize    = 20;
-let lastAt      = null;
-let rawTotals   = {};
+let sortCol      = 'waiting_time';
+let sortAsc      = false;
+let tableSearch  = '';
+let currentPage  = 1;
+let pageSize     = 25;
+let lastAt       = null;
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 function buildTabs() {
-  const counts = { all: allItems.length, pending: 0, inbound: 0, outbound: 0, hold: 0 };
+  const counts = { all: allItems.length, pending: 0, assigned: 0, occupied: 0, hold: 0 };
   allItems.forEach(item => {
-    const f = itemFilter(item);
-    if (f === 'pending')  counts.pending++;
-    if (f === 'inbound')  counts.inbound++;
-    if (f === 'outbound') counts.outbound++;
-    if (f === 'hold')     counts.hold++;
+    const f = statusLabel(item.queue_status);
+    if (counts[f] !== undefined) counts[f]++;
   });
   Object.entries(counts).forEach(([k, v]) => {
     const el = document.getElementById('tc-' + k);
@@ -377,130 +335,42 @@ function buildTabs() {
 // ── KPIs ────────────────────────────────────────────────────────────────
 function buildKPIs() {
   const pending  = allItems.filter(i => i.queue_status === 1);
+  const assigned = allItems.filter(i => i.queue_status === 2);
   const occupied = allItems.filter(i => i.queue_status === 3);
-  const inbound  = occupied.filter(i => dockType(i) === 'inbound');
-  const outbound = occupied.filter(i => dockType(i) === 'outbound');
   const hold     = allItems.filter(i => i.queue_status === 4);
-  const totalPkg = allItems.reduce((s, i) => s + (i.order_quantity || 0), 0);
   const maxWait  = allItems.reduce((b, i) => i.waiting_time > (b?.waiting_time || 0) ? i : b, null);
 
-  document.getElementById('kTotal').textContent   = allItems.length;
+  document.getElementById('kTotal').textContent    = allItems.length;
   document.getElementById('kPending').textContent  = pending.length;
-  document.getElementById('kInbound').textContent  = inbound.length;
-  document.getElementById('kOutbound').textContent = outbound.length;
+  document.getElementById('kAssigned').textContent = assigned.length;
+  document.getElementById('kOccupied').textContent = occupied.length;
   document.getElementById('kHold').textContent     = hold.length;
-  document.getElementById('kPkgs').textContent     = fmtNum(totalPkg);
   document.getElementById('kMaxWait').textContent  = maxWait ? fmtWait(maxWait.waiting_time) : '—';
   document.getElementById('kMaxWaitSub').textContent = maxWait ? maxWait.driver_name.split(' ').slice(0,2).join(' ') : '—';
 }
 
-// ── Agency bars ────────────────────────────────────────────────────────
-function buildAgencyBars() {
-  const agencies = {};
-  allItems.forEach(i => {
-    const ag = (i.agency || 'N/A').trim();
-    if (!agencies[ag]) agencies[ag] = { count: 0, pkgs: 0 };
-    agencies[ag].count++;
-    agencies[ag].pkgs += i.order_quantity || 0;
-  });
-  const sorted = Object.entries(agencies).sort((a,b) => b[1].count - a[1].count).slice(0,8);
-  const maxCount = sorted[0]?.[1].count || 1;
-  document.getElementById('agencyBars').innerHTML = sorted.map(([name, v]) => `
-    <div class="ag-row">
-      <span class="ag-label" title="${name}">${name}</span>
-      <div class="ag-bar-wrap"><div class="ag-bar" style="width:${(v.count/maxCount*100).toFixed(1)}%"></div></div>
-      <span class="ag-val">${v.count} vei · ${fmtNum(v.pkgs)} pcts</span>
-    </div>`).join('') || '<div style="color:var(--muted);text-align:center;padding:20px">—</div>';
-}
-
-// ── Dock list ──────────────────────────────────────────────────────────
-function buildDockList() {
-  const occupied = allItems.filter(i => i.queue_status === 3);
-  const ibList   = occupied.filter(i => dockType(i) === 'inbound').sort((a,b) => b.order_quantity - a.order_quantity);
-  const obList   = occupied.filter(i => dockType(i) === 'outbound').sort((a,b) => b.order_quantity - a.order_quantity);
-
-  const mkItem = (item, type) => {
-    const color = type === 'inbound' ? 'var(--green)' : 'var(--purple)';
-    const dn    = item.occupied_dock_name || '—';
-    const dNum  = dn.replace(/[^\d]/g,'');
-    return `<div class="dock-item">
-      <div>
-        <div class="dock-name" style="color:${color}">${dNum ? 'Doca ' + (type === 'inbound' ? 'IB' : 'OB') + ' ' + dNum : dn}</div>
-        <div class="dock-sub">${item.driver_name} · ${item.vehicle_number}</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-family:monospace;font-size:12px;font-weight:700">${fmtNum(item.order_quantity)}</div>
-        <div style="font-size:10px;color:var(--muted)">${fmtWait(item.waiting_time)}</div>
-      </div>
-    </div>`;
-  };
-
-  const ibHtml = ibList.length ? ibList.map(i => mkItem(i,'inbound')).join('') : '';
-  const obHtml = obList.length ? obList.map(i => mkItem(i,'outbound')).join('') : '';
-
-  const sep = ibList.length && obList.length
-    ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--purple);font-weight:700;margin:10px 0 4px">📤 Outbound (${obList.length})</div>`
-    : '';
-  const ibHeader = ibList.length
-    ? `<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--green);font-weight:700;margin-bottom:4px">📥 Inbound (${ibList.length})</div>`
-    : '';
-
-  document.getElementById('dockList').innerHTML = (ibList.length + obList.length) > 0
-    ? ibHeader + ibHtml + sep + obHtml
-    : '<div style="color:var(--muted);text-align:center;padding:20px">Nenhum veículo na doca</div>';
-}
-
-// ── Wait histogram ─────────────────────────────────────────────────────
-const WAIT_BINS = [
-  { label: '0–15min',  min: 0,   max: 15,  color: '#22c55e' },
-  { label: '15–30min', min: 15,  max: 30,  color: '#4ade80' },
-  { label: '30–60min', min: 30,  max: 60,  color: '#f59e0b' },
-  { label: '1–2h',     min: 60,  max: 120, color: '#fb923c' },
-  { label: '2–4h',     min: 120, max: 240, color: '#ef4444' },
-  { label: '>4h',      min: 240, max: Infinity, color: '#b91c1c' },
-];
-function buildWaitHist() {
-  const counts = WAIT_BINS.map(b => allItems.filter(i => i.waiting_time >= b.min && i.waiting_time < b.max).length);
-  const maxC   = Math.max(...counts, 1);
-  document.getElementById('waitHist').innerHTML =
-    `<div style="display:flex;flex-direction:column;gap:7px">` +
-    WAIT_BINS.map((b, i) => {
-      const pct  = allItems.length ? Math.round(counts[i] / allItems.length * 100) : 0;
-      const barW = (counts[i] / maxC * 100).toFixed(1);
-      const inside = parseFloat(barW) > 30;
-      return `<div style="display:grid;grid-template-columns:72px 1fr 44px;align-items:center;gap:10px">
-        <span style="font-size:11px;font-weight:700;color:var(--muted);text-align:right">${b.label}</span>
-        <div style="position:relative;background:var(--surface2);border-radius:6px;height:28px;overflow:hidden">
-          <div style="width:${barW}%;background:${b.color};height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px">
-            ${inside && counts[i]>0 ? `<span style="font-size:12px;font-weight:800;color:rgba(0,0,0,.75)">${counts[i]}</span>` : ''}
-          </div>
-          ${!inside && counts[i]>0 ? `<span style="position:absolute;left:calc(${barW}% + 6px);top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--text)">${counts[i]}</span>` : ''}
-          ${counts[i]===0 ? `<span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)">—</span>` : ''}
-        </div>
-        <span style="font-size:11px;color:${pct>0?b.color:'var(--muted)'};text-align:right">${pct>0?pct+'%':'—'}</span>
-      </div>`;
-    }).join('') + `</div>`;
-}
-
 // ── Filtered / sorted items ────────────────────────────────────────────
 function filteredItems() {
-  let items = activeFilter === 'all' ? allItems
-    : allItems.filter(i => itemFilter(i) === activeFilter);
-  return items;
+  if (activeFilter === 'all') return allItems;
+  return allItems.filter(i => statusLabel(i.queue_status) === activeFilter);
 }
 
 function sortedItems(items) {
   return [...items].sort((a, b) => {
     let av, bv;
-    if (['queue_number','driver_name','agency','vehicle_number'].includes(sortCol)) {
+    const STR_COLS = ['queue_number','driver_name','agency','vehicle_number',
+                      'assigned_dock_name','assigned_dock_group_name',
+                      'allocated_dock_name','occupied_dock_name','handover_task_number'];
+    if (STR_COLS.includes(sortCol)) {
       av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
-    if (sortCol === 'dockName') {
-      av = dockName(a).toLowerCase(); bv = dockName(b).toLowerCase();
+    if (sortCol === 'lh_trip_number') {
+      av = (a.route_info?.lh_trip_number || '').toLowerCase();
+      bv = (b.route_info?.lh_trip_number || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
-    av = a[sortCol] || 0; bv = b[sortCol] || 0;
+    av = a[sortCol] ?? 0; bv = b[sortCol] ?? 0;
     return sortAsc ? av - bv : bv - av;
   });
 }
@@ -519,35 +389,50 @@ function buildMainTable(items) {
   const q = tableSearch.toLowerCase();
   let vis = sortedItems(items);
   if (q) vis = vis.filter(i =>
-    i.driver_name.toLowerCase().includes(q) ||
-    i.vehicle_number.toLowerCase().includes(q) ||
+    (i.driver_name || '').toLowerCase().includes(q) ||
+    (i.vehicle_number || '').toLowerCase().includes(q) ||
     (i.agency || '').toLowerCase().includes(q) ||
-    i.queue_number.toLowerCase().includes(q));
+    (i.queue_number || '').toLowerCase().includes(q) ||
+    (i.route_info?.lh_trip_number || '').toLowerCase().includes(q) ||
+    (i.route_info?.lh_trip_name || '').toLowerCase().includes(q) ||
+    (i.handover_task_number || '').toLowerCase().includes(q));
 
   const total      = vis.length;
   const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
   if (currentPage > totalPages) currentPage = totalPages;
-  document.getElementById('tableCount').textContent = `${total} veículos`;
+  document.getElementById('tableCount').textContent = `${total} veículo${total !== 1 ? 's' : ''}`;
 
   const start = pageSize > 0 ? (currentPage - 1) * pageSize : 0;
   const page  = pageSize > 0 ? vis.slice(start, start + pageSize) : vis;
 
-  document.getElementById('mainBody').innerHTML = page.map((item, idx) => {
-    const dn  = dockName(item);
-    const dt  = dockType(item);
-    const dnColor = dt === 'inbound' ? 'var(--green)' : dt === 'outbound' ? 'var(--purple)' : 'var(--muted)';
-    const tripName = item.route_info?.lh_trip_name || '—';
-    const tripShort = tripName.length > 32 ? tripName.substring(0,32)+'…' : tripName;
+  document.getElementById('mainBody').innerHTML = page.map(item => {
+    const ri       = item.route_info || {};
+    const pTags    = (item.prioritised_tags || []).join(', ') || '—';
+    const onHold   = item.on_hold_time ? fmtTs(item.on_hold_time) : '—';
+    const entryTag = item.entry_tag != null && item.entry_tag !== -1 ? item.entry_tag : '—';
+
     return `<tr>
-      <td style="font-family:monospace;font-size:12px;font-weight:700;color:var(--blue)">${item.queue_number}</td>
-      <td style="font-weight:600">${item.driver_name}</td>
-      <td style="font-size:11px;color:var(--muted)">${item.agency || '—'}</td>
-      <td style="font-family:monospace;font-size:12px">${item.vehicle_number}</td>
-      <td>${statusPill(item)}</td>
-      <td style="font-size:11px;color:${dnColor};font-weight:600">${dn !== '—' ? dn : '<span style="color:var(--muted)">—</span>'}</td>
+      <td style="font-family:monospace;font-size:12px;font-weight:700;color:var(--blue)">${item.queue_number || '—'}</td>
+      <td style="font-family:monospace;font-size:12px">${item.vehicle_number || '—'}</td>
       <td><span class="${waitClass(item.waiting_time)}">${fmtWait(item.waiting_time)}</span></td>
+      <td style="text-align:center">${fmtPrioritised(item.is_prioritized)}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${pTags}">${pTags}</td>
+      <td style="font-size:11px;color:var(--muted)">${onHold}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${ri.lh_trip_name || ''}">${ri.lh_trip_name || '—'}</td>
+      <td style="font-family:monospace;font-size:11px">${item.handover_task_number || '—'}</td>
       <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(item.order_quantity)}</td>
-      <td style="font-size:11px;color:var(--muted)" title="${tripName}">${fmtTs(item.add_to_queue_time)}</td>
+      <td style="font-weight:600">${item.driver_name || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${fmtArrivalType(item.arrival_type)}</td>
+      <td style="font-size:11px">${item.agency || '—'}</td>
+      <td style="text-align:center">${item.is_printed ? '<span class="tag-yes">✓ Yes</span>' : '<span class="tag-no">No</span>'}</td>
+      <td style="font-size:11px;color:var(--purple);font-weight:600">${item.assigned_dock_name || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${item.assigned_dock_group_name || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${item.allocated_dock_name || '—'}</td>
+      <td style="font-size:11px;color:var(--green);font-weight:600">${item.occupied_dock_name || '—'}</td>
+      <td style="font-size:11px;color:var(--muted);text-align:center">${entryTag}</td>
+      <td style="text-align:center">${fmtGeo(item.geofencing_status)}</td>
+      <td>${statusPill(item.queue_status)}</td>
     </tr>`;
   }).join('');
 
@@ -561,7 +446,7 @@ function buildPaginationBar(total, page, size) {
   bar.style.display = '';
   const totalPages = Math.ceil(total / size);
   const from = (page - 1) * size + 1, to = Math.min(page * size, total);
-  document.getElementById('pagInfo').textContent = `Mostrando ${from}–${to} de ${total} veículos`;
+  document.getElementById('pagInfo').textContent = `Mostrando ${from}–${to} de ${total}`;
 
   const mkBtn = (label, p, active = false, disabled = false) =>
     `<button class="pag-btn${active?' active':''}" data-page="${p}" ${disabled?'disabled':''}>${label}</button>`;
@@ -587,7 +472,10 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
     if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = false; }
-    document.querySelectorAll('table.main-table th').forEach(t => { t.classList.remove('sorted'); t.querySelector('.sa') && (t.querySelector('.sa').textContent=''); });
+    document.querySelectorAll('table.main-table th').forEach(t => {
+      t.classList.remove('sorted');
+      if (t.querySelector('.sa')) t.querySelector('.sa').textContent = '';
+    });
     th.classList.add('sorted');
     if (th.querySelector('.sa')) th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
     updateWaitSortBtn(); currentPage = 1; buildMainTable(filteredItems());
@@ -625,9 +513,6 @@ document.getElementById('waitSortBtn').addEventListener('click', () => {
 function render() {
   buildTabs();
   buildKPIs();
-  buildAgencyBars();
-  buildDockList();
-  buildWaitHist();
   buildMainTable(filteredItems());
 }
 
@@ -639,12 +524,13 @@ async function loadData() {
     const data = await res.json();
     if (data.error || data.fetchedAt === lastAt) return;
     lastAt   = data.fetchedAt;
-    allItems = data.list || [];
+    // Only active statuses: 1=Pending 2=Assigned 3=Occupied 4=On-hold
+    allItems = (data.list || []).filter(v => v.queue_status >= 1 && v.queue_status <= 4);
 
     const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
     document.getElementById('liveDot').className       = 'live-dot on';
-    document.getElementById('metaTag').textContent     = `${allItems.length} veículos · ${ts}`;
+    document.getElementById('metaTag').textContent     = `${allItems.length} ativos · ${ts}`;
     render();
   } catch (e) {}
 }

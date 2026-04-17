@@ -12,13 +12,17 @@
   'use strict';
 
   const SERVER_URL = 'https://stage-out.onrender.com/api/queue-data';
-  const API_URL    = '/api/in-station/queue/list';
+  const API_URL    = '/api/in-station/dock_management/queue/list';
   const INTERVAL   = 60 * 1000; // 60s
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
     return m ? m[1] : '';
   }
+
+  // queue_status: 1=pending 2=assigned 3=occupied 4=on_hold 5=ended
+  // Envia apenas ativos (status 1–4); status 5 (ended) é excluído da lista
+  const ACTIVE_STATUSES = new Set([1, 2, 3, 4]);
 
   async function fetchQueue() {
     const res = await fetch(API_URL, {
@@ -28,12 +32,21 @@
         'Content-Type': 'application/json',
         'x-csrftoken':  getCsrf(),
       },
-      body: JSON.stringify({ pageno: 1, count: 500 }),
+      body: JSON.stringify({ pageno: 1, count: 500, queue_type: 1, queue_status: '1,2,3,5,4' }),
     });
-    const json = await res.json();
+    const raw = await res.text();
+    console.log('[Queue] raw response (200 chars):', raw.substring(0, 200));
+    let json;
+    try { json = JSON.parse(raw); }
+    catch (e) { throw new Error(`Resposta não é JSON (status ${res.status}): ${raw.substring(0, 100)}`); }
     if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
+
+    const allList    = json.data.list || [];
+    const activeList = allList.filter(v => ACTIVE_STATUSES.has(v.queue_status));
+    console.log(`[Queue] ativos: ${activeList.length} / total API: ${json.data.total}`);
+
     return {
-      list:           json.data.list           || [],
+      list:           activeList,
       total:          json.data.total          || 0,
       pending_total:  json.data.pending_total  || 0,
       assigned_total: json.data.assigned_total || 0,
