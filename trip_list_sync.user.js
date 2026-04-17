@@ -27,7 +27,7 @@
 
     const params = new URLSearchParams({
       station_type:        '2,3,7,12,14,16,18',
-      trip_station_status: '50',
+      trip_station_status: '50,60',   // 50=em trânsito/chegando, 60=na doca/descarregando
       pageno:              '1',
       count:               '500',
       query_type:          '1',

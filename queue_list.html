@@ -327,12 +327,18 @@ function getTripDestStation(trip) {
 function getTripInfo(item) {
   const tripNum = item.route_info?.lh_trip_number;
   const trip    = tripNum ? tripMap[tripNum] : null;
-  if (!trip) return { origin: '—', eta: '—', vehicles: '—' };
+  if (!trip) return { origin: '—', eta: '—', vehicleType: '—' };
   const dest    = getTripDestStation(trip);
+  // Origem: pre_station_name ou 1ª estação do array
+  const origin  = trip.pre_station_name
+    || trip.trip_station?.find(s => s.sequence_number === 1)?.station_name
+    || '—';
+  // Tipo de veículo: vehicle_type_name (ex: "CARRETA - EXPRESSA")
+  const vehicleType = trip.vehicle_type_name || '—';
   return {
-    origin:   trip.pre_station_name || '—',
-    eta:      dest?.eta ? fmtTs(dest.eta) : '—',
-    vehicles: (trip.vehicle_plate_number_list || []).join(' / ') || trip.vehicle_number || '—',
+    origin,
+    eta:         dest?.eta ? fmtTs(dest.eta) : '—',
+    vehicleType,
   };
 }
 
@@ -405,7 +411,7 @@ function sortedItems(items) {
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_vehicles') {
-      av = getTripInfo(a).vehicles.toLowerCase(); bv = getTripInfo(b).vehicles.toLowerCase();
+      av = getTripInfo(a).vehicleType.toLowerCase(); bv = getTripInfo(b).vehicleType.toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_eta') {
@@ -457,7 +463,7 @@ function buildMainTable(items) {
 
     return `<tr>
       <td style="font-family:monospace;font-size:12px">${item.vehicle_number || '—'}</td>
-      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${trip.vehicles}</td>
+      <td style="font-size:11px;color:var(--muted)">${trip.vehicleType}</td>
       <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
       <td style="font-size:11px;color:var(--muted)">${trip.origin}</td>
       <td style="font-size:11px;color:var(--blue)">${trip.eta}</td>
