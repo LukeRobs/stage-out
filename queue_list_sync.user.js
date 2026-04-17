@@ -20,9 +20,9 @@
     return m ? m[1] : '';
   }
 
-  // queue_status: 1=pending 2=assigned 3=occupied 4=on_hold 5=ended
-  // Envia apenas ativos (status 1–4); status 5 (ended) é excluído da lista
-  const ACTIVE_STATUSES = new Set([1, 2, 3, 4]);
+  // queue_status: 1=pending 2=assigned 3=occupied 5=on_hold 4=ended
+  // Envia apenas ativos (status 1,2,3,5); status 4 (ended) é excluído da lista
+  const ACTIVE_STATUSES = new Set([1, 2, 3, 5]);
 
   async function fetchQueue() {
     const res = await fetch(API_URL, {

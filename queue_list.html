@@ -274,16 +274,16 @@ function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
 function dash(v) { return (v && v !== '' && v !== 0 && v !== -1) ? v : '—'; }
 
 // ── Status helpers ─────────────────────────────────────────────────────
-// queue_status: 1=Pending 2=Assigned 3=Occupied 4=On-hold
+// queue_status: 1=Pending 2=Assigned 3=Occupied 5=On-hold 4=Ended(excluído)
 function statusLabel(s) {
-  return { 1: 'pending', 2: 'assigned', 3: 'occupied', 4: 'hold' }[s] || 'other';
+  return { 1: 'pending', 2: 'assigned', 3: 'occupied', 5: 'hold' }[s] || 'other';
 }
 function statusPill(s) {
   switch (s) {
     case 1: return `<span class="st-pill st-pending">⏳ Pending</span>`;
     case 2: return `<span class="st-pill st-assigned">📍 Assigned</span>`;
     case 3: return `<span class="st-pill st-occupied">🚛 Occupied</span>`;
-    case 4: return `<span class="st-pill st-hold">⏸ On-hold</span>`;
+    case 5: return `<span class="st-pill st-hold">⏸ On-hold</span>`;
     default: return `<span class="st-pill">—</span>`;
   }
 }
@@ -337,7 +337,7 @@ function buildKPIs() {
   const pending  = allItems.filter(i => i.queue_status === 1);
   const assigned = allItems.filter(i => i.queue_status === 2);
   const occupied = allItems.filter(i => i.queue_status === 3);
-  const hold     = allItems.filter(i => i.queue_status === 4);
+  const hold     = allItems.filter(i => i.queue_status === 5);
   const maxWait  = allItems.reduce((b, i) => i.waiting_time > (b?.waiting_time || 0) ? i : b, null);
 
   document.getElementById('kTotal').textContent    = allItems.length;
@@ -525,7 +525,8 @@ async function loadData() {
     if (data.error || data.fetchedAt === lastAt) return;
     lastAt   = data.fetchedAt;
     // Only active statuses: 1=Pending 2=Assigned 3=Occupied 4=On-hold
-    allItems = (data.list || []).filter(v => v.queue_type === 1 && v.queue_status >= 1 && v.queue_status <= 4);
+    // status 4 = ended (excluído) — ativos: 1=pending 2=assigned 3=occupied 5=on_hold
+    allItems = (data.list || []).filter(v => v.queue_type === 1 && [1, 2, 3, 5].includes(v.queue_status));
 
     const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
