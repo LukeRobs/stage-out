@@ -453,8 +453,9 @@ let stageCache      = null; // { list, total, fetchedAt }
 let toPackingCache  = null; // { list, total, fetchedAt }
 let toPackedCache   = null; // { list, total, fetchedAt }
 let stageInCache    = null; // { list, total, fetchedAt }
-let queueCache      = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
-let tripCache       = null; // { list, fetchedAt } — trip list v2
+let queueCache        = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
+let tripCache         = null; // { list, fetchedAt } — trip list v2
+let tripHistoryCache  = { list: [], fetchedAt: null }; // { list, fetchedAt } — trip history (last 7 days)
 
 // ── Report sheet (pacotes por TO) ─────────────────────────────────────
 const REPORT_SPREADSHEET_ID = '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E';
@@ -734,6 +735,39 @@ const server = http.createServer((req, res) => {
   if (urlPath === '/api/trips') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify(tripCache || { list: [], fetchedAt: null }));
+    return;
+  }
+
+  // POST /api/trip-history-data — receives trip history from Tampermonkey
+  if (urlPath === '/api/trip-history-data' && req.method === 'POST') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', () => {
+      try {
+        const incoming = JSON.parse(body);
+        const inList   = incoming.list || [];
+        // Merge by trip_number — incoming data overwrites existing (more up-to-date)
+        const map = new Map(tripHistoryCache.list.map(t => [t.trip_number, t]));
+        inList.forEach(t => { if (t.trip_number) map.set(t.trip_number, t); });
+        tripHistoryCache = {
+          list:      Array.from(map.values()),
+          fetchedAt: incoming.fetchedAt || Date.now(),
+        };
+        console.log(`[trip-history] Merged → ${tripHistoryCache.list.length} trips (received ${inList.length})`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, total: tripHistoryCache.list.length }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/trip-history — serves trip history to dashboard
+  if (urlPath === '/api/trip-history') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(tripHistoryCache));
     return;
   }
 

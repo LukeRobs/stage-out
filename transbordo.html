@@ -59,6 +59,15 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .origins-strip { padding: 0 24px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
 .origin-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,158,11,.10); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
+/* ── Day navigation ── */
+.day-nav { padding: 0 24px 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.day-nav-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-right: 4px; }
+.day-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.day-btn:hover { border-color: var(--border2); color: var(--text); }
+.day-btn.active { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.4); color: var(--yellow); }
+.day-btn.today  { }
+.history-note { margin-left: auto; font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
+
 /* ── Chart section ── */
 .chart-section { padding: 0 24px 20px; }
 .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
@@ -76,6 +85,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .bar:hover { opacity: .8; }
 .bar-arrived  { background: var(--yellow); }
 .bar-expected { background: rgba(245,158,11,.3); border: 1px solid rgba(245,158,11,.4); border-bottom: none; }
+.bar-hist     { background: var(--purple); }
 .bar-label-top { font-size: 10px; font-family: monospace; color: var(--text); font-weight: 700; white-space: nowrap; }
 .bar-label-top.zero { color: var(--muted); }
 .bar-hour { font-size: 10px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
@@ -83,6 +93,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .chart-yaxis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 160px; padding: 0 8px 0 0; align-items: flex-end; }
 .chart-yaxis span { font-size: 10px; color: var(--muted); font-family: monospace; }
 .chart-row { display: flex; align-items: flex-start; }
+.chart-empty { text-align: center; padding: 40px; color: var(--muted); font-size: 12px; }
 
 /* ── Toolbar ── */
 .table-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
@@ -105,18 +116,18 @@ table.main-table th.sorted { color: var(--yellow); }
 table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: normal; word-break: break-word; }
 
 /* Column widths — 12 colunas */
-table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 6%;  }  /* Placa */
-table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 9%;  }  /* Veículo */
-table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 10%; }  /* LH # */
-table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 12%; }  /* Origem */
-table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 6%;  }  /* ETA */
-table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }  /* Chegada */
-table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 7%;  }  /* T. Espera */
-table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 8%; text-align:right; }  /* Pacotes */
-table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 13%; }  /* Motorista */
-table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 7%;  }  /* Doca Atrib. */
-table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 8%;  }  /* Status LH */
-table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 7%;  }  /* Status Queue */
+table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 6%;  }
+table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 9%;  }
+table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 10%; }
+table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 12%; }
+table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 6%;  }
+table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }
+table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 7%;  }
+table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 8%; text-align:right; }
+table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 13%; }
+table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 7%;  }
+table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 8%;  }
+table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 7%;  }
 
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
 table.main-table tr:hover td { background: rgba(255,255,255,.03); }
@@ -139,10 +150,6 @@ table.main-table tr:last-child td { border-bottom: none; }
 .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
 .empty code { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px; text-align: left; line-height: 1.8; }
-
-/* ── Tooltip ── */
-.tooltip { position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); background: var(--surface2); border: 1px solid var(--border2); color: var(--text); padding: 5px 9px; border-radius: 7px; font-size: 11px; white-space: nowrap; pointer-events: none; z-index: 999; box-shadow: var(--shadow); }
-.tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--border2); }
 
 @media (max-width:1200px) { .stats { grid-template-columns: repeat(3,1fr); } }
 @media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } }
@@ -168,31 +175,40 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- KPIs -->
 <div class="stats">
-  <div class="stat"><div class="stat-label">Viagens Transbordo</div><div class="stat-value" id="kTotal" style="color:var(--yellow)">—</div><div class="stat-sub">LTs filtradas</div></div>
-  <div class="stat"><div class="stat-label">Pacotes Total</div><div class="stat-value" id="kPackages" style="color:var(--blue)">—</div><div class="stat-sub">order_quantity</div></div>
-  <div class="stat"><div class="stat-label">Em Trânsito</div><div class="stat-value" id="kTransit" style="color:var(--yellow)">—</div><div class="stat-sub">a caminho</div></div>
-  <div class="stat"><div class="stat-label">Descarregando</div><div class="stat-value" id="kUnloading" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
-  <div class="stat"><div class="stat-label">Média / Viagem</div><div class="stat-value" id="kAvg" style="color:var(--purple)">—</div><div class="stat-sub">pacotes</div></div>
+  <div class="stat"><div class="stat-label">Viagens Transbordo</div><div class="stat-value" id="kTotal" style="color:var(--yellow)">—</div><div class="stat-sub" id="kTotalSub">ao vivo</div></div>
+  <div class="stat"><div class="stat-label">Pacotes</div><div class="stat-value" id="kPackages" style="color:var(--blue)">—</div><div class="stat-sub" id="kPackagesSub">dia selecionado</div></div>
+  <div class="stat"><div class="stat-label">Em Trânsito</div><div class="stat-value" id="kTransit" style="color:var(--yellow)">—</div><div class="stat-sub">ao vivo</div></div>
+  <div class="stat"><div class="stat-label">Descarregando</div><div class="stat-value" id="kUnloading" style="color:var(--green)">—</div><div class="stat-sub">ao vivo</div></div>
+  <div class="stat"><div class="stat-label">No Histórico</div><div class="stat-value" id="kHistory" style="color:var(--purple)">—</div><div class="stat-sub">últimos 7 dias</div></div>
 </div>
 
 <!-- Origens filtradas -->
 <div class="origins-strip" id="originsStrip"></div>
 
+<!-- Seletor de dias -->
+<div class="day-nav" id="dayNav">
+  <span class="day-nav-label">📅 Dia:</span>
+  <!-- gerado dinamicamente -->
+  <span class="history-note" id="histNote">📦 Histórico: aguardando sync do Tampermonkey</span>
+</div>
+
 <!-- Chart -->
 <div class="chart-section">
   <div class="chart-card">
     <div class="chart-title">
-      📦 <span>Pacotes por Hora de Chegada</span>
-      <div class="chart-legend">
+      📦 <span id="chartTitle">Pacotes por Hora de Chegada</span>
+      <div class="chart-legend" id="chartLegend">
         <span><span class="legend-dot" style="background:var(--yellow)"></span> Chegou (ATA)</span>
-        <span><span class="legend-dot" style="background:rgba(245,158,11,.35)"></span> Previsto (ETA/STA)</span>
+        <span><span class="legend-dot" style="background:rgba(245,158,11,.35)"></span> Previsto</span>
       </div>
     </div>
-    <div class="bar-chart">
-      <div class="bar-chart-inner">
-        <div class="chart-row">
-          <div class="chart-yaxis" id="chartYAxis"></div>
-          <div class="bars-container" id="barsContainer"></div>
+    <div id="chartContainer">
+      <div class="bar-chart">
+        <div class="bar-chart-inner">
+          <div class="chart-row">
+            <div class="chart-yaxis" id="chartYAxis"></div>
+            <div class="bars-container" id="barsContainer"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -200,7 +216,7 @@ table.main-table tr:last-child td { border-bottom: none; }
 </div>
 
 <!-- Toolbar -->
-<div class="section-divider">Viagens</div>
+<div class="section-divider">Viagens ao vivo</div>
 <div class="table-toolbar">
   <div class="search-wrap">
     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -215,9 +231,10 @@ table.main-table tr:last-child td { border-bottom: none; }
     <h2>⏳ Aguardando sincronização</h2>
     <p>O Tampermonkey ainda não enviou dados de Trip List.</p>
     <code>
-      1. Instale o script <b>trip_list_sync.user.js</b> no Tampermonkey<br>
-      2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
-      3. Aguarde o badge <b>🚚 Trip List</b> aparecer
+      1. Instale <b>trip_list_sync.user.js</b> no Tampermonkey (ao vivo)<br>
+      2. Instale <b>trip_history_sync.user.js</b> no Tampermonkey (histórico)<br>
+      3. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
+      4. Aguarde os badges <b>🚚 Trip List</b> e <b>📅 Trip History</b>
     </code>
   </div>
   <table class="main-table" id="mainTable" style="display:none">
@@ -228,7 +245,7 @@ table.main-table tr:last-child td { border-bottom: none; }
         <th data-col="lh_trip_number">Número do LH <span class="sa"></span></th>
         <th data-col="trip_origin">Origem <span class="sa"></span></th>
         <th data-col="trip_eta">ETA <span class="sa"></span></th>
-        <th data-col="trip_arrived" class="sorted">Hora de Chegada <span class="sa">↓</span></th>
+        <th data-col="trip_arrived" class="sorted">Hora Chegada <span class="sa">↓</span></th>
         <th data-col="waiting_time">T. Espera <span class="sa"></span></th>
         <th data-col="order_quantity" style="text-align:right">Pacotes <span class="sa"></span></th>
         <th data-col="driver_name">Motorista <span class="sa"></span></th>
@@ -285,19 +302,69 @@ function fmtTs(ts) {
   if (!ts) return '—';
   return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
-function fmtHour(ts) {
-  if (!ts) return null;
-  return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }).substring(0,5);
-}
 function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
 
-// ── Trip / Queue helpers ───────────────────────────────────────────────
+// Retorna YYYY-MM-DD para um timestamp Unix (segundos)
+function tsToDateStr(ts) {
+  if (!ts) return null;
+  const d = new Date(ts * 1000);
+  return d.toISOString().substring(0, 10);
+}
+// Retorna YYYY-MM-DD para hoje no timezone local
+function todayStr() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+// Formata YYYY-MM-DD para DD/MM
+function fmtDateLabel(dateStr) {
+  const [, m, d] = dateStr.split('-');
+  return `${d}/${m}`;
+}
+
+// ── Trip helpers ───────────────────────────────────────────────────────
+
+// Verifica se a trip é transbordo — funciona para live (pre_station_name) e histórico (trip_station[0])
+function isTransbordo(trip) {
+  const origin = trip.pre_station_name || trip.trip_station?.[0]?.station_name || '';
+  return TRANSBORDO_ORIGINS.has(origin);
+}
+
+// Origem da trip
+function getTripOrigin(trip) {
+  return trip.pre_station_name
+      || trip.trip_station?.[0]?.station_name
+      || '—';
+}
+
+// Destino (última estação) — para trips ao vivo
 function getDestStation(trip) {
   if (!trip?.trip_station) return null;
   return trip.trip_station.find(s => s.trip_station_status === 50 || s.trip_station_status === 60)
       || trip.trip_station[trip.trip_station.length - 1];
 }
 
+// Timestamp de chegada no destino (última estação)
+function getArrivalTs(trip) {
+  const dest = trip.trip_station?.[trip.trip_station.length - 1];
+  if (!dest) return 0;
+  return dest.ata > 0 ? dest.ata : (dest.sta > 0 ? dest.sta : 0);
+}
+
+// Quantidade de pacotes — para dados históricos (sem queue)
+function getHistPackages(trip) {
+  const dest   = trip.trip_station?.[trip.trip_station.length - 1];
+  const origin = trip.trip_station?.[0];
+  if (dest?.unload_quantity > 0)         return dest.unload_quantity;
+  if (dest?.expect_unload_quantity > 0)  return dest.expect_unload_quantity;
+  if (origin?.transport_quantity > 0)    return origin.transport_quantity;
+  if (origin?.load_quantity > 0)         return origin.load_quantity;
+  return 0;
+}
+
+// ── Queue map (fonte secundária para viagens ao vivo) ──────────────────
 let queueMap = {};
 function buildQueueMap(queueList) {
   queueMap = {};
@@ -336,12 +403,16 @@ function queueStatusPill(s) {
 }
 
 // ── State ──────────────────────────────────────────────────────────────
-let allTrips   = [];   // todos trips (não filtrados)
-let tbTrips    = [];   // apenas transbordo
-let sortCol    = 'trip_arrived';
-let sortAsc    = false;
-let tableSearch = '';
-let lastAt     = null;
+let allTrips      = [];   // todos trips ao vivo (não filtrados)
+let liveTransb    = [];   // trips transbordo ao vivo
+let historyTrips  = [];   // todos trips históricos (não filtrados)
+let histTransb    = [];   // trips transbordo históricos
+let sortCol       = 'trip_arrived';
+let sortAsc       = false;
+let tableSearch   = '';
+let lastLiveAt    = null;
+let lastHistAt    = null;
+let selectedDate  = todayStr(); // data exibida no gráfico
 
 // ── Origens strip ──────────────────────────────────────────────────────
 function buildOriginsStrip() {
@@ -351,95 +422,178 @@ function buildOriginsStrip() {
     ).join('');
 }
 
+// ── Day navigation ─────────────────────────────────────────────────────
+function buildDayNav() {
+  const nav = document.getElementById('dayNav');
+  // Remove botões existentes (mantém label e histNote)
+  nav.querySelectorAll('.day-btn').forEach(b => b.remove());
+  const label = nav.querySelector('.day-nav-label');
+  const note  = document.getElementById('histNote');
+
+  // Gera últimos 7 dias (hoje primeiro)
+  const today = todayStr();
+  const days  = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+    days.push(`${y}-${m}-${dd}`);
+  }
+
+  // Determina quais dias têm dados históricos
+  const histDates = new Set();
+  histTransb.forEach(t => {
+    const ts = getArrivalTs(t);
+    if (ts > 0) histDates.add(tsToDateStr(ts));
+  });
+
+  // Insere botões após o label
+  days.forEach(dateStr => {
+    const btn = document.createElement('button');
+    btn.className = 'day-btn' + (dateStr === selectedDate ? ' active' : '') + (dateStr === today ? ' today' : '');
+    const isToday  = dateStr === today;
+    const hasHist  = histDates.has(dateStr);
+    btn.textContent = isToday ? `Hoje (${fmtDateLabel(dateStr)})` : fmtDateLabel(dateStr);
+    btn.title       = dateStr + (hasHist ? ' — histórico disponível' : isToday ? ' — ao vivo' : ' — sem dados');
+    if (!isToday && !hasHist) btn.style.opacity = '.4';
+    btn.addEventListener('click', () => {
+      selectedDate = dateStr;
+      buildDayNav();
+      buildKPIs();
+      buildChart();
+    });
+    label.insertAdjacentElement('afterend', btn);
+  });
+
+  // Move histNote para o final
+  nav.appendChild(note);
+
+  // Atualiza nota de histórico
+  if (lastHistAt) {
+    const ts = new Date(lastHistAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    note.textContent = `📦 Histórico: ${histTransb.length} viagens · sync ${ts}`;
+  } else {
+    note.textContent = '📦 Histórico: aguardando trip_history_sync.user.js';
+  }
+}
+
 // ── KPIs ────────────────────────────────────────────────────────────────
 function buildKPIs() {
-  const transit   = tbTrips.filter(t => getDestStation(t)?.trip_station_status === 50).length;
-  const unloading = tbTrips.filter(t => getDestStation(t)?.trip_station_status === 60).length;
-  const totalPkg  = tbTrips.reduce((s, t) => s + (getQueueInfo(t).orderQty || 0), 0);
-  const avg       = tbTrips.length > 0 ? Math.round(totalPkg / tbTrips.length) : 0;
+  const transit   = liveTransb.filter(t => getDestStation(t)?.trip_station_status === 50).length;
+  const unloading = liveTransb.filter(t => getDestStation(t)?.trip_station_status === 60).length;
 
-  document.getElementById('kTotal').textContent    = tbTrips.length;
-  document.getElementById('kPackages').textContent = fmtNum(totalPkg);
-  document.getElementById('kTransit').textContent  = transit;
-  document.getElementById('kUnloading').textContent = unloading;
-  document.getElementById('kAvg').textContent      = fmtNum(avg);
+  // Pacotes do dia selecionado (histórico ou live se hoje sem histórico)
+  const isToday   = selectedDate === todayStr();
+  const dayTrips  = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
+  let totalPkg    = 0;
+  if (dayTrips.length > 0) {
+    totalPkg = dayTrips.reduce((s, t) => s + getHistPackages(t), 0);
+  } else if (isToday) {
+    totalPkg = liveTransb.reduce((s, t) => s + (getQueueInfo(t).orderQty || 0), 0);
+  }
+
+  document.getElementById('kTotal').textContent      = liveTransb.length;
+  document.getElementById('kTotalSub').textContent   = 'ao vivo';
+  document.getElementById('kPackages').textContent   = fmtNum(totalPkg);
+  document.getElementById('kPackagesSub').textContent = isToday ? 'hoje' : fmtDateLabel(selectedDate);
+  document.getElementById('kTransit').textContent    = transit;
+  document.getElementById('kUnloading').textContent  = unloading;
+  document.getElementById('kHistory').textContent    = histTransb.length;
 }
 
 // ── Bar chart ───────────────────────────────────────────────────────────
 function buildChart() {
-  // Monta janela de 24 horas: 12h atrás até 11h à frente (cobre viagens do dia)
-  const nowTs  = Math.floor(Date.now() / 1000);
-  const nowH   = new Date().getHours();
+  const isToday  = selectedDate === todayStr();
+  const nowH     = new Date().getHours();
+  const hours    = Array.from({ length: 24 }, (_, i) => i);
 
-  // Gera as 24 horas do dia atual (00..23)
-  const hours = [];
-  for (let h = 0; h < 24; h++) hours.push(h);
+  // Decide fonte dos dados do gráfico
+  const histDay = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
+  const useHist = histDay.length > 0;
+  const useLive = isToday && !useHist;
 
-  // Agrupa pacotes por hora
-  // arrived[h] = pacotes de viagens que CHEGARAM nessa hora (ata > 0)
-  // expected[h] = pacotes de viagens SEM ata (prevista por sta ou eta)
-  const arrived  = new Array(24).fill(0);
-  const expected = new Array(24).fill(0);
-  const tripsByHour = {}; // para tooltip
+  let arrived  = new Array(24).fill(0);
+  let expected = new Array(24).fill(0);
+  let isHistMode = false;
 
-  tbTrips.forEach(trip => {
-    const dest = getDestStation(trip);
-    const qi   = getQueueInfo(trip);
-    const pkg  = qi.orderQty || 0;
-
-    if (dest?.ata > 0) {
-      const h = new Date(dest.ata * 1000).getHours();
-      arrived[h]  += pkg;
-      if (!tripsByHour[`a${h}`]) tripsByHour[`a${h}`] = [];
-      tripsByHour[`a${h}`].push({ trip, pkg });
-    } else {
-      const ref = dest?.eta || dest?.sta || 0;
-      if (ref > 0) {
-        const h = new Date(ref * 1000).getHours();
-        expected[h] += pkg;
-        if (!tripsByHour[`e${h}`]) tripsByHour[`e${h}`] = [];
-        tripsByHour[`e${h}`].push({ trip, pkg });
+  if (useHist) {
+    // Modo histórico: pacotes por hora de chegada (ATA no destino)
+    isHistMode = true;
+    histDay.forEach(trip => {
+      const ts  = getArrivalTs(trip);
+      const pkg = getHistPackages(trip);
+      if (ts > 0 && pkg > 0) {
+        const h = new Date(ts * 1000).getHours();
+        arrived[h] += pkg;
       }
-    }
-  });
+    });
+  } else if (useLive) {
+    // Modo ao vivo: usa tripCache atual
+    liveTransb.forEach(trip => {
+      const dest = getDestStation(trip);
+      const qi   = getQueueInfo(trip);
+      const pkg  = qi.orderQty || 0;
+      if (dest?.ata > 0) {
+        const h = new Date(dest.ata * 1000).getHours();
+        arrived[h] += pkg;
+      } else {
+        const ref = dest?.eta || dest?.sta || 0;
+        if (ref > 0) {
+          const h = new Date(ref * 1000).getHours();
+          expected[h] += pkg;
+        }
+      }
+    });
+  }
 
   const maxVal = Math.max(1, ...hours.map(h => arrived[h] + expected[h]));
 
-  // Y-axis labels (4 ticks)
+  // Título e legenda
+  const modeLabel = isHistMode
+    ? `Histórico ${fmtDateLabel(selectedDate)} — ${histDay.length} viagens`
+    : (isToday ? 'Hoje (ao vivo)' : `${fmtDateLabel(selectedDate)} — sem dados`);
+  document.getElementById('chartTitle').textContent = `📦 Pacotes por Hora · ${modeLabel}`;
+  document.getElementById('chartLegend').innerHTML = isHistMode
+    ? `<span><span class="legend-dot" style="background:var(--purple)"></span> Histórico</span>`
+    : `<span><span class="legend-dot" style="background:var(--yellow)"></span> Chegou (ATA)</span>
+       <span><span class="legend-dot" style="background:rgba(245,158,11,.35)"></span> Previsto</span>`;
+
+  // Y-axis
   const yLabels = [0, Math.round(maxVal * 0.33), Math.round(maxVal * 0.66), maxVal];
-  document.getElementById('chartYAxis').innerHTML = yLabels.reverse().map(v =>
+  document.getElementById('chartYAxis').innerHTML = [...yLabels].reverse().map(v =>
     `<span>${fmtNum(v)}</span>`
   ).join('');
 
   // Bars
   document.getElementById('barsContainer').innerHTML = hours.map(h => {
-    const aVal = arrived[h];
-    const eVal = expected[h];
+    const aVal  = arrived[h];
+    const eVal  = expected[h];
     const total = aVal + eVal;
-    const aH   = total > 0 ? Math.round((aVal / maxVal) * 160) : 0;
-    const eH   = total > 0 ? Math.round((eVal / maxVal) * 160) : 0;
-    const isNow = h === nowH;
-    const topLabel = total > 0 ? total : '';
-    const hStr = String(h).padStart(2,'0') + ':00';
+    const aH    = total > 0 ? Math.round((aVal / maxVal) * 160) : 0;
+    const eH    = total > 0 ? Math.round((eVal / maxVal) * 160) : 0;
+    const isNow = isToday && h === nowH;
+    const hStr  = String(h).padStart(2, '0') + ':00';
+    const barClass = isHistMode ? 'bar bar-hist' : 'bar bar-arrived';
 
     return `
       <div class="bar-col">
         <div class="bar-wrap">
           <span class="bar-label-top${total === 0 ? ' zero' : ''}">${total > 0 ? fmtNum(total) : ''}</span>
-          ${eH > 0 ? `<div class="bar bar-expected" style="height:${eH}px" title="${fmtNum(eVal)} pacotes previstos às ${hStr}"></div>` : ''}
-          ${aH > 0 ? `<div class="bar bar-arrived"  style="height:${aH}px" title="${fmtNum(aVal)} pacotes chegados às ${hStr}"></div>` : (eH === 0 ? `<div style="height:2px;width:100%;background:var(--border);border-radius:2px;margin-bottom:0"></div>` : '')}
+          ${eH > 0 ? `<div class="bar bar-expected" style="height:${eH}px" title="${fmtNum(eVal)} prev. às ${hStr}"></div>` : ''}
+          ${aH > 0 ? `<div class="${barClass}" style="height:${aH}px" title="${fmtNum(aVal)} pacotes às ${hStr}"></div>`
+                   : (eH === 0 ? `<div style="height:2px;width:100%;background:var(--border);border-radius:2px"></div>` : '')}
         </div>
-        <span class="bar-hour${isNow ? ' now' : ''}">${isNow ? '▼' : hStr.substring(0,2)}</span>
+        <span class="bar-hour${isNow ? ' now' : ''}">${isNow ? '▼' : String(h).padStart(2,'0')}</span>
       </div>`;
   }).join('');
 }
 
-// ── Table ───────────────────────────────────────────────────────────────
+// ── Table (viagens ao vivo) ─────────────────────────────────────────────
 function sortedItems(items) {
   return [...items].sort((a, b) => {
     let av, bv;
-    if (sortCol === 'vehicle_number') {
-      av = (a.vehicle_number || '').toLowerCase(); bv = (b.vehicle_number || '').toLowerCase();
+    if (['vehicle_number','driver_name','vehicle_type_name','trip_number'].includes(sortCol)) {
+      av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_vehicles') {
@@ -451,11 +605,7 @@ function sortedItems(items) {
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_origin') {
-      av = (a.pre_station_name || '').toLowerCase(); bv = (b.pre_station_name || '').toLowerCase();
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    }
-    if (sortCol === 'driver_name') {
-      av = (a.driver_name || '').toLowerCase(); bv = (b.driver_name || '').toLowerCase();
+      av = getTripOrigin(a).toLowerCase(); bv = getTripOrigin(b).toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_eta') {
@@ -463,10 +613,8 @@ function sortedItems(items) {
       return sortAsc ? av - bv : bv - av;
     }
     if (sortCol === 'trip_arrived') {
-      const ataA = getDestStation(a)?.ata || 0;
-      const ataB = getDestStation(b)?.ata || 0;
-      av = ataA > 0 ? ataA : -1;
-      bv = ataB > 0 ? ataB : -1;
+      av = getDestStation(a)?.ata || 0; bv = getDestStation(b)?.ata || 0;
+      av = av > 0 ? av : -1; bv = bv > 0 ? bv : -1;
       return sortAsc ? av - bv : bv - av;
     }
     if (sortCol === 'lh_status') {
@@ -474,7 +622,7 @@ function sortedItems(items) {
       bv = getDestStation(b)?.trip_station_status || 0;
       return sortAsc ? av - bv : bv - av;
     }
-    if (['waiting_time', 'order_quantity', 'queue_status'].includes(sortCol)) {
+    if (['waiting_time','order_quantity','queue_status'].includes(sortCol)) {
       const qa = queueMap[a.trip_number], qb = queueMap[b.trip_number];
       av = qa?.[sortCol] ?? 0; bv = qb?.[sortCol] ?? 0;
       return sortAsc ? av - bv : bv - av;
@@ -500,25 +648,23 @@ function buildMainTable() {
   document.getElementById('emptyMsg').style.display  = 'none';
 
   const q = tableSearch.toLowerCase();
-  let vis = sortedItems(tbTrips);
+  let vis = sortedItems(liveTransb);
   if (q) vis = vis.filter(t =>
-    (t.vehicle_number   || '').toLowerCase().includes(q) ||
-    (t.driver_name      || '').toLowerCase().includes(q) ||
-    (t.trip_number      || '').toLowerCase().includes(q) ||
-    (t.trip_name        || '').toLowerCase().includes(q) ||
-    (t.pre_station_name || '').toLowerCase().includes(q));
+    (t.vehicle_number    || '').toLowerCase().includes(q) ||
+    (t.driver_name       || '').toLowerCase().includes(q) ||
+    (t.trip_number       || '').toLowerCase().includes(q) ||
+    (t.trip_name         || '').toLowerCase().includes(q) ||
+    getTripOrigin(t).toLowerCase().includes(q));
 
   document.getElementById('tableCount').textContent = `${vis.length} viagem${vis.length !== 1 ? 's' : ''} transbordo`;
 
   document.getElementById('mainBody').innerHTML = vis.map(trip => {
-    const dest    = getDestStation(trip);
-    const qi      = getQueueInfo(trip);
-    const origin  = trip.pre_station_name
-                  || trip.trip_station?.find(s => s.sequence_number === 1)?.station_name
-                  || '—';
-    const eta     = dest?.eta  ? fmtTs(dest.eta)  : '—';
-    const ata     = dest?.ata  || 0;
-    const ataStr  = ata > 0 ? fmtTs(ata) : '—';
+    const dest   = getDestStation(trip);
+    const qi     = getQueueInfo(trip);
+    const origin = getTripOrigin(trip);
+    const eta    = dest?.eta ? fmtTs(dest.eta) : '—';
+    const ata    = dest?.ata || 0;
+    const ataStr = ata > 0 ? fmtTs(ata) : '—';
 
     return `<tr>
       <td style="font-family:monospace;font-size:12px">${trip.vehicle_number || '—'}</td>
@@ -561,39 +707,57 @@ document.getElementById('tableSearch').addEventListener('input', e => {
 // ── Render all ──────────────────────────────────────────────────────────
 function render() {
   buildOriginsStrip();
+  buildDayNav();
   buildKPIs();
   buildChart();
   buildMainTable();
 }
 
-// ── Load data ────────────────────────────────────────────────────────────
-async function loadData() {
+// ── Load live data ───────────────────────────────────────────────────────
+async function loadLive() {
   try {
     const [qRes, tRes] = await Promise.all([fetch('/api/queue'), fetch('/api/trips')]);
     const [qData, tData] = await Promise.all([qRes.json(), tRes.json()]);
-
-    if (!tData.list || tData.fetchedAt === lastAt) return;
-    lastAt = tData.fetchedAt;
+    if (!tData.list || tData.fetchedAt === lastLiveAt) return;
+    lastLiveAt = tData.fetchedAt;
 
     buildQueueMap(qData.list || []);
-    allTrips = tData.list || [];
-
-    // Filtra apenas trips transbordo
-    tbTrips = allTrips.filter(t => TRANSBORDO_ORIGINS.has(t.pre_station_name));
+    allTrips   = tData.list || [];
+    liveTransb = allTrips.filter(isTransbordo);
 
     const ts = new Date(tData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('lastUpdated').textContent = ts;
+    document.getElementById('lastUpdated').textContent = `Live: ${ts}`;
     document.getElementById('liveDot').className       = 'live-dot on';
-    document.getElementById('metaTag').textContent     = `${tbTrips.length} transbordo · ${ts}`;
+    document.getElementById('metaTag').textContent     = `${liveTransb.length} transb. ao vivo · ${ts}`;
 
     render();
   } catch (e) {
-    console.error('[Transbordo]', e);
+    console.error('[Transbordo live]', e);
   }
 }
 
-loadData();
-setInterval(loadData, 15000);
+// ── Load history data ────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    const res  = await fetch('/api/trip-history');
+    const data = await res.json();
+    if (!data.list || data.fetchedAt === lastHistAt) return;
+    lastHistAt   = data.fetchedAt;
+    historyTrips = data.list || [];
+    histTransb   = historyTrips.filter(isTransbordo);
+    console.log(`[Transbordo hist] ${histTransb.length} viagens transbordo no histórico`);
+    buildDayNav();
+    buildKPIs();
+    buildChart();
+  } catch (e) {
+    console.error('[Transbordo hist]', e);
+  }
+}
+
+loadLive();
+loadHistory();
+setInterval(loadLive,    15000); // ao vivo: a cada 15s
+setInterval(loadHistory, 30000); // histórico: a cada 30s
 </script>
 </body>
 </html>
