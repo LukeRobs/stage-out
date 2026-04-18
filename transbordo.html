@@ -443,6 +443,19 @@ function queueStatusPill(s) {
   }
 }
 
+// ── Cache de trip numbers transbordo (localStorage) ───────────────────
+// Persiste trip numbers vistos em liveTransb para identificar trips que
+// finalizaram na queue mas ainda não chegaram no trip_history
+const TRANSB_CACHE_KEY = 'tbTransbSeenTrips';
+let transbCache = (() => {
+  try { return new Set(JSON.parse(localStorage.getItem(TRANSB_CACHE_KEY) || '[]')); }
+  catch { return new Set(); }
+})();
+function saveTransbCache() {
+  try { localStorage.setItem(TRANSB_CACHE_KEY, JSON.stringify([...transbCache])); }
+  catch {}
+}
+
 // ── State ──────────────────────────────────────────────────────────────
 let allTrips      = [];   // todos trips ao vivo (não filtrados)
 let liveTransb    = [];   // trips transbordo ao vivo
@@ -518,6 +531,19 @@ function buildDayNav() {
   }
 }
 
+// ── Trips finalizadas na queue ainda não no trip_history (apenas hoje) ──
+function getEndedQueueTransbToday() {
+  const histNums = new Set(histTransb.map(t => t.trip_number));
+  const today    = todayStr();
+  return Object.values(queueMap).filter(q => {
+    if (q.queue_status !== 4) return false;
+    const tn = q.route_info?.lh_trip_number;
+    if (!tn || !transbCache.has(tn)) return false;  // não reconhecido como transbordo
+    if (histNums.has(tn)) return false;              // já contabilizado no histTransb
+    return tsToDateStr(q.add_to_queue_time || 0) === today;
+  });
+}
+
 // ── KPIs ────────────────────────────────────────────────────────────────
 function buildKPIs() {
   const isToday = selectedDate === todayStr();
@@ -525,15 +551,18 @@ function buildKPIs() {
   // Viagens finalizadas do dia selecionado (vêm do histórico)
   const dayFinished = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
 
-  // Pacotes finalizados (histórico do dia)
-  const pkgReceived = dayFinished.reduce((s, t) => s + getHistPackages(t), 0);
+  // Trips finalizadas na queue hoje que ainda não estão no histTransb (apenas hoje)
+  const endedQ = isToday ? getEndedQueueTransbToday() : [];
+
+  // Pacotes finalizados: histórico + ended queue (sem duplicar)
+  const pkgReceived = dayFinished.reduce((s, t) => s + getHistPackages(t), 0)
+                    + endedQ.reduce((s, q) => s + (q.order_quantity || 0), 0);
 
   // Pacotes pendentes (ao vivo — ainda em trânsito ou descarregando)
   const pkgPending = liveTransb.reduce((s, t) => s + (getQueueInfo(t).orderQty || 0), 0);
 
-  // Total viagens do dia = ao vivo (pendentes) + finalizadas no histórico
-  // Só soma ao vivo quando dia selecionado é hoje
-  const totalToday = isToday ? liveTransb.length + dayFinished.length : dayFinished.length;
+  const finishedCount = dayFinished.length + endedQ.length;
+  const totalToday = isToday ? liveTransb.length + finishedCount : dayFinished.length;
 
   const dayLabel = isToday ? 'hoje' : fmtDateLabel(selectedDate);
 
@@ -542,20 +571,21 @@ function buildKPIs() {
   document.getElementById('kPending').textContent    = isToday ? liveTransb.length : '—';
   document.getElementById('kPendingSub').textContent = isToday ? `${liveTransb.filter(t=>getDestStation(t)?.trip_station_status===50).length} trânsito · ${liveTransb.filter(t=>getDestStation(t)?.trip_station_status===60).length} descarregando` : 'apenas hoje';
   document.getElementById('kReceived').textContent   = fmtNum(pkgReceived);
-  document.getElementById('kReceivedSub').textContent = `${dayFinished.length} viagens · ${dayLabel}`;
+  document.getElementById('kReceivedSub').textContent = `${isToday ? finishedCount : dayFinished.length} viagens · ${dayLabel}`;
   document.getElementById('kPendingPkg').textContent = isToday ? fmtNum(pkgPending) : '—';
   document.getElementById('kHistory').textContent    = histTransb.length;
 }
 
 // ── Bar chart ───────────────────────────────────────────────────────────
-// Exibe APENAS viagens finalizadas (histórico) — nunca trips ao vivo pendentes
 function buildChart() {
   const isToday = selectedDate === todayStr();
   const nowH    = new Date().getHours();
   const hours   = Array.from({ length: 24 }, (_, i) => i);
 
-  // Apenas viagens finalizadas do dia selecionado (vêm do endpoint /api/trip-history)
+  // Viagens finalizadas do histórico
   const histDay = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
+  // Trips finalizadas na queue ainda não no histTransb (apenas hoje)
+  const endedQ  = isToday ? getEndedQueueTransbToday() : [];
 
   const arrived = new Array(24).fill(0);
   histDay.forEach(trip => {
@@ -565,13 +595,19 @@ function buildChart() {
       arrived[new Date(ata * 1000).getHours()] += pkg;
     }
   });
+  endedQ.forEach(q => {
+    const ts  = q.add_to_queue_time || 0;
+    const pkg = q.order_quantity || 0;
+    if (ts > 0 && pkg > 0) arrived[new Date(ts * 1000).getHours()] += pkg;
+  });
 
   const maxVal = Math.max(1, ...arrived);
+  const finishedCount = histDay.length + endedQ.length;
 
   // Título e legenda
   const dayLabel = fmtDateLabel(selectedDate);
-  const modeLabel = histDay.length > 0
-    ? `${isToday ? 'Hoje' : dayLabel} — ${histDay.length} finalizadas`
+  const modeLabel = finishedCount > 0
+    ? `${isToday ? 'Hoje' : dayLabel} — ${finishedCount} finalizadas`
     : (isToday ? 'Hoje — aguardando finalizações' : `${dayLabel} — sem dados`);
 
   document.getElementById('chartTitle').textContent = `PACOTES POR HORA · ${modeLabel.toUpperCase()}`;
@@ -740,6 +776,8 @@ async function loadLive() {
     buildQueueMap(qData.list || []);
     allTrips   = tData.list || [];
     liveTransb = allTrips.filter(isTransbordo);
+    liveTransb.forEach(t => transbCache.add(t.trip_number));
+    saveTransbCache();
 
     const ts = new Date(tData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = `Live: ${ts}`;
