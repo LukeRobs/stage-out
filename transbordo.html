@@ -346,15 +346,18 @@ function getDestStation(trip) {
       || trip.trip_station[trip.trip_station.length - 1];
 }
 
-// Timestamp de chegada no destino (última estação)
+// Timestamp de chegada real no destino (somente ATA — nunca STA/ETA)
+// Usar ATA garante que só viagens que JÁ chegaram entram no gráfico histórico
 function getArrivalTs(trip) {
   const dest = trip.trip_station?.[trip.trip_station.length - 1];
   if (!dest) return 0;
-  return dest.ata > 0 ? dest.ata : (dest.sta > 0 ? dest.sta : 0);
+  return dest.ata > 0 ? dest.ata : 0;
 }
 
 // Quantidade de pacotes — para dados históricos (sem queue)
+// Prioridade: order_quantity (raiz) > unload real > previsto descarregar > transportado > carregado
 function getHistPackages(trip) {
+  if ((trip.order_quantity || 0) > 0)    return trip.order_quantity;
   const dest   = trip.trip_station?.[trip.trip_station.length - 1];
   const origin = trip.trip_station?.[0];
   if (dest?.unload_quantity > 0)         return dest.unload_quantity;
