@@ -304,11 +304,15 @@ function fmtTs(ts) {
 }
 function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
 
-// Retorna YYYY-MM-DD para um timestamp Unix (segundos)
+// Retorna YYYY-MM-DD para um timestamp Unix (segundos) no timezone LOCAL do browser
+// IMPORTANTE: toISOString() retorna UTC — a 23:00 BRT (UTC-3) seria "dia+1" em UTC
 function tsToDateStr(ts) {
   if (!ts) return null;
   const d = new Date(ts * 1000);
-  return d.toISOString().substring(0, 10);
+  const y  = d.getFullYear();
+  const m  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
 }
 // Retorna YYYY-MM-DD para hoje no timezone local
 function todayStr() {
@@ -327,9 +331,19 @@ function fmtDateLabel(dateStr) {
 // ── Trip helpers ───────────────────────────────────────────────────────
 
 // Verifica se a trip é transbordo — funciona para live (pre_station_name) e histórico (trip_station[0])
+// Usa trim() para ignorar espaços extras e comparação normalizada
+function normalizeOrigin(s) {
+  return (s || '').trim().replace(/\s+/g, ' ');
+}
 function isTransbordo(trip) {
-  const origin = trip.pre_station_name || trip.trip_station?.[0]?.station_name || '';
-  return TRANSBORDO_ORIGINS.has(origin);
+  const raw = trip.pre_station_name || trip.trip_station?.[0]?.station_name || '';
+  const origin = normalizeOrigin(raw);
+  // Testa match direto ou parcial (o nome no API pode ter sufixo/prefixo extra)
+  if (TRANSBORDO_ORIGINS.has(origin)) return true;
+  for (const o of TRANSBORDO_ORIGINS) {
+    if (origin.includes(o) || o.includes(origin)) return true;
+  }
+  return false;
 }
 
 // Origem da trip
@@ -378,10 +392,12 @@ function buildQueueMap(queueList) {
 }
 function getQueueInfo(trip) {
   const q = queueMap[trip.trip_number];
-  if (!q) return { waitMins: null, orderQty: 0, assignedDock: '—', queueStatus: null };
+  // Fallback: se queue não tem o trip ainda, usa order_quantity do próprio objeto
+  const fallbackQty = trip.order_quantity || 0;
+  if (!q) return { waitMins: null, orderQty: fallbackQty, assignedDock: '—', queueStatus: null };
   return {
-    waitMins:    q.waiting_time   || 0,
-    orderQty:    q.order_quantity || 0,
+    waitMins:     q.waiting_time    || 0,
+    orderQty:     q.order_quantity  || fallbackQty,
     assignedDock: q.assigned_dock_name || '—',
     queueStatus:  q.queue_status,
   };
@@ -748,7 +764,18 @@ async function loadHistory() {
     lastHistAt   = data.fetchedAt;
     historyTrips = data.list || [];
     histTransb   = historyTrips.filter(isTransbordo);
-    console.log(`[Transbordo hist] ${histTransb.length} viagens transbordo no histórico`);
+    console.log(`[Transbordo hist] ${histTransb.length} de ${historyTrips.length} viagens são transbordo`);
+
+    // Debug: origens únicas no histórico que NÃO foram reconhecidas como transbordo
+    const unmatchedOrigins = new Map();
+    historyTrips.filter(t => !isTransbordo(t)).forEach(t => {
+      const o = normalizeOrigin(t.pre_station_name || t.trip_station?.[0]?.station_name || '—');
+      unmatchedOrigins.set(o, (unmatchedOrigins.get(o) || 0) + 1);
+    });
+    if (unmatchedOrigins.size) {
+      console.log('[Transbordo hist] Origens NÃO reconhecidas (verifique se alguma é transbordo):',
+        [...unmatchedOrigins.entries()].sort((a,b)=>b[1]-a[1]).map(([o,n])=>`${o} (${n})`).join(' | '));
+    }
     buildDayNav();
     buildKPIs();
     buildChart();
