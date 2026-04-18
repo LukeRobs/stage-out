@@ -86,20 +86,21 @@ table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing
 table.main-table th:hover { color: var(--text); }
 table.main-table th.sorted { color: var(--blue); }
 table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: normal; word-break: break-word; }
-/* larguras fixas das 13 colunas */
-table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 6%;  }  /* Placa */
+/* larguras fixas das 14 colunas */
+table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 5%;  }  /* Placa */
 table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 8%;  }  /* Veículo */
 table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 9%;  }  /* LH # */
-table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 9%;  }  /* Origem */
-table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 6%;  }  /* ETA */
-table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }  /* T. desde Chegada */
+table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 8%;  }  /* Origem */
+table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 5%;  }  /* ETA */
+table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 6%;  }  /* T. desde Chegada */
 table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 6%;  }  /* T. Espera */
 table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 6%;  }  /* T. em Espera */
 table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 6%; text-align:right; }  /* Pacotes */
-table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 13%; }  /* Motorista */
-table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 8%;  }  /* Doca Atrib. */
-table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 9%;  }  /* Doca Ocup. */
-table.main-table th:nth-child(13), table.main-table td:nth-child(13) { width: 7%;  }  /* Status */
+table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 12%; }  /* Motorista */
+table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 7%;  }  /* Doca Atrib. */
+table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 8%;  }  /* Doca Ocup. */
+table.main-table th:nth-child(13), table.main-table td:nth-child(13) { width: 7%;  }  /* Status LH */
+table.main-table th:nth-child(14), table.main-table td:nth-child(14) { width: 7%;  }  /* Status Queue */
 [data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
 table.main-table tr:hover td { background: rgba(255,255,255,.03); }
 table.main-table tr:last-child td { border-bottom: none; }
@@ -166,19 +167,17 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- Status tabs -->
 <div class="zone-tabs" id="statusTabs">
-  <button class="zone-tab active"     data-filter="all">Todos <span class="tab-count" id="tc-all">—</span></button>
-  <button class="zone-tab t-pending"  data-filter="pending">Pendente <span class="tab-count" id="tc-pending">—</span></button>
-  <button class="zone-tab t-assigned" data-filter="assigned">Atribuído <span class="tab-count" id="tc-assigned">—</span></button>
-  <button class="zone-tab t-occupied" data-filter="occupied">Ocupado <span class="tab-count" id="tc-occupied">—</span></button>
-  <button class="zone-tab t-hold"     data-filter="hold">Em Espera <span class="tab-count" id="tc-hold">—</span></button>
+  <button class="zone-tab active"      data-filter="all">Todos <span class="tab-count" id="tc-all">—</span></button>
+  <button class="zone-tab t-pending"   data-filter="transit">Em Trânsito <span class="tab-count" id="tc-transit">—</span></button>
+  <button class="zone-tab t-occupied"  data-filter="unloading">Descarregando <span class="tab-count" id="tc-unloading">—</span></button>
 </div>
 
 <!-- KPIs -->
 <div class="stats">
-  <div class="stat"><div class="stat-label">Total Ativo</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">veículos na fila</div></div>
-  <div class="stat"><div class="stat-label">Pendente</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">aguardando doca</div></div>
-  <div class="stat"><div class="stat-label">Atribuído</div><div class="stat-value" id="kAssigned" style="color:var(--purple)">—</div><div class="stat-sub">doca atribuída</div></div>
-  <div class="stat"><div class="stat-label">Ocupado</div><div class="stat-value" id="kOccupied" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
+  <div class="stat"><div class="stat-label">Total Viagens</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">LTs ativas</div></div>
+  <div class="stat"><div class="stat-label">Em Trânsito</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">a caminho</div></div>
+  <div class="stat"><div class="stat-label">Descarregando</div><div class="stat-value" id="kOccupied" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
+  <div class="stat"><div class="stat-label">Pendente na Fila</div><div class="stat-value" id="kAssigned" style="color:var(--purple)">—</div><div class="stat-sub">aguardando doca</div></div>
   <div class="stat"><div class="stat-label">Em Espera</div><div class="stat-value" id="kHold" style="color:var(--orange)">—</div><div class="stat-sub">on-hold</div></div>
   <div class="stat"><div class="stat-label">Maior Espera</div><div class="stat-value" id="kMaxWait" style="color:var(--red)">—</div><div class="stat-sub" id="kMaxWaitSub">—</div></div>
 </div>
@@ -219,7 +218,8 @@ table.main-table tr:last-child td { border-bottom: none; }
         <th data-col="driver_name">Nome do Motorista <span class="sa"></span></th>
         <th data-col="assigned_dock_name">Doca Atribuída <span class="sa"></span></th>
         <th data-col="occupied_dock_name">Doca Ocupada <span class="sa"></span></th>
-        <th data-col="queue_status">Status <span class="sa"></span></th>
+        <th data-col="lh_status">Status Linehaul <span class="sa"></span></th>
+        <th data-col="queue_status">Status Queue <span class="sa"></span></th>
       </tr>
     </thead>
     <tbody id="mainBody"></tbody>
@@ -279,72 +279,59 @@ function fmtTs(ts) {
 function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
 function dash(v) { return (v && v !== '' && v !== 0 && v !== -1) ? v : '—'; }
 
-// ── Status helpers ─────────────────────────────────────────────────────
-// queue_status: 1=Pending 2=Assigned 3=Occupied 5=On-hold 4=Ended(excluído)
-function statusLabel(s) {
-  return { 1: 'pending', 2: 'assigned', 3: 'occupied', 5: 'hold' }[s] || 'other';
+// ── Linehaul status helpers ────────────────────────────────────────────
+// trip_station_status na estação destino: 50=Em Trânsito, 60=Descarregando
+function lhStatusLabel(s) {
+  return { 50: 'transit', 60: 'unloading' }[s] || 'other';
 }
-function statusPill(s) {
+function lhStatusPill(s) {
+  switch (s) {
+    case 50: return `<span class="st-pill st-pending">🚚 Em Trânsito</span>`;
+    case 60: return `<span class="st-pill st-occupied">📦 Descarregando</span>`;
+    default: return `<span class="st-pill" style="color:var(--muted)">—</span>`;
+  }
+}
+
+// ── Queue status pill (coluna secundária) ──────────────────────────────
+// queue_status: 1=Pendente 2=Atribuído 3=Ocupado 5=Em Espera
+function queueStatusPill(s) {
   switch (s) {
     case 1: return `<span class="st-pill st-pending">⏳ Pendente</span>`;
     case 2: return `<span class="st-pill st-assigned">📍 Atribuído</span>`;
     case 3: return `<span class="st-pill st-occupied">🚛 Ocupado</span>`;
     case 5: return `<span class="st-pill st-hold">⏸ Em Espera</span>`;
-    default: return `<span class="st-pill">—</span>`;
+    default: return `<span class="st-pill" style="color:var(--muted)">—</span>`;
   }
 }
 
-// arrival_type: 1=Normal, 2=Agendado (aproximação)
-function fmtArrivalType(t) {
-  return { 1: 'Normal', 2: 'Scheduled' }[t] || (t != null ? t : '—');
-}
-
-// is_prioritized: 1=Sim, outros=Não
-function fmtPrioritised(v) {
-  return v === 1
-    ? `<span class="tag-prio">★ Yes</span>`
-    : `<span class="tag-no">No</span>`;
-}
-
-// geofencing_status: 0=Fora, 1=Dentro
-function fmtGeo(v) {
-  if (v === 1) return `<span class="geo-ok">● Inside</span>`;
-  return `<span class="geo-out">— Outside</span>`;
-}
-
-// ── Trip helpers ───────────────────────────────────────────────────────
-let tripMap = {}; // trip_number → trip object
-
-function buildTripMap(trips) {
-  tripMap = {};
-  (trips || []).forEach(t => { tripMap[t.trip_number] = t; });
-}
-
-function getTripDestStation(trip) {
+// ── Trip helpers (fonte primária) ──────────────────────────────────────
+function getDestStation(trip) {
   if (!trip?.trip_station) return null;
-  return trip.trip_station.find(s => s.trip_station_status === 50)
+  return trip.trip_station.find(s => s.trip_station_status === 50 || s.trip_station_status === 60)
       || trip.trip_station[trip.trip_station.length - 1];
 }
 
-function getTripInfo(item) {
-  const tripNum = item.route_info?.lh_trip_number;
-  const trip    = tripNum ? tripMap[tripNum] : null;
-  if (!trip) return { origin: '—', eta: '—', vehicleType: '—', arrivedMins: null };
-  const dest    = getTripDestStation(trip);
-  // Origem: pre_station_name ou 1ª estação do array
-  const origin  = trip.pre_station_name
-    || trip.trip_station?.find(s => s.sequence_number === 1)?.station_name
-    || '—';
-  // Tipo de veículo
-  const vehicleType = trip.vehicle_type_name || '—';
-  // Tempo desde a chegada: ata (Actual Time of Arrival) da estação destino
-  const ata         = dest?.ata || 0;
-  const arrivedMins = ata > 0 ? Math.floor((Date.now() / 1000 - ata) / 60) : null;
+// ── Queue map (fonte secundária) ───────────────────────────────────────
+let queueMap = {}; // trip_number → queue_item
+
+function buildQueueMap(queueList) {
+  queueMap = {};
+  (queueList || []).forEach(q => {
+    const tn = q.route_info?.lh_trip_number;
+    if (tn) queueMap[tn] = q;
+  });
+}
+
+function getQueueInfo(trip) {
+  const q = queueMap[trip.trip_number];
+  if (!q) return { waitMins: null, onHoldTime: 0, orderQty: 0, assignedDock: '—', occupiedDock: '—', queueStatus: null };
   return {
-    origin,
-    eta: dest?.eta ? fmtTs(dest.eta) : '—',
-    vehicleType,
-    arrivedMins,
+    waitMins:    q.waiting_time    || 0,
+    onHoldTime:  q.on_hold_time    || 0,
+    orderQty:    q.order_quantity  || 0,
+    assignedDock: q.assigned_dock_name || '—',
+    occupiedDock: q.occupied_dock_name || '—',
+    queueStatus:  q.queue_status,
   };
 }
 
@@ -360,10 +347,11 @@ let lastAt       = null;
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 function buildTabs() {
-  const counts = { all: allItems.length, pending: 0, assigned: 0, occupied: 0, hold: 0 };
-  allItems.forEach(item => {
-    const f = statusLabel(item.queue_status);
-    if (counts[f] !== undefined) counts[f]++;
+  const counts = { all: allItems.length, transit: 0, unloading: 0 };
+  allItems.forEach(trip => {
+    const dest = getDestStation(trip);
+    const lbl  = lhStatusLabel(dest?.trip_station_status);
+    if (counts[lbl] !== undefined) counts[lbl]++;
   });
   Object.entries(counts).forEach(([k, v]) => {
     const el = document.getElementById('tc-' + k);
@@ -376,60 +364,76 @@ function buildTabs() {
 
 // ── KPIs ────────────────────────────────────────────────────────────────
 function buildKPIs() {
-  const pending  = allItems.filter(i => i.queue_status === 1);
-  const assigned = allItems.filter(i => i.queue_status === 2);
-  const occupied = allItems.filter(i => i.queue_status === 3);
-  const hold     = allItems.filter(i => i.queue_status === 5);
-  const maxWait  = allItems.reduce((b, i) => i.waiting_time > (b?.waiting_time || 0) ? i : b, null);
+  const transit    = allItems.filter(t => getDestStation(t)?.trip_station_status === 50);
+  const unloading  = allItems.filter(t => getDestStation(t)?.trip_station_status === 60);
+  const qPending   = allItems.filter(t => queueMap[t.trip_number]?.queue_status === 1);
+  const qHold      = allItems.filter(t => queueMap[t.trip_number]?.queue_status === 5);
+  const maxWaitTrip = allItems.reduce((best, t) => {
+    const w = queueMap[t.trip_number]?.waiting_time || 0;
+    return w > (queueMap[best?.trip_number]?.waiting_time || 0) ? t : best;
+  }, null);
 
   document.getElementById('kTotal').textContent    = allItems.length;
-  document.getElementById('kPending').textContent  = pending.length;
-  document.getElementById('kAssigned').textContent = assigned.length;
-  document.getElementById('kOccupied').textContent = occupied.length;
-  document.getElementById('kHold').textContent     = hold.length;
-  document.getElementById('kMaxWait').textContent  = maxWait ? fmtWait(maxWait.waiting_time) : '—';
-  document.getElementById('kMaxWaitSub').textContent = maxWait ? maxWait.driver_name.split(' ').slice(0,2).join(' ') : '—';
+  document.getElementById('kPending').textContent  = transit.length;
+  document.getElementById('kOccupied').textContent = unloading.length;
+  document.getElementById('kAssigned').textContent = qPending.length;
+  document.getElementById('kHold').textContent     = qHold.length;
+  const mw = maxWaitTrip ? queueMap[maxWaitTrip.trip_number]?.waiting_time : 0;
+  document.getElementById('kMaxWait').textContent    = mw ? fmtWait(mw) : '—';
+  document.getElementById('kMaxWaitSub').textContent = maxWaitTrip ? maxWaitTrip.driver_name.split(' ').slice(0,2).join(' ') : '—';
 }
 
 // ── Filtered / sorted items ────────────────────────────────────────────
 function filteredItems() {
   if (activeFilter === 'all') return allItems;
-  return allItems.filter(i => statusLabel(i.queue_status) === activeFilter);
+  return allItems.filter(t => lhStatusLabel(getDestStation(t)?.trip_station_status) === activeFilter);
 }
 
 function sortedItems(items) {
   return [...items].sort((a, b) => {
     let av, bv;
-    const STR_COLS = ['queue_number','driver_name','agency','vehicle_number',
-                      'assigned_dock_name','assigned_dock_group_name',
-                      'allocated_dock_name','occupied_dock_name','handover_task_number'];
-    if (STR_COLS.includes(sortCol)) {
+    // Campos string diretos do trip
+    const STR_TRIP = ['vehicle_number','driver_name','vehicle_type_name','trip_number','pre_station_name'];
+    if (STR_TRIP.includes(sortCol)) {
       av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'lh_trip_number') {
-      av = (a.route_info?.lh_trip_number || '').toLowerCase();
-      bv = (b.route_info?.lh_trip_number || '').toLowerCase();
+      av = (a.trip_number || '').toLowerCase(); bv = (b.trip_number || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_origin') {
-      av = getTripInfo(a).origin.toLowerCase(); bv = getTripInfo(b).origin.toLowerCase();
+      av = (a.pre_station_name || '').toLowerCase(); bv = (b.pre_station_name || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_vehicles') {
-      av = getTripInfo(a).vehicleType.toLowerCase(); bv = getTripInfo(b).vehicleType.toLowerCase();
+      av = (a.vehicle_type_name || '').toLowerCase(); bv = (b.vehicle_type_name || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     if (sortCol === 'trip_eta') {
-      const ta = tripMap[a.route_info?.lh_trip_number];
-      const tb = tripMap[b.route_info?.lh_trip_number];
-      av = getTripDestStation(ta)?.eta || 0;
-      bv = getTripDestStation(tb)?.eta || 0;
+      av = getDestStation(a)?.eta || 0; bv = getDestStation(b)?.eta || 0;
       return sortAsc ? av - bv : bv - av;
     }
     if (sortCol === 'trip_arrived') {
-      av = getTripInfo(a).arrivedMins ?? -1;
-      bv = getTripInfo(b).arrivedMins ?? -1;
+      const ataA = getDestStation(a)?.ata || 0;
+      const ataB = getDestStation(b)?.ata || 0;
+      av = ataA > 0 ? Math.floor((Date.now()/1000 - ataA)/60) : -1;
+      bv = ataB > 0 ? Math.floor((Date.now()/1000 - ataB)/60) : -1;
+      return sortAsc ? av - bv : bv - av;
+    }
+    if (sortCol === 'lh_status') {
+      av = getDestStation(a)?.trip_station_status || 0;
+      bv = getDestStation(b)?.trip_station_status || 0;
+      return sortAsc ? av - bv : bv - av;
+    }
+    // Campos da queue (secundários)
+    if (['waiting_time','on_hold_time','order_quantity','assigned_dock_name','occupied_dock_name','queue_status'].includes(sortCol)) {
+      const qa = queueMap[a.trip_number], qb = queueMap[b.trip_number];
+      if (['assigned_dock_name','occupied_dock_name'].includes(sortCol)) {
+        av = (qa?.[sortCol] || '').toLowerCase(); bv = (qb?.[sortCol] || '').toLowerCase();
+        return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      av = qa?.[sortCol] ?? 0; bv = qb?.[sortCol] ?? 0;
       return sortAsc ? av - bv : bv - av;
     }
     av = a[sortCol] ?? 0; bv = b[sortCol] ?? 0;
@@ -450,14 +454,13 @@ function buildMainTable(items) {
 
   const q = tableSearch.toLowerCase();
   let vis = sortedItems(items);
-  if (q) vis = vis.filter(i =>
-    (i.driver_name || '').toLowerCase().includes(q) ||
-    (i.vehicle_number || '').toLowerCase().includes(q) ||
-    (i.agency || '').toLowerCase().includes(q) ||
-    (i.queue_number || '').toLowerCase().includes(q) ||
-    (i.route_info?.lh_trip_number || '').toLowerCase().includes(q) ||
-    (i.route_info?.lh_trip_name || '').toLowerCase().includes(q) ||
-    (i.handover_task_number || '').toLowerCase().includes(q));
+  if (q) vis = vis.filter(t =>
+    (t.driver_name    || '').toLowerCase().includes(q) ||
+    (t.vehicle_number || '').toLowerCase().includes(q) ||
+    (t.agency_name    || '').toLowerCase().includes(q) ||
+    (t.trip_number    || '').toLowerCase().includes(q) ||
+    (t.trip_name      || '').toLowerCase().includes(q) ||
+    (t.pre_station_name || '').toLowerCase().includes(q));
 
   const total      = vis.length;
   const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
@@ -467,25 +470,32 @@ function buildMainTable(items) {
   const start = pageSize > 0 ? (currentPage - 1) * pageSize : 0;
   const page  = pageSize > 0 ? vis.slice(start, start + pageSize) : vis;
 
-  document.getElementById('mainBody').innerHTML = page.map(item => {
-    const ri     = item.route_info || {};
-    const onHold = item.on_hold_time ? fmtWait(item.on_hold_time) : '—';
-    const trip   = getTripInfo(item);
+  document.getElementById('mainBody').innerHTML = page.map(trip => {
+    const dest        = getDestStation(trip);
+    const qi          = getQueueInfo(trip);
+    const origin      = trip.pre_station_name
+                        || trip.trip_station?.find(s => s.sequence_number === 1)?.station_name
+                        || '—';
+    const eta         = dest?.eta  ? fmtTs(dest.eta)  : '—';
+    const ata         = dest?.ata  || 0;
+    const arrivedMins = ata > 0 ? Math.floor((Date.now()/1000 - ata)/60) : null;
+    const onHold      = qi.onHoldTime ? fmtTs(qi.onHoldTime) : '—';
 
     return `<tr>
-      <td style="font-family:monospace;font-size:12px">${item.vehicle_number || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${trip.vehicleType}</td>
-      <td style="font-family:monospace;font-size:11px;color:var(--teal)">${ri.lh_trip_number || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${trip.origin}</td>
-      <td style="font-size:11px;color:var(--blue)">${trip.eta}</td>
-      <td>${trip.arrivedMins !== null ? `<span class="${waitClass(trip.arrivedMins)}">${fmtWait(trip.arrivedMins)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td><span class="${waitClass(item.waiting_time)}">${fmtWait(item.waiting_time)}</span></td>
+      <td style="font-family:monospace;font-size:12px">${trip.vehicle_number || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${trip.vehicle_type_name || '—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--teal)">${trip.trip_number || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${origin}</td>
+      <td style="font-size:11px;color:var(--blue)">${eta}</td>
+      <td>${arrivedMins !== null ? `<span class="${waitClass(arrivedMins)}">${fmtWait(arrivedMins)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${qi.waitMins ? `<span class="${waitClass(qi.waitMins)}">${fmtWait(qi.waitMins)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
       <td style="font-size:11px;color:var(--muted)">${onHold}</td>
-      <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(item.order_quantity)}</td>
-      <td style="font-weight:600">${item.driver_name || '—'}</td>
-      <td style="font-size:11px;color:var(--purple);font-weight:600">${item.assigned_dock_name || '—'}</td>
-      <td style="font-size:11px;color:var(--green);font-weight:600">${item.occupied_dock_name || '—'}</td>
-      <td>${statusPill(item.queue_status)}</td>
+      <td style="text-align:right;font-family:monospace;font-weight:700">${fmtNum(qi.orderQty)}</td>
+      <td style="font-weight:600">${trip.driver_name || '—'}</td>
+      <td style="font-size:11px;color:var(--purple);font-weight:600">${qi.assignedDock}</td>
+      <td style="font-size:11px;color:var(--green);font-weight:600">${qi.occupiedDock}</td>
+      <td>${lhStatusPill(dest?.trip_station_status)}</td>
+      <td>${queueStatusPill(qi.queueStatus)}</td>
     </tr>`;
   }).join('');
 
@@ -576,19 +586,20 @@ async function loadData() {
     if (!qRes.ok) return;
 
     const [qData, tData] = await Promise.all([qRes.json(), tRes.json()]);
-    if (qData.error || qData.fetchedAt === lastAt) return;
-    lastAt = qData.fetchedAt;
+    // Trips são a fonte primária — usa fetchedAt deles
+    if (!tData.list || tData.fetchedAt === lastAt) return;
+    lastAt = tData.fetchedAt;
 
-    // Atualiza mapa de trips (trip_number → trip)
-    buildTripMap(tData.list || []);
+    // Constrói mapa da queue (trip_number → queue_item) para enriquecimento
+    buildQueueMap(qData.list || []);
 
-    // Apenas ativos inbound: status 1=Pendente 2=Atribuído 3=Ocupado 5=Em Espera
-    allItems = (qData.list || []).filter(v => v.queue_type === 1 && [1, 2, 3, 5].includes(v.queue_status));
+    // allItems = trips (fonte primária)
+    allItems = tData.list || [];
 
-    const ts = new Date(qData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const ts = new Date(tData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
     document.getElementById('liveDot').className       = 'live-dot on';
-    document.getElementById('metaTag').textContent     = `${allItems.length} ativos · ${ts}`;
+    document.getElementById('metaTag').textContent     = `${allItems.length} viagens · ${ts}`;
     render();
   } catch (e) {}
 }
