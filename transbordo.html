@@ -389,15 +389,17 @@ function getArrivalTs(trip) {
 }
 
 // Quantidade de pacotes — para dados históricos (sem queue)
-// Prioridade: order_quantity (raiz) > unload real > previsto descarregar > transportado > carregado
+// Prioridade: order_quantity da queue (trips finalizados) > unload real > previsto > transportado > carregado > order_packed_quantity
 function getHistPackages(trip) {
-  if ((trip.order_quantity || 0) > 0)    return trip.order_quantity;
+  const qPkg = queueMap[trip.trip_number]?.order_quantity;
+  if (qPkg > 0) return qPkg;
   const dest   = trip.trip_station?.[trip.trip_station.length - 1];
   const origin = trip.trip_station?.[0];
-  if (dest?.unload_quantity > 0)         return dest.unload_quantity;
-  if (dest?.expect_unload_quantity > 0)  return dest.expect_unload_quantity;
-  if (origin?.transport_quantity > 0)    return origin.transport_quantity;
-  if (origin?.load_quantity > 0)         return origin.load_quantity;
+  if ((dest?.unload_quantity || 0) > 0)        return dest.unload_quantity;
+  if ((dest?.expect_unload_quantity || 0) > 0) return dest.expect_unload_quantity;
+  if ((origin?.transport_quantity || 0) > 0)   return origin.transport_quantity;
+  if ((origin?.load_quantity || 0) > 0)        return origin.load_quantity;
+  if ((trip.order_packed_quantity || 0) > 0)   return trip.order_packed_quantity;
   return 0;
 }
 
