@@ -175,11 +175,31 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- KPIs -->
 <div class="stats">
-  <div class="stat"><div class="stat-label">Viagens Transbordo</div><div class="stat-value" id="kTotal" style="color:var(--yellow)">—</div><div class="stat-sub" id="kTotalSub">ao vivo</div></div>
-  <div class="stat"><div class="stat-label">Pacotes</div><div class="stat-value" id="kPackages" style="color:var(--blue)">—</div><div class="stat-sub" id="kPackagesSub">dia selecionado</div></div>
-  <div class="stat"><div class="stat-label">Em Trânsito</div><div class="stat-value" id="kTransit" style="color:var(--yellow)">—</div><div class="stat-sub">ao vivo</div></div>
-  <div class="stat"><div class="stat-label">Descarregando</div><div class="stat-value" id="kUnloading" style="color:var(--green)">—</div><div class="stat-sub">ao vivo</div></div>
-  <div class="stat"><div class="stat-label">No Histórico</div><div class="stat-value" id="kHistory" style="color:var(--purple)">—</div><div class="stat-sub">últimos 7 dias</div></div>
+  <div class="stat">
+    <div class="stat-label">Total Viagens</div>
+    <div class="stat-value" id="kTotal" style="color:var(--yellow)">—</div>
+    <div class="stat-sub" id="kTotalSub">pendentes + finalizadas hoje</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Pendentes (ao vivo)</div>
+    <div class="stat-value" id="kPending" style="color:var(--orange)">—</div>
+    <div class="stat-sub" id="kPendingSub">aguardando descarga</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Pacotes Recebidos</div>
+    <div class="stat-value" id="kReceived" style="color:var(--green)">—</div>
+    <div class="stat-sub" id="kReceivedSub">viagens finalizadas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Pacotes Pendentes</div>
+    <div class="stat-value" id="kPendingPkg" style="color:var(--blue)">—</div>
+    <div class="stat-sub">ao vivo · ainda não descarregados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Histórico 7 dias</div>
+    <div class="stat-value" id="kHistory" style="color:var(--purple)">—</div>
+    <div class="stat-sub">viagens finalizadas</div>
+  </div>
 </div>
 
 <!-- Origens filtradas -->
@@ -498,84 +518,63 @@ function buildDayNav() {
 
 // ── KPIs ────────────────────────────────────────────────────────────────
 function buildKPIs() {
-  const transit   = liveTransb.filter(t => getDestStation(t)?.trip_station_status === 50).length;
-  const unloading = liveTransb.filter(t => getDestStation(t)?.trip_station_status === 60).length;
+  const isToday = selectedDate === todayStr();
 
-  // Pacotes do dia selecionado (histórico ou live se hoje sem histórico)
-  const isToday   = selectedDate === todayStr();
-  const dayTrips  = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
-  let totalPkg    = 0;
-  if (dayTrips.length > 0) {
-    totalPkg = dayTrips.reduce((s, t) => s + getHistPackages(t), 0);
-  } else if (isToday) {
-    totalPkg = liveTransb.reduce((s, t) => s + (getQueueInfo(t).orderQty || 0), 0);
-  }
+  // Viagens finalizadas do dia selecionado (vêm do histórico)
+  const dayFinished = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
 
-  document.getElementById('kTotal').textContent      = liveTransb.length;
-  document.getElementById('kTotalSub').textContent   = 'ao vivo';
-  document.getElementById('kPackages').textContent   = fmtNum(totalPkg);
-  document.getElementById('kPackagesSub').textContent = isToday ? 'hoje' : fmtDateLabel(selectedDate);
-  document.getElementById('kTransit').textContent    = transit;
-  document.getElementById('kUnloading').textContent  = unloading;
+  // Pacotes finalizados (histórico do dia)
+  const pkgReceived = dayFinished.reduce((s, t) => s + getHistPackages(t), 0);
+
+  // Pacotes pendentes (ao vivo — ainda em trânsito ou descarregando)
+  const pkgPending = liveTransb.reduce((s, t) => s + (getQueueInfo(t).orderQty || 0), 0);
+
+  // Total viagens do dia = ao vivo (pendentes) + finalizadas no histórico
+  // Só soma ao vivo quando dia selecionado é hoje
+  const totalToday = isToday ? liveTransb.length + dayFinished.length : dayFinished.length;
+
+  const dayLabel = isToday ? 'hoje' : fmtDateLabel(selectedDate);
+
+  document.getElementById('kTotal').textContent      = totalToday;
+  document.getElementById('kTotalSub').textContent   = `${dayLabel} · pendentes + finalizadas`;
+  document.getElementById('kPending').textContent    = isToday ? liveTransb.length : '—';
+  document.getElementById('kPendingSub').textContent = isToday ? `${liveTransb.filter(t=>getDestStation(t)?.trip_station_status===50).length} trânsito · ${liveTransb.filter(t=>getDestStation(t)?.trip_station_status===60).length} descarregando` : 'apenas hoje';
+  document.getElementById('kReceived').textContent   = fmtNum(pkgReceived);
+  document.getElementById('kReceivedSub').textContent = `${dayFinished.length} viagens · ${dayLabel}`;
+  document.getElementById('kPendingPkg').textContent = isToday ? fmtNum(pkgPending) : '—';
   document.getElementById('kHistory').textContent    = histTransb.length;
 }
 
 // ── Bar chart ───────────────────────────────────────────────────────────
+// Exibe APENAS viagens finalizadas (histórico) — nunca trips ao vivo pendentes
 function buildChart() {
-  const isToday  = selectedDate === todayStr();
-  const nowH     = new Date().getHours();
-  const hours    = Array.from({ length: 24 }, (_, i) => i);
+  const isToday = selectedDate === todayStr();
+  const nowH    = new Date().getHours();
+  const hours   = Array.from({ length: 24 }, (_, i) => i);
 
-  // Decide fonte dos dados do gráfico
+  // Apenas viagens finalizadas do dia selecionado (vêm do endpoint /api/trip-history)
   const histDay = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
-  const useHist = histDay.length > 0;
-  const useLive = isToday && !useHist;
 
-  let arrived  = new Array(24).fill(0);
-  let expected = new Array(24).fill(0);
-  let isHistMode = false;
+  const arrived = new Array(24).fill(0);
+  histDay.forEach(trip => {
+    const ata = trip.trip_station?.[trip.trip_station.length - 1]?.ata || 0;
+    const pkg = getHistPackages(trip);
+    if (ata > 0 && pkg > 0) {
+      arrived[new Date(ata * 1000).getHours()] += pkg;
+    }
+  });
 
-  if (useHist) {
-    // Modo histórico: pacotes por hora de chegada (ATA no destino)
-    isHistMode = true;
-    histDay.forEach(trip => {
-      const ts  = getArrivalTs(trip);
-      const pkg = getHistPackages(trip);
-      if (ts > 0 && pkg > 0) {
-        const h = new Date(ts * 1000).getHours();
-        arrived[h] += pkg;
-      }
-    });
-  } else if (useLive) {
-    // Modo ao vivo: usa tripCache atual
-    liveTransb.forEach(trip => {
-      const dest = getDestStation(trip);
-      const qi   = getQueueInfo(trip);
-      const pkg  = qi.orderQty || 0;
-      if (dest?.ata > 0) {
-        const h = new Date(dest.ata * 1000).getHours();
-        arrived[h] += pkg;
-      } else {
-        const ref = dest?.eta || dest?.sta || 0;
-        if (ref > 0) {
-          const h = new Date(ref * 1000).getHours();
-          expected[h] += pkg;
-        }
-      }
-    });
-  }
-
-  const maxVal = Math.max(1, ...hours.map(h => arrived[h] + expected[h]));
+  const maxVal = Math.max(1, ...arrived);
 
   // Título e legenda
-  const modeLabel = isHistMode
-    ? `Histórico ${fmtDateLabel(selectedDate)} — ${histDay.length} viagens`
-    : (isToday ? 'Hoje (ao vivo)' : `${fmtDateLabel(selectedDate)} — sem dados`);
-  document.getElementById('chartTitle').textContent = `📦 Pacotes por Hora · ${modeLabel}`;
-  document.getElementById('chartLegend').innerHTML = isHistMode
-    ? `<span><span class="legend-dot" style="background:var(--purple)"></span> Histórico</span>`
-    : `<span><span class="legend-dot" style="background:var(--yellow)"></span> Chegou (ATA)</span>
-       <span><span class="legend-dot" style="background:rgba(245,158,11,.35)"></span> Previsto</span>`;
+  const dayLabel = fmtDateLabel(selectedDate);
+  const modeLabel = histDay.length > 0
+    ? `${isToday ? 'Hoje' : dayLabel} — ${histDay.length} finalizadas`
+    : (isToday ? 'Hoje — aguardando finalizações' : `${dayLabel} — sem dados`);
+
+  document.getElementById('chartTitle').textContent = `PACOTES POR HORA · ${modeLabel.toUpperCase()}`;
+  document.getElementById('chartLegend').innerHTML =
+    `<span><span class="legend-dot" style="background:var(--purple)"></span> FINALIZADO</span>`;
 
   // Y-axis
   const yLabels = [0, Math.round(maxVal * 0.33), Math.round(maxVal * 0.66), maxVal];
@@ -585,22 +584,18 @@ function buildChart() {
 
   // Bars
   document.getElementById('barsContainer').innerHTML = hours.map(h => {
-    const aVal  = arrived[h];
-    const eVal  = expected[h];
-    const total = aVal + eVal;
-    const aH    = total > 0 ? Math.round((aVal / maxVal) * 160) : 0;
-    const eH    = total > 0 ? Math.round((eVal / maxVal) * 160) : 0;
+    const val  = arrived[h];
+    const barH = val > 0 ? Math.max(4, Math.round((val / maxVal) * 160)) : 0;
     const isNow = isToday && h === nowH;
     const hStr  = String(h).padStart(2, '0') + ':00';
-    const barClass = isHistMode ? 'bar bar-hist' : 'bar bar-arrived';
 
     return `
       <div class="bar-col">
         <div class="bar-wrap">
-          <span class="bar-label-top${total === 0 ? ' zero' : ''}">${total > 0 ? fmtNum(total) : ''}</span>
-          ${eH > 0 ? `<div class="bar bar-expected" style="height:${eH}px" title="${fmtNum(eVal)} prev. às ${hStr}"></div>` : ''}
-          ${aH > 0 ? `<div class="${barClass}" style="height:${aH}px" title="${fmtNum(aVal)} pacotes às ${hStr}"></div>`
-                   : (eH === 0 ? `<div style="height:2px;width:100%;background:var(--border);border-radius:2px"></div>` : '')}
+          <span class="bar-label-top${val === 0 ? ' zero' : ''}">${val > 0 ? fmtNum(val) : ''}</span>
+          ${barH > 0
+            ? `<div class="bar bar-hist" style="height:${barH}px" title="${fmtNum(val)} pacotes finalizados às ${hStr}"></div>`
+            : `<div style="height:2px;width:100%;background:var(--border);border-radius:2px"></div>`}
         </div>
         <span class="bar-hour${isNow ? ' now' : ''}">${isNow ? '▼' : String(h).padStart(2,'0')}</span>
       </div>`;
