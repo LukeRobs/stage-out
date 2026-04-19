@@ -200,9 +200,9 @@ table.op-subtable tr:last-child td{border-bottom:none}
       <div class="kpi-sub" id="kpiWorkersBreak">— ded · — free</div>
     </div>
     <div class="kpi-card accent-yellow">
-      <div class="kpi-label">Throughput Total</div>
-      <div class="kpi-val" id="kpiThroughput">—</div>
-      <div class="kpi-sub" id="kpiThroughputSub">itens processados</div>
+      <div class="kpi-label">Produção Total</div>
+      <div class="kpi-val" id="kpiProdução">—</div>
+      <div class="kpi-sub" id="kpiProduçãoSub">itens processados</div>
     </div>
     <div class="kpi-card accent-purple">
       <div class="kpi-label">Prod. Média / h</div>
@@ -222,28 +222,28 @@ table.op-subtable tr:last-child td{border-bottom:none}
       <div class="act-card-title">Packing</div>
       <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s12ws">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s12mp">—</span></div>
-      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s12tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Produção</span><span class="act-stat-val" id="s12tp">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s12ph">—</span></div>
     </div>
     <div class="act-card staging">
       <div class="act-card-title">Staging</div>
       <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s27ws">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s27mp">—</span></div>
-      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s27tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Produção</span><span class="act-stat-val" id="s27tp">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s27ph">—</span></div>
     </div>
     <div class="act-card linehaul">
       <div class="act-card-title">Line Haul</div>
       <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s16ws">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s16mp">—</span></div>
-      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s16tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Produção</span><span class="act-stat-val" id="s16tp">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s16ph">—</span></div>
     </div>
     <div class="act-card receiving">
       <div class="act-card-title">Receiving</div>
       <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s11ws">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s11mp">—</span></div>
-      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s11tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Produção</span><span class="act-stat-val" id="s11tp">—</span></div>
       <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s11ph">—</span></div>
     </div>
   </div>
@@ -251,9 +251,9 @@ table.op-subtable tr:last-child td{border-bottom:none}
   <!-- Top 5 + Idle WSs -->
   <div class="two-col">
     <div class="panel">
-      <div class="panel-title">Top 5 · Maior Throughput</div>
+      <div class="panel-title">Top 5 · Maior Produção</div>
       <table class="top5-table">
-        <thead><tr><th>#</th><th>Workstation</th><th>Atividade</th><th>Throughput</th><th>Prod/h</th></tr></thead>
+        <thead><tr><th>#</th><th>Workstation</th><th>Atividade</th><th>Produção</th><th>Prod/h</th></tr></thead>
         <tbody id="top5Body"><tr><td colspan="5" class="empty-msg">—</td></tr></tbody>
       </table>
     </div>
@@ -290,7 +290,7 @@ table.op-subtable tr:last-child td{border-bottom:none}
           <th data-col="manpower" style="text-align:center">Operadores <span class="sa"></span></th>
           <th data-col="dedicated" style="text-align:center">Ded% <span class="sa"></span></th>
           <th data-col="working_hours" style="text-align:center">Horas <span class="sa"></span></th>
-          <th data-col="total_throughput" style="text-align:center">Throughput <span class="sa"></span></th>
+          <th data-col="total_throughput" style="text-align:center">Produção <span class="sa"></span></th>
           <th data-col="hourly_productivity">Prod/h <span class="sa"></span></th>
           <th style="text-align:center;cursor:default">Status</th>
         </tr>
@@ -397,7 +397,7 @@ function buildKPIs() {
   document.getElementById('kpiWsTotal').textContent     = `de ${allWS.length} cadastradas`;
   document.getElementById('kpiWorkers').textContent     = n(totWorkers);
   document.getElementById('kpiWorkersBreak').textContent = `${totDed} ded · ${totFree} free`;
-  document.getElementById('kpiThroughput').textContent  = totTP >= 1000 ? (totTP/1000).toFixed(1)+'k' : n(totTP);
+  document.getElementById('kpiProdução').textContent  = totTP >= 1000 ? (totTP/1000).toFixed(1)+'k' : n(totTP);
   document.getElementById('kpiProd').textContent        = n(avgProd);
   document.getElementById('kpiIdle').textContent        = idle.length;
 }
@@ -567,7 +567,7 @@ function renderExpand(ws) {
     opHtml = `
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px;font-weight:600">Operadores (${ops.length})</div>
       <table class="op-subtable">
-        <thead><tr><th>Operador</th><th style="text-align:center">Check-in</th><th style="text-align:center">Check-out</th><th style="text-align:center">Horas</th><th style="text-align:center">Throughput</th><th style="text-align:center">Prod/h</th></tr></thead>
+        <thead><tr><th>Operador</th><th style="text-align:center">Check-in</th><th style="text-align:center">Check-out</th><th style="text-align:center">Horas</th><th style="text-align:center">Produção</th><th style="text-align:center">Prod/h</th></tr></thead>
         <tbody>${sorted.map(o => {
           const isIdle = o.total_throughput === 0;
           return `<tr>
@@ -592,7 +592,7 @@ function renderExpand(ws) {
            <span style="font-weight:700">${ws.manpower}</span> <span style="font-size:10px;color:var(--muted)">(${dedCnt} ded · ${freeCnt} free)</span></div>
       <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Horas trabalhadas</div>
            <span style="font-weight:700;font-family:monospace">${ws.working_hours.toFixed(1)}h</span></div>
-      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Throughput total</div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Produção total</div>
            <span style="font-weight:700;font-family:monospace">${n(ws.total_throughput)}</span></div>
       <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Prod/h (WS)</div>
            <span style="font-weight:700;font-family:monospace">${n(ws.hourly_productivity)}</span></div>
