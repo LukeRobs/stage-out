@@ -527,6 +527,7 @@ table.main-table tr:last-child td { border-bottom: none; }
         <th data-col="staging_group_name">Zona <span class="sa"></span></th>
         <th data-col="to_quantity" style="text-align:center">TOs <span class="sa"></span></th>
         <th data-col="pacotes" style="text-align:center">Pacotes <span class="sa"></span></th>
+        <th data-col="spp" style="text-align:center">SPP <span class="sa"></span></th>
         <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
         <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
         <th data-col="staging_duration_time" class="sorted">Aging <span class="sa">↓</span></th>
@@ -966,6 +967,11 @@ function sortedAreas(areas) {
     else if (sortCol === 'pacotes') {
       av = reportData?.byArea?.[a.area_name]?.pacotes || 0;
       bv = reportData?.byArea?.[b.area_name]?.pacotes || 0;
+    } else if (sortCol === 'spp') {
+      const apac = reportData?.byArea?.[a.area_name]?.pacotes; const atos = a.to_quantity || 0;
+      const bpac = reportData?.byArea?.[b.area_name]?.pacotes; const btos = b.to_quantity || 0;
+      av = (apac != null && atos > 0) ? apac / atos : 0;
+      bv = (bpac != null && btos > 0) ? bpac / btos : 0;
     } else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
       av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
@@ -1091,13 +1097,16 @@ function buildMainTable(areas) {
   document.getElementById('mainBody').innerHTML = page.map(a => {
     const occ = parseOcc(a.occupy_percentage);
     const pac = reportData?.byArea?.[a.area_name]?.pacotes;
+    const tos = a.to_quantity || 0;
+    const spp = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
     const isExp = expandedAreas.has(a.area_name);
-    const expandRow = isExp ? `<tr class="expand-row"><td colspan="8">${renderTosSub(a.area_name)}</td></tr>` : '';
+    const expandRow = isExp ? `<tr class="expand-row"><td colspan="9">${renderTosSub(a.area_name)}</td></tr>` : '';
     return `<tr class="area-row" data-area="${a.area_name}">
       <td class="area-name"><span class="expand-chevron${isExp?' open':''}">▶</span>${a.area_name}</td>
       <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
-      <td style="font-family:monospace;text-align:center;font-weight:${a.to_quantity>0?'700':'400'}">${a.to_quantity||0}</td>
+      <td style="font-family:monospace;text-align:center;font-weight:${tos>0?'700':'400'}">${tos}</td>
       <td style="font-family:monospace;text-align:center;font-weight:600;color:${pac>0?'var(--text)':'var(--muted)'}">${pac!=null?pac.toLocaleString('pt-BR'):'—'}</td>
+      <td style="font-family:monospace;text-align:center;color:${spp!=null?'var(--text)':'var(--muted)'}">${spp!=null?spp:'—'}</td>
       <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
       <td>
         <div class="occ-bar-wrap">
