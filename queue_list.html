@@ -368,9 +368,13 @@ function buildKPIs() {
   const unloading  = allItems.filter(t => getDestStation(t)?.trip_station_status === 60);
   const qPending   = allItems.filter(t => queueMap[t.trip_number]?.queue_status === 1);
   const qHold      = allItems.filter(t => queueMap[t.trip_number]?.queue_status === 5);
+  const nowSec = Math.floor(Date.now() / 1000);
   const maxWaitTrip = allItems.reduce((best, t) => {
-    const w = queueMap[t.trip_number]?.waiting_time || 0;
-    return w > (queueMap[best?.trip_number]?.waiting_time || 0) ? t : best;
+    const ataT = getDestStation(t)?.ata || 0;
+    const ataB = getDestStation(best)?.ata || 0;
+    const sinceT = ataT > 0 ? nowSec - ataT : 0;
+    const sinceB = ataB > 0 ? nowSec - ataB : 0;
+    return sinceT > sinceB ? t : best;
   }, null);
 
   document.getElementById('kTotal').textContent    = allItems.length;
@@ -378,8 +382,9 @@ function buildKPIs() {
   document.getElementById('kOccupied').textContent = unloading.length;
   document.getElementById('kAssigned').textContent = qPending.length;
   document.getElementById('kHold').textContent     = qHold.length;
-  const mw = maxWaitTrip ? queueMap[maxWaitTrip.trip_number]?.waiting_time : 0;
-  document.getElementById('kMaxWait').textContent    = mw ? fmtWait(mw) : '—';
+  const ata = maxWaitTrip ? (getDestStation(maxWaitTrip)?.ata || 0) : 0;
+  const sinceArrival = ata > 0 ? nowSec - ata : 0;
+  document.getElementById('kMaxWait').textContent    = sinceArrival > 0 ? fmtWait(Math.floor(sinceArrival / 60)) : '—';
   document.getElementById('kMaxWaitSub').textContent = maxWaitTrip ? maxWaitTrip.driver_name.split(' ').slice(0,2).join(' ') : '—';
 }
 
