@@ -60,13 +60,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .origin-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,158,11,.10); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 
 /* ── Day navigation ── */
-.day-nav { padding: 0 24px 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.day-nav-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-right: 4px; }
-.day-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
-.day-btn:hover { border-color: var(--border2); color: var(--text); }
-.day-btn.active { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.4); color: var(--yellow); }
-.day-btn.today  { }
-.history-note { margin-left: auto; font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
+.history-note { font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
 
 /* ── Chart section ── */
 .chart-section { padding: 0 24px 20px; }
@@ -165,6 +159,7 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">—</span>
+    <span class="history-note" id="histNote">📦 Histórico: aguardando sync</span>
     <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
     <div class="live-badge">
       <div class="live-dot" id="liveDot"></div>
@@ -204,13 +199,6 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- Origens filtradas -->
 <div class="origins-strip" id="originsStrip"></div>
-
-<!-- Seletor de dias -->
-<div class="day-nav" id="dayNav">
-  <span class="day-nav-label">📅 Dia:</span>
-  <!-- gerado dinamicamente -->
-  <span class="history-note" id="histNote">📦 Histórico: aguardando sync do Tampermonkey</span>
-</div>
 
 <!-- Chart -->
 <div class="chart-section">
@@ -486,58 +474,14 @@ function buildOriginsStrip() {
     ).join('');
 }
 
-// ── Day navigation ─────────────────────────────────────────────────────
-function buildDayNav() {
-  const nav = document.getElementById('dayNav');
-  // Remove botões existentes (mantém label e histNote)
-  nav.querySelectorAll('.day-btn').forEach(b => b.remove());
-  const label = nav.querySelector('.day-nav-label');
-  const note  = document.getElementById('histNote');
-
-  // Gera últimos 7 dias (hoje primeiro)
-  const today = todayStr();
-  const days  = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
-    days.push(`${y}-${m}-${dd}`);
-  }
-
-  // Determina quais dias têm dados históricos
-  const histDates = new Set();
-  histTransb.forEach(t => {
-    const ts = getArrivalTs(t);
-    if (ts > 0) histDates.add(tsToDateStr(ts));
-  });
-
-  // Insere botões após o label
-  days.forEach(dateStr => {
-    const btn = document.createElement('button');
-    btn.className = 'day-btn' + (dateStr === selectedDate ? ' active' : '') + (dateStr === today ? ' today' : '');
-    const isToday  = dateStr === today;
-    const hasHist  = histDates.has(dateStr);
-    btn.textContent = isToday ? `Hoje (${fmtDateLabel(dateStr)})` : fmtDateLabel(dateStr);
-    btn.title       = dateStr + (hasHist ? ' — histórico disponível' : isToday ? ' — ao vivo' : ' — sem dados');
-    if (!isToday && !hasHist) btn.style.opacity = '.4';
-    btn.addEventListener('click', () => {
-      selectedDate = dateStr;
-      buildDayNav();
-      buildKPIs();
-      buildChart();
-    });
-    label.insertAdjacentElement('afterend', btn);
-  });
-
-  // Move histNote para o final
-  nav.appendChild(note);
-
-  // Atualiza nota de histórico
+// ── Atualiza nota de histórico no header ──────────────────────────────
+function updateHistNote() {
+  const note = document.getElementById('histNote');
   if (lastHistAt) {
     const ts = new Date(lastHistAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    note.textContent = `📦 Histórico: ${histTransb.length} viagens · sync ${ts}`;
+    note.textContent = `📦 ${histTransb.length} hist · sync ${ts}`;
   } else {
-    note.textContent = '📦 Histórico: aguardando trip_history_sync.user.js';
+    note.textContent = '📦 Histórico: aguardando sync';
   }
 }
 
@@ -769,7 +713,7 @@ document.getElementById('tableSearch').addEventListener('input', e => {
 // ── Render all ──────────────────────────────────────────────────────────
 function render() {
   buildOriginsStrip();
-  buildDayNav();
+  updateHistNote();
   buildKPIs();
   buildChart();
   buildMainTable();
@@ -821,7 +765,7 @@ async function loadHistory() {
       console.log('[Transbordo hist] Origens NÃO reconhecidas (verifique se alguma é transbordo):',
         [...unmatchedOrigins.entries()].sort((a,b)=>b[1]-a[1]).map(([o,n])=>`${o} (${n})`).join(' | '));
     }
-    buildDayNav();
+    updateHistNote();
     buildKPIs();
     buildChart();
   } catch (e) {
