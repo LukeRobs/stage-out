@@ -388,19 +388,28 @@ function getArrivalTs(trip) {
   return dest.ata > 0 ? dest.ata : 0;
 }
 
-// Quantidade de pacotes — para dados históricos (sem queue)
-// Prioridade: order_quantity da queue (trips finalizados) > unload real > previsto > transportado > carregado > order_packed_quantity
+// Quantidade de pacotes — para dados históricos
+// Prioridade: unload real > previsto > transportado > carregado > queue order_quantity (fallback) > order_packed_quantity
 function getHistPackages(trip) {
-  const qPkg = queueMap[trip.trip_number]?.order_quantity;
-  if (qPkg > 0) return qPkg;
   const dest   = trip.trip_station?.[trip.trip_station.length - 1];
   const origin = trip.trip_station?.[0];
   if ((dest?.unload_quantity || 0) > 0)        return dest.unload_quantity;
   if ((dest?.expect_unload_quantity || 0) > 0) return dest.expect_unload_quantity;
   if ((origin?.transport_quantity || 0) > 0)   return origin.transport_quantity;
   if ((origin?.load_quantity || 0) > 0)        return origin.load_quantity;
+  // Fallback: order_quantity da queue (quando trip_history ainda não tem dados)
+  const qPkg = queueMap[trip.trip_number]?.order_quantity;
+  if (qPkg > 0) return qPkg;
   if ((trip.order_packed_quantity || 0) > 0)   return trip.order_packed_quantity;
   return 0;
+}
+
+// Timestamp de finalização do descarregamento (hora que o carro foi finalizado)
+// Usa unloaded_time da última estação; fallback para ata se ainda não disponível
+function getFinalizationTs(trip) {
+  const dest = trip.trip_station?.[trip.trip_station.length - 1];
+  if (!dest) return 0;
+  return dest.unloaded_time > 0 ? dest.unloaded_time : (dest.ata > 0 ? dest.ata : 0);
 }
 
 // ── Queue map (fonte secundária para viagens ao vivo) ──────────────────
@@ -589,10 +598,10 @@ function buildChart() {
 
   const arrived = new Array(24).fill(0);
   histDay.forEach(trip => {
-    const ata = trip.trip_station?.[trip.trip_station.length - 1]?.ata || 0;
+    const ts  = getFinalizationTs(trip); // hora de finalização (unloaded_time ou ata)
     const pkg = getHistPackages(trip);
-    if (ata > 0 && pkg > 0) {
-      arrived[new Date(ata * 1000).getHours()] += pkg;
+    if (ts > 0 && pkg > 0) {
+      arrived[new Date(ts * 1000).getHours()] += pkg;
     }
   });
   endedQ.forEach(q => {
