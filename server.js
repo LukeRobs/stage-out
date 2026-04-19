@@ -449,13 +449,14 @@ async function sendSeaTalkQueueReport(imgBuffer, text) {
 }
 
 // ── Stage-out cache (fed by Tampermonkey) ─────────────────────────────
-let stageCache      = null; // { list, total, fetchedAt }
-let toPackingCache  = null; // { list, total, fetchedAt }
-let toPackedCache   = null; // { list, total, fetchedAt }
-let stageInCache    = null; // { list, total, fetchedAt }
+let stageCache        = null; // { list, total, fetchedAt }
+let toPackingCache    = null; // { list, total, fetchedAt }
+let toPackedCache     = null; // { list, total, fetchedAt }
+let stageInCache      = null; // { list, total, fetchedAt }
 let queueCache        = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
 let tripCache         = null; // { list, fetchedAt } — trip list v2
 let tripHistoryCache  = { list: [], fetchedAt: null }; // { list, fetchedAt } — trip history (last 7 days)
+let workstationCache  = null; // { workstations, operators, startTime, endTime, fetchedAt }
 
 // ── Report sheet (pacotes por TO) ─────────────────────────────────────
 const REPORT_SPREADSHEET_ID = '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E';
@@ -879,6 +880,38 @@ const server = http.createServer((req, res) => {
     }
     res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'no-cache' });
     res.end(buf);
+    return;
+  }
+
+  // POST /api/workstation-data — receives workstation productivity from Tampermonkey
+  if (urlPath === '/api/workstation-data' && req.method === 'POST') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', () => {
+      try {
+        workstationCache = JSON.parse(body);
+        const ws = workstationCache.workstations?.length || 0;
+        const op = workstationCache.operators?.length    || 0;
+        console.log(`[workstation] Received ${ws} workstations · ${op} operators`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/workstation — serves workstation data to dashboard
+  if (urlPath === '/api/workstation') {
+    if (!workstationCache) {
+      res.writeHead(503, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify(workstationCache));
     return;
   }
 

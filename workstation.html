@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workstation Productivity</title>
+<style>
+:root {
+  --bg:#0d0f14; --surface:#161920; --surface2:#1e2130;
+  --border:#2a2d3e; --border2:#353849;
+  --text:#e2e8f0; --muted:#6b7280;
+  --green:#22c55e; --yellow:#f59e0b; --orange:#ee4d2d;
+  --red:#ef4444; --blue:#3b82f6; --purple:#8b5cf6;
+  --radius:10px; --shadow:0 2px 8px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;min-height:100vh;padding-bottom:36px}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
+.header-left{display:flex;align-items:center;gap:12px}
+.header-title{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:var(--muted)}
+.header-right{display:flex;align-items:center;gap:10px}
+.btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Content ── */
+.content{padding:16px 20px;max-width:1440px;margin:0 auto}
+
+/* ── KPI grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:5px}
+.kpi-val{font-size:24px;font-weight:700;line-height:1.1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.kpi-card.accent-blue{border-top:2px solid var(--blue)}
+.kpi-card.accent-green{border-top:2px solid var(--green)}
+.kpi-card.accent-yellow{border-top:2px solid var(--yellow)}
+.kpi-card.accent-purple{border-top:2px solid var(--purple)}
+.kpi-card.accent-red{border-top:2px solid var(--red)}
+
+/* ── Activity summary cards ── */
+.act-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.act-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;border-left:3px solid transparent}
+.act-card.packing{border-left-color:var(--blue)}.act-card.staging{border-left-color:var(--green)}
+.act-card.linehaul{border-left-color:var(--yellow)}.act-card.receiving{border-left-color:var(--purple)}
+.act-card-title{font-size:10px;text-transform:uppercase;letter-spacing:.7px;font-weight:700;margin-bottom:8px}
+.act-card.packing .act-card-title{color:var(--blue)}.act-card.staging .act-card-title{color:var(--green)}
+.act-card.linehaul .act-card-title{color:var(--yellow)}.act-card.receiving .act-card-title{color:var(--purple)}
+.act-stat{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)}
+.act-stat:last-child{border-bottom:none}
+.act-stat-label{color:var(--muted)}.act-stat-val{font-weight:600;font-family:monospace}
+
+/* ── Two-col ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;margin-bottom:12px}
+
+/* ── Top5 table ── */
+.top5-table{width:100%;border-collapse:collapse;font-size:12px}
+.top5-table th{padding:5px 8px;font-size:10px;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);text-align:left}
+.top5-table th:not(:first-child){text-align:right}
+.top5-table td{padding:7px 8px;border-bottom:1px solid var(--border)}
+.top5-table td:not(:first-child){text-align:right;font-family:monospace}
+.top5-table tr:last-child td{border-bottom:none}
+.rank{font-size:11px;color:var(--muted);font-weight:700;min-width:20px;display:inline-block}
+.rank-1{color:var(--yellow)}.rank-2{color:var(--muted)}.rank-3{color:#cd7f32}
+
+/* ── Zero waste panel ── */
+.waste-list{display:flex;flex-direction:column;gap:6px}
+.waste-item{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:6px;font-size:11px}
+.waste-ws{font-weight:600}.waste-workers{color:var(--red);font-weight:600}
+
+/* ── Activity tabs ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.act-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.act-tab{padding:6px 14px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;font-size:11px;font-weight:500;transition:.15s}
+.act-tab:hover{border-color:var(--blue);color:var(--blue)}
+.act-tab.active{color:#fff;border-color:transparent}
+.act-tab[data-act="all"].active{background:var(--blue)}
+.act-tab[data-act="12"].active{background:var(--blue)}
+.act-tab[data-act="27"].active{background:var(--green)}
+.act-tab[data-act="16"].active{background:var(--yellow);color:#111}
+.act-tab[data-act="11"].active{background:var(--purple)}
+
+.search-wrap{position:relative;display:flex;align-items:center}
+.search-wrap svg{position:absolute;left:7px;pointer-events:none}
+.search-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px 5px 26px;border-radius:6px;font-size:12px;width:160px}
+.search-input:focus{outline:none;border-color:var(--blue)}
+.search-input::placeholder{color:var(--muted)}
+
+/* ── Main table ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px}
+table.ws-table{width:100%;border-collapse:collapse}
+table.ws-table th{background:var(--surface2);padding:8px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+table.ws-table th:hover{color:var(--text)}
+table.ws-table th.sorted{color:var(--text)}
+table.ws-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.ws-table tr:last-child > td{border-bottom:none}
+table.ws-table tr.ws-row{cursor:pointer}
+table.ws-table tr.ws-row:hover > td{background:rgba(255,255,255,.02)}
+.sa{font-size:9px;margin-left:2px}
+.expand-chevron{display:inline-block;margin-right:6px;font-size:9px;transition:transform .2s;color:var(--muted)}
+.expand-chevron.open{transform:rotate(90deg);color:var(--text)}
+
+/* ── Expand row ── */
+.expand-row > td{padding:0!important;background:var(--surface2)!important}
+.expand-inner{padding:12px 14px 14px 42px}
+.op-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:8px}
+.op-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.op-name{font-weight:600;font-size:12px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.op-stats{display:flex;flex-direction:column;gap:3px}
+.op-stat-row{display:flex;justify-content:space-between;font-size:11px}
+.op-stat-label{color:var(--muted)}.op-stat-val{font-family:monospace;font-weight:600}
+
+/* Operator subtable fallback */
+table.op-subtable{width:100%;border-collapse:collapse;font-size:11px}
+table.op-subtable th{padding:5px 10px;font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.6px;border-bottom:1px solid var(--border)}
+table.op-subtable td{padding:6px 10px;border-bottom:1px solid var(--border)}
+table.op-subtable tr:last-child td{border-bottom:none}
+
+/* ── Badges ── */
+.act-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;letter-spacing:.4px}
+.act-badge.packing{background:rgba(59,130,246,.15);color:var(--blue)}
+.act-badge.staging{background:rgba(34,197,94,.15);color:var(--green)}
+.act-badge.linehaul{background:rgba(245,158,11,.15);color:var(--yellow)}
+.act-badge.receiving{background:rgba(139,92,246,.15);color:var(--purple)}
+
+/* ── Prod bar ── */
+.prod-bar-wrap{display:flex;align-items:center;gap:6px}
+.prod-bar{flex:1;min-width:50px;height:4px;background:var(--border);border-radius:3px;overflow:hidden}
+.prod-fill{height:100%;border-radius:3px;transition:width .3s}
+.prod-fill.packing{background:var(--blue)}.prod-fill.staging{background:var(--green)}
+.prod-fill.linehaul{background:var(--yellow)}.prod-fill.receiving{background:var(--purple)}
+.prod-val{font-family:monospace;font-size:11px;min-width:40px}
+
+/* ── Workers pill ── */
+.workers-pill{display:inline-flex;align-items:center;gap:3px;font-family:monospace;font-weight:700}
+.ded-pct{font-size:10px;color:var(--muted)}
+
+/* ── Alert ── */
+.alert-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle;animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Freelancer bar (dedicated vs freelancer) ── */
+.worker-bar{display:flex;height:4px;border-radius:3px;overflow:hidden;min-width:60px;margin-top:2px}
+.ded-fill{background:var(--blue)}.free-fill{background:var(--muted)}
+
+/* ── Section header ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
+
+/* ── Status bar ── */
+.status-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:4px 20px;font-size:10px;color:var(--muted);display:flex;gap:20px;z-index:50}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.status-dot.ok{background:var(--green)}.status-dot.warn{background:var(--yellow)}.status-dot.err{background:var(--red)}
+
+.empty-msg{text-align:center;padding:40px;color:var(--muted)}
+
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .act-summary{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="header-title">⚙️ Workstation Productivity</div>
+      <div class="header-sub" id="headerSub">Carregando...</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="loadingSpinner" style="display:none"><span class="spinner"></span></span>
+    <span id="lastUpdate" style="font-size:10px;color:var(--muted)"></span>
+    <button class="btn" id="refreshBtn" onclick="loadData()">↺ Atualizar</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- KPI row -->
+  <div class="kpi-grid">
+    <div class="kpi-card accent-blue">
+      <div class="kpi-label">WSs Ativas</div>
+      <div class="kpi-val" id="kpiWsAtivas">—</div>
+      <div class="kpi-sub" id="kpiWsTotal">de — cadastradas</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div class="kpi-label">Trabalhadores</div>
+      <div class="kpi-val" id="kpiWorkers">—</div>
+      <div class="kpi-sub" id="kpiWorkersBreak">— ded · — free</div>
+    </div>
+    <div class="kpi-card accent-yellow">
+      <div class="kpi-label">Throughput Total</div>
+      <div class="kpi-val" id="kpiThroughput">—</div>
+      <div class="kpi-sub" id="kpiThroughputSub">itens processados</div>
+    </div>
+    <div class="kpi-card accent-purple">
+      <div class="kpi-label">Prod. Média / h</div>
+      <div class="kpi-val" id="kpiProd">—</div>
+      <div class="kpi-sub">itens · hora · WS</div>
+    </div>
+    <div class="kpi-card accent-red">
+      <div class="kpi-label">WSs Ociosas</div>
+      <div class="kpi-val" id="kpiIdle">—</div>
+      <div class="kpi-sub">com operador · sem produção</div>
+    </div>
+  </div>
+
+  <!-- Activity summary cards -->
+  <div class="act-summary" id="actSummary">
+    <div class="act-card packing">
+      <div class="act-card-title">Packing</div>
+      <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s12ws">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s12mp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s12tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s12ph">—</span></div>
+    </div>
+    <div class="act-card staging">
+      <div class="act-card-title">Staging</div>
+      <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s27ws">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s27mp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s27tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s27ph">—</span></div>
+    </div>
+    <div class="act-card linehaul">
+      <div class="act-card-title">Line Haul</div>
+      <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s16ws">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s16mp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s16tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s16ph">—</span></div>
+    </div>
+    <div class="act-card receiving">
+      <div class="act-card-title">Receiving</div>
+      <div class="act-stat"><span class="act-stat-label">WSs</span><span class="act-stat-val" id="s11ws">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Operadores</span><span class="act-stat-val" id="s11mp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Throughput</span><span class="act-stat-val" id="s11tp">—</span></div>
+      <div class="act-stat"><span class="act-stat-label">Prod/h média</span><span class="act-stat-val" id="s11ph">—</span></div>
+    </div>
+  </div>
+
+  <!-- Top 5 + Idle WSs -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">Top 5 · Maior Throughput</div>
+      <table class="top5-table">
+        <thead><tr><th>#</th><th>Workstation</th><th>Atividade</th><th>Throughput</th><th>Prod/h</th></tr></thead>
+        <tbody id="top5Body"><tr><td colspan="5" class="empty-msg">—</td></tr></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <div class="panel-title">WSs Ociosas <span style="color:var(--muted);font-size:10px;font-weight:400">(operadores logados · 0 throughput)</span></div>
+      <div class="waste-list" id="wasteList"><div class="empty-msg" style="padding:20px">—</div></div>
+    </div>
+  </div>
+
+  <!-- Main table -->
+  <div class="toolbar">
+    <div class="act-tabs" id="actTabs">
+      <button class="act-tab active" data-act="all">Todas</button>
+      <button class="act-tab" data-act="12">Packing</button>
+      <button class="act-tab" data-act="27">Staging</button>
+      <button class="act-tab" data-act="16">Line Haul</button>
+      <button class="act-tab" data-act="11">Receiving</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
+      <div class="search-wrap">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" id="wsSearch" type="text" placeholder="Buscar WS...">
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="ws-table">
+      <thead>
+        <tr>
+          <th data-col="workstation">Workstation <span class="sa"></span></th>
+          <th data-col="activity_type">Atividade <span class="sa"></span></th>
+          <th data-col="manpower" style="text-align:center">Operadores <span class="sa"></span></th>
+          <th data-col="dedicated" style="text-align:center">Ded% <span class="sa"></span></th>
+          <th data-col="working_hours" style="text-align:center">Horas <span class="sa"></span></th>
+          <th data-col="total_throughput" style="text-align:center">Throughput <span class="sa"></span></th>
+          <th data-col="hourly_productivity">Prod/h <span class="sa"></span></th>
+          <th style="text-align:center;cursor:default">Status</th>
+        </tr>
+      </thead>
+      <tbody id="wsBody">
+        <tr><td colspan="8" class="empty-msg">Aguardando dados do Tampermonkey...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="emptyMsg" style="display:none" class="empty-msg">Nenhuma WS encontrada</div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span><span class="status-dot" id="statusDot"></span><span id="statusText">—</span></span>
+  <span id="statusPeriod"></span>
+  <span id="statusWs"></span>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────
+const ACTIVITY = {
+  11: { label: 'Receiving', cls: 'receiving', color: 'var(--purple)' },
+  12: { label: 'Packing',   cls: 'packing',   color: 'var(--blue)'   },
+  16: { label: 'Line Haul', cls: 'linehaul',  color: 'var(--yellow)' },
+  27: { label: 'Staging',   cls: 'staging',   color: 'var(--green)'  },
+};
+
+function actInfo(type) {
+  return ACTIVITY[type] || { label: `Tipo ${type}`, cls: 'packing', color: 'var(--blue)' };
+}
+
+// ── State ────────────────────────────────────────────────────────────────
+let allWS       = [];
+let allOperators = [];
+let activeAct   = 'all';
+let sortCol     = 'total_throughput';
+let sortAsc     = false;
+let wsSearch    = '';
+let expandedWS  = new Set();
+let maxProd     = 1;
+
+// ── Load data ────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('loadingSpinner').style.display = '';
+  try {
+    const res  = await fetch('/api/workstation');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    allWS        = data.workstations || [];
+    allOperators = data.operators    || [];
+
+    const period = fmtPeriod(data.startTime, data.endTime);
+    document.getElementById('headerSub').textContent = period || 'Dados ao vivo';
+    document.getElementById('lastUpdate').textContent = data.fetchedAt
+      ? 'Atualizado: ' + new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })
+      : '';
+
+    maxProd = Math.max(1, ...allWS.map(w => w.hourly_productivity || 0));
+
+    buildKPIs();
+    buildActSummary();
+    buildTop5();
+    buildWasteList();
+    buildTable();
+    updateStatus('ok', `${allWS.length} workstations`);
+    document.getElementById('statusPeriod').textContent = period;
+    document.getElementById('statusWs').textContent = `${allWS.filter(w => w.total_throughput > 0).length} ativas`;
+  } catch (e) {
+    updateStatus('err', e.message.includes('No data') ? 'Abra o SPX com o Tampermonkey ativo' : e.message);
+    document.getElementById('headerSub').textContent = 'Sem dados';
+  } finally {
+    document.getElementById('loadingSpinner').style.display = 'none';
+  }
+}
+
+function fmtPeriod(start, end) {
+  if (!start || !end) return '';
+  const fmt = ts => new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+  const fmtDate = ts => new Date(ts * 1000).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  return `${fmtDate(start)} · ${fmt(start)} – ${fmt(end)}`;
+}
+
+function n(v) { return (v || 0).toLocaleString('pt-BR'); }
+
+// ── KPIs ─────────────────────────────────────────────────────────────────
+function buildKPIs() {
+  const active     = allWS.filter(w => w.total_throughput > 0);
+  const totWorkers = allWS.reduce((s, w) => s + (w.manpower || 0), 0);
+  const totTP      = allWS.reduce((s, w) => s + (w.total_throughput || 0), 0);
+  const avgProd    = active.length > 0
+    ? Math.round(active.reduce((s, w) => s + (w.hourly_productivity || 0), 0) / active.length)
+    : 0;
+  const idle       = allWS.filter(w => w.manpower > 0 && w.total_throughput === 0);
+
+  // Dedicated workers count
+  const totDed  = allWS.reduce((s, w) => s + Math.round((w.manpower || 0) * (100 - (w.freelancer || 0)) / 100), 0);
+  const totFree = totWorkers - totDed;
+
+  document.getElementById('kpiWsAtivas').textContent   = active.length;
+  document.getElementById('kpiWsTotal').textContent     = `de ${allWS.length} cadastradas`;
+  document.getElementById('kpiWorkers').textContent     = n(totWorkers);
+  document.getElementById('kpiWorkersBreak').textContent = `${totDed} ded · ${totFree} free`;
+  document.getElementById('kpiThroughput').textContent  = totTP >= 1000 ? (totTP/1000).toFixed(1)+'k' : n(totTP);
+  document.getElementById('kpiProd').textContent        = n(avgProd);
+  document.getElementById('kpiIdle').textContent        = idle.length;
+}
+
+// ── Activity summary ──────────────────────────────────────────────────────
+function buildActSummary() {
+  [11, 12, 16, 27].forEach(type => {
+    const ws    = allWS.filter(w => w.activity_type === type);
+    const actWS = ws.filter(w => w.total_throughput > 0);
+    const tp    = ws.reduce((s, w) => s + (w.total_throughput || 0), 0);
+    const mp    = ws.reduce((s, w) => s + (w.manpower || 0), 0);
+    const avgPH = actWS.length > 0
+      ? Math.round(actWS.reduce((s, w) => s + (w.hourly_productivity || 0), 0) / actWS.length)
+      : 0;
+    document.getElementById(`s${type}ws`).textContent = `${actWS.length} / ${ws.length}`;
+    document.getElementById(`s${type}mp`).textContent = n(mp);
+    document.getElementById(`s${type}tp`).textContent = n(tp);
+    document.getElementById(`s${type}ph`).textContent = n(avgPH);
+  });
+}
+
+// ── Top 5 ────────────────────────────────────────────────────────────────
+function buildTop5() {
+  const top5 = [...allWS]
+    .filter(w => w.total_throughput > 0)
+    .sort((a, b) => b.total_throughput - a.total_throughput)
+    .slice(0, 5);
+
+  const rankColors = ['rank-1','rank-2','rank-3','',''];
+  document.getElementById('top5Body').innerHTML = top5.length
+    ? top5.map((w, i) => {
+        const info = actInfo(w.activity_type);
+        const ws   = w.workstation.replace(/^\[WS\d+\]/, '');
+        return `<tr>
+          <td><span class="rank ${rankColors[i]}">${i+1}</span></td>
+          <td style="font-weight:600;font-size:12px">${ws}</td>
+          <td><span class="act-badge ${info.cls}">${info.label}</span></td>
+          <td style="font-family:monospace">${n(w.total_throughput)}</td>
+          <td style="font-family:monospace">${n(w.hourly_productivity)}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5" class="empty-msg" style="padding:16px">—</td></tr>';
+}
+
+// ── Idle WSs ─────────────────────────────────────────────────────────────
+function buildWasteList() {
+  const idle = allWS.filter(w => w.manpower > 0 && w.total_throughput === 0);
+  if (!idle.length) {
+    document.getElementById('wasteList').innerHTML =
+      '<div style="color:var(--green);font-size:12px;padding:8px 0">Nenhuma WS ociosa</div>';
+    return;
+  }
+  document.getElementById('wasteList').innerHTML = idle
+    .sort((a, b) => b.manpower - a.manpower)
+    .map(w => {
+      const info = actInfo(w.activity_type);
+      const ws   = w.workstation.replace(/^\[WS\d+\]/, '');
+      return `<div class="waste-item">
+        <span><span class="act-badge ${info.cls}" style="margin-right:6px">${info.label}</span><span class="waste-ws">${ws}</span></span>
+        <span class="waste-workers">${w.manpower} op · ${w.working_hours.toFixed(1)}h</span>
+      </div>`;
+    }).join('');
+}
+
+// ── Table ────────────────────────────────────────────────────────────────
+function filteredWS() {
+  let list = activeAct === 'all' ? allWS : allWS.filter(w => w.activity_type === parseInt(activeAct));
+  if (wsSearch) {
+    const q = wsSearch.toLowerCase();
+    list = list.filter(w => w.workstation.toLowerCase().includes(q));
+  }
+  return list;
+}
+
+function sortedWS(list) {
+  return [...list].sort((a, b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (typeof av === 'string') {
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    }
+    av = av || 0; bv = bv || 0;
+    return sortAsc ? av - bv : bv - av;
+  });
+}
+
+function buildTable() {
+  const vis = sortedWS(filteredWS());
+  document.getElementById('tableCount').textContent = `${vis.length} workstations`;
+
+  if (!vis.length) {
+    document.getElementById('wsBody').innerHTML =
+      `<tr><td colspan="8" class="empty-msg">${allWS.length ? 'Nenhuma WS para este filtro' : 'Aguardando dados do Tampermonkey...'}</td></tr>`;
+    return;
+  }
+
+  document.getElementById('wsBody').innerHTML = vis.map(w => {
+    const info   = actInfo(w.activity_type);
+    const wsName = w.workstation.replace(/^\[WS\d+\]/, '');
+    const wsId   = w.workstation;
+    const isExp  = expandedWS.has(wsId);
+    const pct    = maxProd > 0 ? Math.min(100, (w.hourly_productivity / maxProd) * 100) : 0;
+    const isIdle = w.manpower > 0 && w.total_throughput === 0;
+    const dedPct = Math.round(100 - (w.freelancer || 0));
+    const freePct = w.freelancer || 0;
+
+    const statusBadge = isIdle
+      ? `<span class="alert-dot"></span><span style="color:var(--red);font-size:10px">Ocioso</span>`
+      : w.total_throughput > 0
+        ? `<span style="color:var(--green);font-size:10px">● Ativo</span>`
+        : `<span style="color:var(--muted);font-size:10px">○ Sem mov.</span>`;
+
+    const expandRow = isExp ? `<tr class="expand-row"><td colspan="8">${renderExpand(w)}</td></tr>` : '';
+
+    return `<tr class="ws-row" data-wsid="${encodeURIComponent(wsId)}">
+      <td style="font-weight:600">
+        <span class="expand-chevron${isExp?' open':''}">▶</span>${wsName}
+        <div style="font-size:10px;color:var(--muted);margin-top:1px;padding-left:16px;font-family:monospace">${wsId.match(/\[(\w+)\]/)?.[1]||''}</div>
+      </td>
+      <td><span class="act-badge ${info.cls}">${info.label}</span></td>
+      <td style="text-align:center">
+        <span class="workers-pill">${w.manpower || 0}</span>
+        <div class="worker-bar" style="width:50px;margin:3px auto 0" title="${dedPct}% dedicado · ${freePct}% freelancer">
+          <div class="ded-fill" style="width:${dedPct}%"></div>
+          <div class="free-fill" style="width:${freePct}%"></div>
+        </div>
+      </td>
+      <td style="text-align:center;font-family:monospace;font-size:11px;color:${dedPct>50?'var(--blue)':'var(--muted)'}">${dedPct}%</td>
+      <td style="text-align:center;font-family:monospace">${w.working_hours.toFixed(1)}h</td>
+      <td style="text-align:center;font-family:monospace;font-weight:${w.total_throughput>0?'700':'400'};color:${w.total_throughput>0?'var(--text)':'var(--muted)'}">${n(w.total_throughput)}</td>
+      <td>
+        <div class="prod-bar-wrap">
+          <div class="prod-bar"><div class="prod-fill ${info.cls}" style="width:${pct.toFixed(1)}%"></div></div>
+          <span class="prod-val">${n(w.hourly_productivity)}</span>
+        </div>
+      </td>
+      <td style="text-align:center">${statusBadge}</td>
+    </tr>${expandRow}`;
+  }).join('');
+
+  // Bind expand clicks
+  document.querySelectorAll('tr.ws-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = decodeURIComponent(row.dataset.wsid);
+      if (expandedWS.has(id)) expandedWS.delete(id);
+      else expandedWS.add(id);
+      buildTable();
+    });
+  });
+}
+
+// ── Expand row ───────────────────────────────────────────────────────────
+function renderExpand(ws) {
+  const ops = allOperators.filter(o => o.workstation === ws.workstation);
+  const info = actInfo(ws.activity_type);
+
+  // WS stats summary
+  const dedCnt  = Math.round(ws.manpower * (100 - (ws.freelancer || 0)) / 100);
+  const freeCnt = ws.manpower - dedCnt;
+  const prodPP  = ws.working_hours > 0 ? Math.round(ws.total_throughput / ws.working_hours) : 0;
+
+  let opHtml = '';
+  if (ops.length > 0) {
+    // Sort operators by throughput desc
+    const sorted = [...ops].sort((a, b) => (b.total_throughput || 0) - (a.total_throughput || 0));
+    opHtml = `
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px;font-weight:600">Operadores (${ops.length})</div>
+      <table class="op-subtable">
+        <thead><tr><th>Operador</th><th style="text-align:center">Horas</th><th style="text-align:center">Throughput</th><th style="text-align:center">Prod/h</th><th>Tipo</th></tr></thead>
+        <tbody>${sorted.map(o => `<tr>
+          <td style="font-weight:600">${o.operator || o.name || '—'}</td>
+          <td style="text-align:center;font-family:monospace">${(o.working_hours||0).toFixed(1)}h</td>
+          <td style="text-align:center;font-family:monospace;font-weight:600">${n(o.total_throughput||0)}</td>
+          <td style="text-align:center;font-family:monospace">${n(o.hourly_productivity||0)}</td>
+          <td><span style="font-size:10px;color:var(--muted)">${o.worker_type||'—'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  } else {
+    opHtml = `<div style="color:var(--muted);font-size:11px;font-style:italic">Dados por operador não disponíveis — verifique se o script Tampermonkey está capturando o endpoint de operadores.</div>`;
+  }
+
+  return `<div class="expand-inner">
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Atividade</div>
+           <span class="act-badge ${info.cls}">${info.label}</span></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Operadores</div>
+           <span style="font-weight:700">${ws.manpower}</span> <span style="font-size:10px;color:var(--muted)">(${dedCnt} ded · ${freeCnt} free)</span></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Horas trabalhadas</div>
+           <span style="font-weight:700;font-family:monospace">${ws.working_hours.toFixed(1)}h</span></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Throughput total</div>
+           <span style="font-weight:700;font-family:monospace">${n(ws.total_throughput)}</span></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Prod/h (WS)</div>
+           <span style="font-weight:700;font-family:monospace">${n(ws.hourly_productivity)}</span></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">Prod/h por pessoa</div>
+           <span style="font-weight:700;font-family:monospace">${n(prodPP)}</span></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:2px">% Freelancer</div>
+           <span style="font-weight:700;font-family:monospace">${ws.freelancer||0}%</span></div>
+    </div>
+    ${opHtml}
+  </div>`;
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────
+function updateStatus(type, msg) {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.className  = `status-dot ${type}`;
+  text.textContent = msg;
+}
+
+// ── Sort headers ──────────────────────────────────────────────────────────
+document.querySelectorAll('table.ws-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = false; }
+    document.querySelectorAll('table.ws-table th').forEach(t => {
+      t.classList.remove('sorted');
+      t.querySelector('.sa').textContent = '';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
+    buildTable();
+  });
+});
+
+// ── Activity tabs ─────────────────────────────────────────────────────────
+document.getElementById('actTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.act-tab');
+  if (!btn) return;
+  activeAct = btn.dataset.act;
+  document.querySelectorAll('.act-tab').forEach(t => t.classList.toggle('active', t === btn));
+  expandedWS.clear();
+  buildTable();
+});
+
+// ── Search ────────────────────────────────────────────────────────────────
+document.getElementById('wsSearch').addEventListener('input', e => {
+  wsSearch = e.target.value;
+  buildTable();
+});
+
+// ── Auto-refresh every 60s ────────────────────────────────────────────────
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>
