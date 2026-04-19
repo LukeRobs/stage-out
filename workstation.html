@@ -560,19 +560,25 @@ function renderExpand(ws) {
 
   let opHtml = '';
   if (ops.length > 0) {
-    // Sort operators by throughput desc
     const sorted = [...ops].sort((a, b) => (b.total_throughput || 0) - (a.total_throughput || 0));
+    // Extrai nome limpo: "[Ops304835]JOAO DA SILVA" → "JOAO DA SILVA"
+    const opName = raw => (raw || '').replace(/^\[Ops\d+\]\s*/, '').trim() || '—';
+    const fmtTime = s => s ? s.substring(11, 16) : '—';
     opHtml = `
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:8px;font-weight:600">Operadores (${ops.length})</div>
       <table class="op-subtable">
-        <thead><tr><th>Operador</th><th style="text-align:center">Horas</th><th style="text-align:center">Throughput</th><th style="text-align:center">Prod/h</th><th>Tipo</th></tr></thead>
-        <tbody>${sorted.map(o => `<tr>
-          <td style="font-weight:600">${o.operator || o.name || '—'}</td>
-          <td style="text-align:center;font-family:monospace">${(o.working_hours||0).toFixed(1)}h</td>
-          <td style="text-align:center;font-family:monospace;font-weight:600">${n(o.total_throughput||0)}</td>
-          <td style="text-align:center;font-family:monospace">${n(o.hourly_productivity||0)}</td>
-          <td><span style="font-size:10px;color:var(--muted)">${o.worker_type||'—'}</span></td>
-        </tr>`).join('')}</tbody>
+        <thead><tr><th>Operador</th><th style="text-align:center">Check-in</th><th style="text-align:center">Check-out</th><th style="text-align:center">Horas</th><th style="text-align:center">Throughput</th><th style="text-align:center">Prod/h</th></tr></thead>
+        <tbody>${sorted.map(o => {
+          const isIdle = o.total_throughput === 0;
+          return `<tr>
+            <td style="font-weight:600">${opName(o.ops)}</td>
+            <td style="text-align:center;font-family:monospace;color:var(--muted)">${fmtTime(o.check_in_time)}</td>
+            <td style="text-align:center;font-family:monospace;color:var(--muted)">${fmtTime(o.check_out_time)}</td>
+            <td style="text-align:center;font-family:monospace">${(o.working_hours||0).toFixed(1)}h</td>
+            <td style="text-align:center;font-family:monospace;font-weight:600;color:${isIdle?'var(--muted)':'var(--text)'}">${n(o.total_throughput||0)}</td>
+            <td style="text-align:center;font-family:monospace">${n(o.hourly_productivity||0)}</td>
+          </tr>`;
+        }).join('')}</tbody>
       </table>`;
   } else {
     opHtml = `<div style="color:var(--muted);font-size:11px;font-style:italic">Dados por operador não disponíveis — verifique se o script Tampermonkey está capturando o endpoint de operadores.</div>`;

@@ -17,8 +17,8 @@
 
   // Endpoint para lista de workstations (paginado — busca todas as páginas)
   const WS_API   = '/api/wfm/admin/workstation/productivity/productivity_workstation_list';
-  // Endpoint para lista de operadores por workstation
-  const OP_API   = '/api/wfm/admin/workstation/productivity/productivity_operator_list';
+  // Endpoint para lista de operadores individuais por workstation
+  const OP_API   = '/api/wfm/admin/workstation/productivity/productivity_individual_list';
 
   // ── Utilitários ─────────────────────────────────────────────────────────
   function getTurnoWindow() {
@@ -60,7 +60,13 @@
     return { list: allList, total };
   }
 
-  // Busca operadores para todas as WS com manpower > 0
+  // Extrai o biz_workstation_id do campo workstation: "[WS10963000005]ST_OUT01" → "WS10963000005"
+  function extractWsId(workstation) {
+    const m = workstation.match(/^\[(\w+)\]/);
+    return m ? m[1] : workstation;
+  }
+
+  // Busca operadores individuais para todas as WS com manpower > 0
   async function fetchOperators(wsList, start_time, end_time) {
     const wsWithOps = wsList.filter(w => w.manpower > 0);
     const results   = [];
@@ -69,20 +75,18 @@
     const BATCH = 5;
     for (let i = 0; i < wsWithOps.length; i += BATCH) {
       const batch = wsWithOps.slice(i, i + BATCH);
-      const promises = batch.map(ws =>
-        fetch(`${OP_API}?workstation_id=${encodeURIComponent(ws.workstation)}&start_time=${start_time}&end_time=${end_time}`, {
-          credentials: 'include',
-        })
-        .then(r => r.json())
-        .then(json => {
-          if (json.retcode !== 0) return [];
-          return (json.data?.list || []).map(op => ({
-            ...op,
-            workstation: ws.workstation,
-          }));
-        })
-        .catch(() => [])
-      );
+      const promises = batch.map(ws => {
+        const wsId = extractWsId(ws.workstation);
+        const url  = `${OP_API}?start_time=${start_time}&end_time=${end_time}&workstation_group_id=0&biz_workstation_id=${wsId}&count=9999`;
+        return fetch(url, { credentials: 'include' })
+          .then(r => r.json())
+          .then(json => {
+            if (json.retcode !== 0) return [];
+            // O campo workstation já vem preenchido no response, mas garantimos
+            return json.data?.list || [];
+          })
+          .catch(() => []);
+      });
       const batchResults = await Promise.all(promises);
       batchResults.forEach(ops => results.push(...ops));
     }
