@@ -104,7 +104,7 @@ body {
 
 /* ── KPIs ── */
 .stats {
-  display: grid; grid-template-columns: repeat(5,1fr);
+  display: grid; grid-template-columns: repeat(6,1fr);
   gap: 10px; padding: 14px 24px;
 }
 .stat {
@@ -405,6 +405,11 @@ table.main-table tr:last-child td { border-bottom: none; }
     <div class="stat-label">Média Aging</div>
     <div class="stat-value" id="sAvgAging" style="color:var(--yellow)">—</div>
     <div class="stat-sub">nas ruas ativas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Média por TO</div>
+    <div class="stat-value" id="sAvgTO" style="color:var(--purple)">—</div>
+    <div class="stat-sub" id="sAvgTOSub">pacotes / TO</div>
   </div>
 </div>
 
@@ -709,6 +714,9 @@ function updateStats(areas) {
     const totalPac = Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
     document.getElementById('sTotalPacotes').textContent = totalPac.toLocaleString('pt-BR');
 
+    const avgTO = totalTOs > 0 ? Math.round(totalPac / totalTOs) : null;
+    document.getElementById('sAvgTO').textContent    = avgTO !== null ? avgTO.toLocaleString('pt-BR') : '—';
+    document.getElementById('sAvgTOSub').textContent = avgTO !== null ? `${totalPac.toLocaleString('pt-BR')} pkgs ÷ ${totalTOs} TOs` : 'pacotes / TO';
   }
 }
 
