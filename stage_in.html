@@ -111,9 +111,20 @@ body {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 12px 16px;
 }
+.stat.clickable { cursor: pointer; transition: border-color .15s, background .15s; }
+.stat.clickable:hover { border-color: var(--blue); background: rgba(59,130,246,.06); }
+.stat.pct-active { border-color: var(--blue) !important; background: rgba(59,130,246,.10) !important; box-shadow: 0 0 0 2px rgba(59,130,246,.25); }
+.stat.pct-active .stat-sub::after { content: ' ✕'; font-size:10px; opacity:.6; }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
 .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+/* Banner de filtro ativo */
+.pct-filter-banner { display:flex; align-items:center; gap:10px; padding:6px 12px; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.3); border-radius:8px; font-size:11px; margin-bottom:8px; }
+.pct-filter-banner strong { color:var(--blue); }
+.pct-filter-clear { cursor:pointer; padding:2px 8px; border-radius:10px; background:rgba(59,130,246,.2); border:none; color:var(--blue); font-size:10px; }
+/* TO linha destacada na subtabela */
+.to-match { background: rgba(59,130,246,.12) !important; }
+.to-match td:nth-child(2) { font-weight:800; color:var(--blue) !important; }
 
 /* ── Visão por Zona ── */
 .section { padding: 0 24px 14px; }
@@ -467,9 +478,9 @@ table.main-table tr:last-child td { border-bottom: none; }
   <div class="stats" style="grid-template-columns:repeat(7,1fr)">
     <div class="stat"><div class="stat-label">Total TOs</div><div class="stat-value" id="vTOs" style="color:var(--accent)">—</div><div class="stat-sub">na VOLUMOSO</div></div>
     <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="vPacotes" style="color:var(--purple)">—</div><div class="stat-sub">soma geral</div></div>
-    <div class="stat"><div class="stat-label">TOs &lt; 30 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
-    <div class="stat"><div class="stat-label">TOs = 30 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
-    <div class="stat"><div class="stat-label">TOs &gt; 30 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
+    <div class="stat clickable" id="statLt20"><div class="stat-label">TOs &lt; 20 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
+    <div class="stat clickable" id="statEq20"><div class="stat-label">TOs = 20 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
+    <div class="stat clickable" id="statGt20"><div class="stat-label">TOs &gt; 20 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
     <div class="stat"><div class="stat-label">Média por TO</div><div class="stat-value" id="vMedia" style="color:var(--yellow)">—</div><div class="stat-sub">pacotes/TO</div></div>
     <div class="stat"><div class="stat-label">Maior TO</div><div class="stat-value" id="vMaior" style="color:var(--orange)">—</div><div class="stat-sub">pacotes</div></div>
   </div>
@@ -481,11 +492,11 @@ table.main-table tr:last-child td { border-bottom: none; }
       <div id="vDistrib"></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Turno Ofensor (TOs &gt; 30 pcts)</div>
+      <div class="panel-title">Turno Ofensor (TOs &gt; 20 pcts)</div>
       <div id="vTurnoOfensor"></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Top 5 TOs com Maior Volume (&gt; 30 pcts)</div>
+      <div class="panel-title">Top 5 TOs com Maior Volume (&gt; 20 pcts)</div>
       <div id="vTop5"></div>
     </div>
   </div>
@@ -498,6 +509,12 @@ table.main-table tr:last-child td { border-bottom: none; }
 </div>
 
 <!-- Detail table -->
+<div id="pctFilterBanner" style="display:none" class="pct-filter-banner">
+  <span>🔍 Filtro ativo:</span>
+  <strong id="pctFilterLabel">—</strong>
+  <span style="color:var(--muted)">— mostrando ruas com TOs correspondentes</span>
+  <button class="pct-filter-clear" onclick="setPctFilter(null)">Limpar filtro</button>
+</div>
 <div class="section-header">
   <span class="section-title">Detalhamento por Rua</span>
   <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
@@ -956,8 +973,21 @@ function buildOccByZone(areas) {
 
 // ── Filtered / sorted areas ────────────────────────────────────────────
 function filteredAreas() {
-  return activeZone === 'all' ? allAreas
+  let base = activeZone === 'all' ? allAreas
     : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
+  // Filtro PCT: mantém só ruas que têm pelo menos 1 TO correspondente
+  if (pctFilter) {
+    base = base.filter(a => {
+      const tos = reportData?.byAreaTOs?.[a.area_name];
+      if (!tos?.length) return false;
+      return tos.some(t =>
+        pctFilter === 'lt' ? t.pacotes < PCT_THRESHOLD :
+        pctFilter === 'eq' ? t.pacotes === PCT_THRESHOLD :
+        /* gt */             t.pacotes > PCT_THRESHOLD
+      );
+    });
+  }
+  return base;
 }
 
 function sortedAreas(areas) {
@@ -1003,17 +1033,33 @@ function turnoTag(t) {
 }
 
 // ── Expanded TOs sub-table ─────────────────────────────────────────────
+function toMatchesPct(t) {
+  if (!pctFilter) return false;
+  return pctFilter === 'lt' ? t.pacotes < PCT_THRESHOLD :
+         pctFilter === 'eq' ? t.pacotes === PCT_THRESHOLD :
+         /* gt */             t.pacotes > PCT_THRESHOLD;
+}
+
 function renderTosSub(areaName) {
   const tos = reportData?.byAreaTOs?.[areaName];
   if (!tos?.length) return `<div class="expand-inner" style="color:var(--muted);font-size:12px">Nenhum TO na planilha para esta rua.</div>`;
-  const rows = [...tos].sort((a, b) => b.aging_h - a.aging_h).map(t => `<tr>
-    <td style="font-family:monospace;font-size:11px">${t.to}</td>
-    <td style="font-family:monospace;text-align:center">${t.pacotes}</td>
-    <td style="font-family:monospace">${fmtDurH(t.aging_h)}</td>
-    <td style="color:var(--muted)">${t.hora_end}</td>
-    <td>${turnoTag(t.turno)}</td>
-  </tr>`).join('');
+  const sorted = [...tos].sort((a, b) => b.aging_h - a.aging_h);
+  const rows = sorted.map(t => {
+    const isMatch = toMatchesPct(t);
+    return `<tr class="${isMatch ? 'to-match' : ''}">
+      <td style="font-family:monospace;font-size:11px">${t.to}</td>
+      <td style="font-family:monospace;text-align:center">${t.pacotes}</td>
+      <td style="font-family:monospace">${fmtDurH(t.aging_h)}</td>
+      <td style="color:var(--muted)">${t.hora_end}</td>
+      <td>${turnoTag(t.turno)}</td>
+    </tr>`;
+  }).join('');
+  const matchCount = pctFilter ? sorted.filter(toMatchesPct).length : 0;
+  const matchNote  = pctFilter
+    ? `<div style="font-size:10px;color:var(--blue);margin-bottom:6px">🔍 ${matchCount} TO(s) destacado(s) pelo filtro ativo</div>`
+    : '';
   return `<div class="expand-inner">
+    ${matchNote}
     <table class="tos-subtable">
       <thead><tr><th>TO</th><th style="text-align:center">Pacotes</th><th>Aging</th><th>Hora End.</th><th>Turno</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -1164,6 +1210,11 @@ document.getElementById('pagSizeSelect').addEventListener('change', e => {
   buildMainTable(filteredAreas());
 });
 
+// ── Clique nos cards PCT ────────────────────────────────────────────────
+document.getElementById('statLt20')?.addEventListener('click', () => setPctFilter('lt'));
+document.getElementById('statEq20')?.addEventListener('click', () => setPctFilter('eq'));
+document.getElementById('statGt20')?.addEventListener('click', () => setPctFilter('gt'));
+
 // ── Aging sort toggle ──────────────────────────────────────────────────
 function updateAgingSortBtn() {
   const btn = document.getElementById('agingSortBtn');
@@ -1201,22 +1252,54 @@ function getVolumosoTOs() {
   return result;
 }
 
+const PCT_THRESHOLD = 20;
+
+// ── Filtro PCT (clique nos cards de pacotes) ──────────────────────────────
+let pctFilter = null; // null | 'lt' | 'eq' | 'gt'
+
+function setPctFilter(type) {
+  pctFilter = (pctFilter === type) ? null : type; // toggle
+  // Atualiza destaque dos cards
+  ['statLt20','statEq20','statGt20'].forEach(id => {
+    document.getElementById(id)?.classList.remove('pct-active');
+  });
+  if (pctFilter === 'lt') document.getElementById('statLt20')?.classList.add('pct-active');
+  if (pctFilter === 'eq') document.getElementById('statEq20')?.classList.add('pct-active');
+  if (pctFilter === 'gt') document.getElementById('statGt20')?.classList.add('pct-active');
+  // Banner
+  const banner = document.getElementById('pctFilterBanner');
+  const label  = document.getElementById('pctFilterLabel');
+  if (pctFilter) {
+    const txt = pctFilter === 'lt' ? `TOs < ${PCT_THRESHOLD} pacotes` :
+                pctFilter === 'eq' ? `TOs = ${PCT_THRESHOLD} pacotes` :
+                                     `TOs > ${PCT_THRESHOLD} pacotes`;
+    label.textContent = txt;
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
+  // Limpa expansão e reconstrói tabela
+  expandedAreas.clear();
+  currentPage = 1;
+  buildMainTable(filteredAreas());
+}
+
 function buildVolumoso() {
   const tos = getVolumosoTOs();
   const total    = tos.length;
   const totalPac = tos.reduce((s, t) => s + t.pacotes, 0);
-  const lt30 = tos.filter(t => t.pacotes < 30).length;
-  const eq30 = tos.filter(t => t.pacotes === 30).length;
-  const gt30 = tos.filter(t => t.pacotes > 30).length;
+  const lt20 = tos.filter(t => t.pacotes < PCT_THRESHOLD).length;
+  const eq20 = tos.filter(t => t.pacotes === PCT_THRESHOLD).length;
+  const gt20 = tos.filter(t => t.pacotes > PCT_THRESHOLD).length;
   const media = total ? (totalPac / total).toFixed(1) : '0';
   const maior = total ? Math.max(...tos.map(t => t.pacotes)) : 0;
 
   // KPIs
   document.getElementById('vTOs').textContent    = total.toLocaleString('pt-BR');
   document.getElementById('vPacotes').textContent = totalPac.toLocaleString('pt-BR');
-  document.getElementById('vLt30').textContent   = lt30.toLocaleString('pt-BR');
-  document.getElementById('vEq30').textContent   = eq30.toLocaleString('pt-BR');
-  document.getElementById('vGt30').textContent   = gt30.toLocaleString('pt-BR');
+  document.getElementById('vLt30').textContent   = lt20.toLocaleString('pt-BR');
+  document.getElementById('vEq30').textContent   = eq20.toLocaleString('pt-BR');
+  document.getElementById('vGt30').textContent   = gt20.toLocaleString('pt-BR');
   document.getElementById('vMedia').textContent  = media;
   document.getElementById('vMaior').textContent  = maior.toLocaleString('pt-BR');
 
@@ -1239,8 +1322,8 @@ function buildVolumoso() {
     </div>`;
   }).join('');
 
-  // Turno Ofensor (TOs > 30 pacotes)
-  const heavy = tos.filter(t => t.pacotes > 30);
+  // Turno Ofensor (TOs > PCT_THRESHOLD pacotes)
+  const heavy = tos.filter(t => t.pacotes > PCT_THRESHOLD);
   const byTurno = {};
   heavy.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
   const turnoSorted = Object.entries(byTurno).sort((a, b) => b[1] - a[1]);
@@ -1256,10 +1339,10 @@ function buildVolumoso() {
           <span class="vol-val">${cnt} TOs <span class="vol-pct">(${pct}%)</span></span>
         </div>`;
       }).join('')
-    : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhuma TO &gt; 30 pacotes</div>';
+    : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhuma TO &gt; ${PCT_THRESHOLD} pacotes</div>`;
 
-  // Top 5 TOs > 30 pacotes
-  const top5 = [...tos].filter(t => t.pacotes > 30).sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
+  // Top 5 TOs > PCT_THRESHOLD pacotes
+  const top5 = [...tos].filter(t => t.pacotes > PCT_THRESHOLD).sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
   document.getElementById('vTop5').innerHTML = top5.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--muted);font-size:11px">
@@ -1279,7 +1362,7 @@ function buildVolumoso() {
           <td style="padding:5px 6px">${turnoTag(t.turno)}</td>
         </tr>`).join('')}</tbody>
       </table>`
-    : '<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhuma TO acima de 30 pacotes</div>';
+    : `<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhuma TO acima de ${PCT_THRESHOLD} pacotes</div>`;
 
   // Histograma de Aging — barras full-width com gradiente de cor
   const hCounts = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
