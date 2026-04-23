@@ -327,16 +327,24 @@ table.main-table tr:last-child td { border-bottom: none; }
 .pag-size select:focus { border-color: var(--accent); }
 
 /* ── VOLUMOSO specific ── */
-.vol-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); }
+.vol-row { display:flex; align-items:center; gap:10px; padding:6px 4px; border-bottom:1px solid var(--border); border-radius:6px; cursor:pointer; transition:background .15s; }
 .vol-row:last-child { border-bottom:none; }
+.vol-row:hover { background:rgba(255,255,255,.04); }
+.vol-row.vol-active { background:rgba(59,130,246,.13); border-bottom-color:transparent; box-shadow:inset 2px 0 0 var(--blue); }
 .vol-label { min-width:60px; font-size:12px; font-weight:600; color:var(--muted); }
 .vol-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:10px; overflow:hidden; }
 .vol-bar { height:100%; border-radius:4px; background:var(--green); transition:width .4s ease; }
 .vol-val { min-width:110px; text-align:right; font-family:monospace; font-size:12px; font-weight:700; }
 .vol-pct { color:var(--muted); font-weight:400; font-size:11px; }
 .vol-hist-label { min-width:72px; font-size:11px; color:var(--muted); flex-shrink:0; }
-.vol-turno-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.vol-turno-row { display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--border); border-radius:6px; cursor:pointer; transition:background .15s; }
 .vol-turno-row:last-child { border-bottom:none; }
+.vol-turno-row:hover { background:rgba(255,255,255,.04); }
+.vol-turno-row.vol-active { background:rgba(59,130,246,.13); border-bottom-color:transparent; box-shadow:inset 2px 0 0 var(--blue); }
+/* Aging histogram row clicável */
+.vol-aging-row { cursor:pointer; border-radius:8px; transition:box-shadow .15s; }
+.vol-aging-row:hover { box-shadow:0 0 0 1px rgba(255,255,255,.1); }
+.vol-aging-row.vol-active { box-shadow:0 0 0 2px var(--blue); }
 
 /* ── Expandable TO rows ── */
 .area-row { cursor: pointer; }
@@ -975,16 +983,11 @@ function buildOccByZone(areas) {
 function filteredAreas() {
   let base = activeZone === 'all' ? allAreas
     : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
-  // Filtro PCT: mantém só ruas que têm pelo menos 1 TO correspondente
-  if (pctFilter) {
+  // Filtro global: mantém só ruas com pelo menos 1 TO correspondente
+  if (activeVolFilter.type) {
     base = base.filter(a => {
       const tos = reportData?.byAreaTOs?.[a.area_name];
-      if (!tos?.length) return false;
-      return tos.some(t =>
-        pctFilter === 'lt' ? t.pacotes < PCT_THRESHOLD :
-        pctFilter === 'eq' ? t.pacotes === PCT_THRESHOLD :
-        /* gt */             t.pacotes > PCT_THRESHOLD
-      );
+      return tos?.some(t => matchesVolFilter(t));
     });
   }
   return base;
@@ -1033,19 +1036,22 @@ function turnoTag(t) {
 }
 
 // ── Expanded TOs sub-table ─────────────────────────────────────────────
-function toMatchesPct(t) {
-  if (!pctFilter) return false;
-  return pctFilter === 'lt' ? t.pacotes < PCT_THRESHOLD :
-         pctFilter === 'eq' ? t.pacotes === PCT_THRESHOLD :
-         /* gt */             t.pacotes > PCT_THRESHOLD;
-}
-
 function renderTosSub(areaName) {
   const tos = reportData?.byAreaTOs?.[areaName];
   if (!tos?.length) return `<div class="expand-inner" style="color:var(--muted);font-size:12px">Nenhum TO na planilha para esta rua.</div>`;
-  const sorted = [...tos].sort((a, b) => b.aging_h - a.aging_h);
+
+  // Quando filtro ativo: TOs correspondentes primeiro, depois aging desc
+  const sorted = [...tos].sort((a, b) => {
+    if (activeVolFilter.type) {
+      const aM = matchesVolFilter(a) ? 1 : 0;
+      const bM = matchesVolFilter(b) ? 1 : 0;
+      if (bM !== aM) return bM - aM;
+    }
+    return b.aging_h - a.aging_h;
+  });
+
   const rows = sorted.map(t => {
-    const isMatch = toMatchesPct(t);
+    const isMatch = activeVolFilter.type ? matchesVolFilter(t) : false;
     return `<tr class="${isMatch ? 'to-match' : ''}">
       <td style="font-family:monospace;font-size:11px">${t.to}</td>
       <td style="font-family:monospace;text-align:center">${t.pacotes}</td>
@@ -1054,10 +1060,12 @@ function renderTosSub(areaName) {
       <td>${turnoTag(t.turno)}</td>
     </tr>`;
   }).join('');
-  const matchCount = pctFilter ? sorted.filter(toMatchesPct).length : 0;
-  const matchNote  = pctFilter
-    ? `<div style="font-size:10px;color:var(--blue);margin-bottom:6px">🔍 ${matchCount} TO(s) destacado(s) pelo filtro ativo</div>`
+
+  const matchCount = activeVolFilter.type ? sorted.filter(t => matchesVolFilter(t)).length : 0;
+  const matchNote  = activeVolFilter.type
+    ? `<div style="font-size:10px;color:var(--blue);margin-bottom:6px">🔍 ${matchCount} TO(s) do filtro ativo · destacados e ordenados primeiro</div>`
     : '';
+
   return `<div class="expand-inner">
     ${matchNote}
     <table class="tos-subtable">
@@ -1211,9 +1219,9 @@ document.getElementById('pagSizeSelect').addEventListener('change', e => {
 });
 
 // ── Clique nos cards PCT ────────────────────────────────────────────────
-document.getElementById('statLt20')?.addEventListener('click', () => setPctFilter('lt'));
-document.getElementById('statEq20')?.addEventListener('click', () => setPctFilter('eq'));
-document.getElementById('statGt20')?.addEventListener('click', () => setPctFilter('gt'));
+document.getElementById('statLt20')?.addEventListener('click', () => setVolFilter('pct','lt'));
+document.getElementById('statEq20')?.addEventListener('click', () => setVolFilter('pct','eq'));
+document.getElementById('statGt20')?.addEventListener('click', () => setVolFilter('pct','gt'));
 
 // ── Aging sort toggle ──────────────────────────────────────────────────
 function updateAgingSortBtn() {
@@ -1254,38 +1262,86 @@ function getVolumosoTOs() {
 
 const PCT_THRESHOLD = 20;
 
-// ── Filtro PCT (clique nos cards de pacotes) ──────────────────────────────
-let pctFilter = null; // null | 'lt' | 'eq' | 'gt'
+// ── Filtro global único (single source of truth) ──────────────────────────
+// type: 'pct' | 'distrib' | 'turno' | 'aging' | null
+// value: 'lt'/'eq'/'gt' | {min,max,label} | 'T1'/'T2'/'T3' | {min,max,label}
+let activeVolFilter = { type: null, value: null };
 
-function setPctFilter(type) {
-  pctFilter = (pctFilter === type) ? null : type; // toggle
-  // Atualiza destaque dos cards
-  ['statLt20','statEq20','statGt20'].forEach(id => {
-    document.getElementById(id)?.classList.remove('pct-active');
-  });
-  if (pctFilter === 'lt') document.getElementById('statLt20')?.classList.add('pct-active');
-  if (pctFilter === 'eq') document.getElementById('statEq20')?.classList.add('pct-active');
-  if (pctFilter === 'gt') document.getElementById('statGt20')?.classList.add('pct-active');
+function matchesVolFilter(t) {
+  if (!activeVolFilter.type) return true;
+  const { type, value } = activeVolFilter;
+  if (type === 'pct') {
+    return value === 'lt' ? t.pacotes < PCT_THRESHOLD :
+           value === 'eq' ? t.pacotes === PCT_THRESHOLD :
+                            t.pacotes > PCT_THRESHOLD;
+  }
+  if (type === 'distrib') {
+    return t.pacotes >= value.min && t.pacotes < value.max;
+  }
+  if (type === 'turno') {
+    return (t.turno || '') === value;
+  }
+  if (type === 'aging') {
+    const secs = t.aging_h * 3600;
+    return secs >= value.min && secs < value.max;
+  }
+  return true;
+}
+
+function getFilteredVolumosoTOs() {
+  const all = getVolumosoTOs();
+  return activeVolFilter.type ? all.filter(matchesVolFilter) : all;
+}
+
+function filterLabel() {
+  const { type, value } = activeVolFilter;
+  if (type === 'pct')    return value === 'lt' ? `TOs < ${PCT_THRESHOLD} pacotes` :
+                                value === 'eq' ? `TOs = ${PCT_THRESHOLD} pacotes` :
+                                                 `TOs > ${PCT_THRESHOLD} pacotes`;
+  if (type === 'distrib') return `Faixa ${value.label} pacotes`;
+  if (type === 'turno')   return `Turno ${value}`;
+  if (type === 'aging')   return `Aging ${value.label}`;
+  return '';
+}
+
+function setVolFilter(type, value) {
+  // Toggle: mesmo clique remove
+  const same = activeVolFilter.type === type &&
+               JSON.stringify(activeVolFilter.value) === JSON.stringify(value);
+  activeVolFilter = same ? { type: null, value: null } : { type, value };
+
+  // Atualiza cards PCT
+  ['statLt20','statEq20','statGt20'].forEach(id =>
+    document.getElementById(id)?.classList.remove('pct-active'));
+  if (activeVolFilter.type === 'pct') {
+    const map = { lt:'statLt20', eq:'statEq20', gt:'statGt20' };
+    document.getElementById(map[activeVolFilter.value])?.classList.add('pct-active');
+  }
+
   // Banner
   const banner = document.getElementById('pctFilterBanner');
   const label  = document.getElementById('pctFilterLabel');
-  if (pctFilter) {
-    const txt = pctFilter === 'lt' ? `TOs < ${PCT_THRESHOLD} pacotes` :
-                pctFilter === 'eq' ? `TOs = ${PCT_THRESHOLD} pacotes` :
-                                     `TOs > ${PCT_THRESHOLD} pacotes`;
-    label.textContent = txt;
+  if (activeVolFilter.type) {
+    label.textContent = filterLabel();
     banner.style.display = '';
   } else {
     banner.style.display = 'none';
   }
-  // Limpa expansão e reconstrói tabela
+
+  // Reconstrói tudo
   expandedAreas.clear();
   currentPage = 1;
+  buildVolumoso();
   buildMainTable(filteredAreas());
 }
 
+// Alias para o onclick inline dos cards PCT e botão limpar
+function setPctFilter(v) { setVolFilter('pct', v); }
+
 function buildVolumoso() {
-  const tos = getVolumosoTOs();
+  // TOs filtrados = fonte de verdade para todos os componentes
+  const tos    = getFilteredVolumosoTOs();
+  const allTos = getVolumosoTOs(); // total sem filtro (para denominador das barras de distrib)
   const total    = tos.length;
   const totalPac = tos.reduce((s, t) => s + t.pacotes, 0);
   const lt20 = tos.filter(t => t.pacotes < PCT_THRESHOLD).length;
@@ -1294,55 +1350,60 @@ function buildVolumoso() {
   const media = total ? (totalPac / total).toFixed(1) : '0';
   const maior = total ? Math.max(...tos.map(t => t.pacotes)) : 0;
 
-  // KPIs
-  document.getElementById('vTOs').textContent    = total.toLocaleString('pt-BR');
+  // KPIs — refletem o filtro ativo
+  document.getElementById('vTOs').textContent     = total.toLocaleString('pt-BR');
   document.getElementById('vPacotes').textContent = totalPac.toLocaleString('pt-BR');
-  document.getElementById('vLt30').textContent   = lt20.toLocaleString('pt-BR');
-  document.getElementById('vEq30').textContent   = eq20.toLocaleString('pt-BR');
-  document.getElementById('vGt30').textContent   = gt20.toLocaleString('pt-BR');
-  document.getElementById('vMedia').textContent  = media;
-  document.getElementById('vMaior').textContent  = maior.toLocaleString('pt-BR');
+  document.getElementById('vLt30').textContent    = lt20.toLocaleString('pt-BR');
+  document.getElementById('vEq30').textContent    = eq20.toLocaleString('pt-BR');
+  document.getElementById('vGt30').textContent    = gt20.toLocaleString('pt-BR');
+  document.getElementById('vMedia').textContent   = media;
+  document.getElementById('vMaior').textContent   = maior.toLocaleString('pt-BR');
 
-  // Distribuição por faixa de pacotes
+  // ── Distribuição por faixa de pacotes (clicável → filtro real) ────────
   const distBands = [
     { label: '0–9',   min: 0,  max: 10,       color: 'var(--accent)' },
     { label: '10–19', min: 10, max: 20,        color: 'var(--blue)'   },
     { label: '20–30', min: 20, max: 31,        color: 'var(--yellow)' },
-    { label: '>30',   min: 31, max: Infinity,  color: 'var(--red)'    },
+    { label: '>30',   min: 31, max: 999999,    color: 'var(--red)'    },
   ];
-  const dCounts = distBands.map(b => tos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
+  // Conta nos TOs originais (sem filtro) para os totais das barras fazerem sentido
+  const dCounts = distBands.map(b => allTos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
   const dMax    = Math.max(...dCounts, 1);
+  const allTotal = allTos.length;
   document.getElementById('vDistrib').innerHTML = distBands.map((b, i) => {
-    const pct  = total ? Math.round(dCounts[i] / total * 100) : 0;
-    const barW = (dCounts[i] / dMax * 100).toFixed(1);
-    return `<div class="vol-row">
+    const pct     = allTotal ? Math.round(dCounts[i] / allTotal * 100) : 0;
+    const barW    = (dCounts[i] / dMax * 100).toFixed(1);
+    const isActive = activeVolFilter.type === 'distrib' &&
+                     activeVolFilter.value?.label === b.label;
+    const val = JSON.stringify({ min: b.min, max: b.max, label: b.label });
+    return `<div class="vol-row${isActive?' vol-active':''}" onclick="setVolFilter('distrib',${val})">
       <span class="vol-label">${b.label}</span>
       <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${b.color}"></div></div>
       <span class="vol-val">${dCounts[i].toLocaleString('pt-BR')} <span class="vol-pct">(${pct}%)</span></span>
     </div>`;
   }).join('');
 
-  // Turno Ofensor (TOs > PCT_THRESHOLD pacotes)
-  const heavy = tos.filter(t => t.pacotes > PCT_THRESHOLD);
+  // ── Turno Ofensor — todos os turnos presentes nos TOs filtrados ────────
   const byTurno = {};
-  heavy.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
+  tos.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
   const turnoSorted = Object.entries(byTurno).sort((a, b) => b[1] - a[1]);
-  const heavyTotal  = heavy.length;
+  const turnoTotal  = tos.length;
   document.getElementById('vTurnoOfensor').innerHTML = turnoSorted.length
     ? turnoSorted.map(([turno, cnt]) => {
-        const pct  = heavyTotal ? Math.round(cnt / heavyTotal * 100) : 0;
-        const barW = pct;
+        const pct    = turnoTotal ? Math.round(cnt / turnoTotal * 100) : 0;
+        const barW   = pct;
         const tColor = turno==='T1' ? 'var(--blue)' : turno==='T2' ? 'var(--yellow)' : turno==='T3' ? 'var(--accent)' : 'var(--muted)';
-        return `<div class="vol-turno-row">
+        const isActive = activeVolFilter.type === 'turno' && activeVolFilter.value === turno;
+        return `<div class="vol-turno-row${isActive?' vol-active':''}" onclick="setVolFilter('turno','${turno}')">
           <span class="turno-tag ${turno==='T1'?'t-t1':turno==='T2'?'t-t2':turno==='T3'?'t-t3':'t-other'}">${turno}</span>
           <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${tColor}"></div></div>
           <span class="vol-val">${cnt} TOs <span class="vol-pct">(${pct}%)</span></span>
         </div>`;
       }).join('')
-    : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhuma TO &gt; ${PCT_THRESHOLD} pacotes</div>`;
+    : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhum TO no filtro atual</div>`;
 
-  // Top 5 TOs > PCT_THRESHOLD pacotes
-  const top5 = [...tos].filter(t => t.pacotes > PCT_THRESHOLD).sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
+  // ── Top 5 TOs com maior volume (do conjunto filtrado) ─────────────────
+  const top5 = [...tos].sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
   document.getElementById('vTop5').innerHTML = top5.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--muted);font-size:11px">
@@ -1362,20 +1423,25 @@ function buildVolumoso() {
           <td style="padding:5px 6px">${turnoTag(t.turno)}</td>
         </tr>`).join('')}</tbody>
       </table>`
-    : `<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhuma TO acima de ${PCT_THRESHOLD} pacotes</div>`;
+    : `<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhum TO no filtro atual</div>`;
 
-  // Histograma de Aging — barras full-width com gradiente de cor
+  // ── Histograma de Aging (clicável) ─────────────────────────────────────
   const hCounts = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
   const hMax    = Math.max(...hCounts, 1);
   const HIST_COLORS = ['#22c55e','#4ade80','#a3e635','#facc15','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c','#7f1d1d'];
   document.getElementById('vAgingHist').innerHTML =
     `<div style="display:flex;flex-direction:column;gap:7px;padding:4px 0">` +
     VOL_BINS.map((b, i) => {
-      const pct  = total ? Math.round(hCounts[i] / total * 100) : 0;
-      const barW = (hCounts[i] / hMax * 100).toFixed(1);
-      const color = HIST_COLORS[i] || '#7f1d1d';
+      const pct    = total ? Math.round(hCounts[i] / total * 100) : 0;
+      const barW   = (hCounts[i] / hMax * 100).toFixed(1);
+      const color  = HIST_COLORS[i] || '#7f1d1d';
       const inside = parseFloat(barW) > 28;
-      return `<div style="display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:10px">
+      const isActive = activeVolFilter.type === 'aging' &&
+                       activeVolFilter.value?.label === b.label;
+      const val = JSON.stringify({ min: b.min, max: b.max, label: b.label });
+      return `<div class="vol-aging-row${isActive?' vol-active':''}"
+        style="display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:10px"
+        onclick="setVolFilter('aging',${val})">
         <span style="font-size:11px;font-weight:700;color:var(--muted);text-align:right;letter-spacing:.3px">${b.label}</span>
         <div style="position:relative;background:var(--surface2);border-radius:8px;height:32px;overflow:hidden">
           <div style="width:${barW}%;background:${color};height:100%;border-radius:8px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:10px">
@@ -1387,7 +1453,6 @@ function buildVolumoso() {
         <span style="font-size:12px;font-weight:600;color:${pct>0?color:'var(--muted)'};text-align:right">${pct > 0 ? pct+'%' : '—'}</span>
       </div>`;
     }).join('') + `</div>`;
-
 }
 
 // ── Render ──────────────────────────────────────────────────────────────
