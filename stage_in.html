@@ -1361,10 +1361,10 @@ function buildVolumoso() {
 
   // ── Distribuição por faixa de pacotes (clicável → filtro real) ────────
   const distBands = [
-    { label: '0–9',   min: 0,  max: 10,       color: 'var(--accent)' },
-    { label: '10–19', min: 10, max: 20,        color: 'var(--blue)'   },
-    { label: '20–30', min: 20, max: 31,        color: 'var(--yellow)' },
-    { label: '>30',   min: 31, max: 999999,    color: 'var(--red)'    },
+    { label: '0–9',   min: 0,  max: 10,     color: 'var(--accent)' },
+    { label: '10–15', min: 10, max: 15,     color: 'var(--blue)'   },
+    { label: '15–20', min: 15, max: 20,     color: 'var(--yellow)' },
+    { label: '>20',   min: 20, max: 999999, color: 'var(--red)'    },
   ];
   // Conta nos TOs originais (sem filtro) para os totais das barras fazerem sentido
   const dCounts = distBands.map(b => allTos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
