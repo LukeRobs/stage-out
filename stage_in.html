@@ -1375,7 +1375,7 @@ function buildVolumoso() {
     const barW    = (dCounts[i] / dMax * 100).toFixed(1);
     const isActive = activeVolFilter.type === 'distrib' &&
                      activeVolFilter.value?.label === b.label;
-    const val = JSON.stringify({ min: b.min, max: b.max, label: b.label });
+    const val = JSON.stringify({ min: b.min, max: b.max, label: b.label }).replace(/"/g, '&quot;');
     return `<div class="vol-row${isActive?' vol-active':''}" onclick="setVolFilter('distrib',${val})">
       <span class="vol-label">${b.label}</span>
       <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${b.color}"></div></div>
@@ -1438,7 +1438,7 @@ function buildVolumoso() {
       const inside = parseFloat(barW) > 28;
       const isActive = activeVolFilter.type === 'aging' &&
                        activeVolFilter.value?.label === b.label;
-      const val = JSON.stringify({ min: b.min, max: b.max, label: b.label });
+      const val = JSON.stringify({ min: b.min, max: b.max, label: b.label }).replace(/"/g, '&quot;');
       return `<div class="vol-aging-row${isActive?' vol-active':''}"
         style="display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:10px"
         onclick="setVolFilter('aging',${val})">
