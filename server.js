@@ -597,27 +597,27 @@
   }
 }
       async function appendToSheet(values) {
-      if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+  if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
 
-      const token = await getServiceAccountToken();
+  const token = await getServiceAccountToken();
 
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/WS_HOURLY!A1:append?valueInputOption=USER_ENTERED`;
+  const range = 'WS_HOURLY!A:A'; // 👈 use coluna inteira (melhor prática)
 
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          values
-        })
-      });
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
 
-      if (!resp.ok) {
-        throw new Error(`Erro ao escrever no Sheets: ${resp.status} ${await resp.text()}`);
-      }
-    }
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ values })
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Erro ao escrever no Sheets: ${resp.status} ${await resp.text()}`);
+  }
+}
   // ── HTTP server ────────────────────────────────────────────────────────
 
   const server = http.createServer((req, res) => {
