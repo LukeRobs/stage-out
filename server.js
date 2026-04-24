@@ -550,6 +550,31 @@
     }
     return result;
   }
+  async function forceSaveToSheets() {
+  try {
+    if (!workstationCache) {
+      console.log('[force-save] ❌ Sem dados de workstation');
+      return { ok: false, error: 'Sem dados' };
+    }
+
+    const rows = buildHourlyRows();
+
+    if (!rows || rows.length === 0) {
+      console.log('[force-save] ❌ Nenhuma linha gerada');
+      return { ok: false, error: 'Sem linhas' };
+    }
+
+    await appendToSheet(rows);
+
+    console.log(`[force-save] ✅ ${rows.length} linhas salvas manualmente`);
+
+    return { ok: true, rows: rows.length };
+
+  } catch (err) {
+    console.error('[force-save] ❌ Erro:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
   async function writeToSheets() {
   if (!workstationCache) {
     console.log('[flush] ❌ Sem dados de workstation');
@@ -608,6 +633,15 @@
       return;
     }
 
+    if (urlPath === '/api/force-save' && req.method === 'POST') {
+      (async () => {
+        const result = await forceSaveToSheets();
+
+        res.writeHead(result.ok ? 200 : 500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      })();
+      return;
+    }
     // POST /api/stage-data — receives data from Tampermonkey userscript
     if (urlPath === '/api/stage-data' && req.method === 'POST') {
       let body = '';
