@@ -64,16 +64,26 @@
       .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
       .map(([rua]) => rua);
 
-    let totalTOs = 0, tosGt30 = 0, totalAging = 0;
+    let totalTOs = 0, tosGt20 = 0, totalAging = 0;
     for (const rua of volRuas) {
       for (const to of (data.byAreaTOs[rua] || [])) {
         totalTOs++;
-        if (to.pacotes > 30) tosGt30++;
+        if (to.pacotes > 20) tosGt20++;
         totalAging += to.aging_h;
       }
     }
-    const agingMedio = totalTOs > 0 ? (totalAging / totalTOs).toFixed(1) : '0.0';
-    return `Report SPP Volumoso:\nTotal TO's: ${totalTOs}\nTO's > 30: ${tosGt30}\nAging Médio: ${agingMedio}h`;
+    const avgH     = totalTOs > 0 ? totalAging / totalTOs : 0;
+    const hh       = Math.floor(avgH);
+    const mm       = Math.round((avgH - hh) * 60);
+    const agingStr = hh > 0 ? `${hh}h ${mm}min` : `${mm}min`;
+    return [
+      `Report SPP Volumoso:`,
+      `Total TO's: ${totalTOs}`,
+      `TO's > 20: ${tosGt20}`,
+      `Aging Médio: ${agingStr}`,
+      ``,
+      `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
+    ].join('\n');
   }
 
   /* ── Envio ao servidor (que repassa ao SeaTalk via Bot API) ─────── */
