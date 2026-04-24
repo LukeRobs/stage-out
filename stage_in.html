@@ -482,6 +482,13 @@ table.main-table tr:last-child td { border-bottom: none; }
 </div><!-- end #defaultView -->
 
 <div id="volumosoView" style="display:none">
+  <!-- header row: título + botão copiar report -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">Zona Volumoso</span>
+    <button id="btnCopyVolReport" onclick="copyVolReport()" style="display:flex;align-items:center;gap:6px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--blue);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s">
+      📋 Copiar Report
+    </button>
+  </div>
   <!-- 7 KPI cards -->
   <div class="stats" style="grid-template-columns:repeat(7,1fr)">
     <div class="stat"><div class="stat-label">Total TOs</div><div class="stat-value" id="vTOs" style="color:var(--accent)">—</div><div class="stat-sub">na VOLUMOSO</div></div>
@@ -1337,6 +1344,58 @@ function setVolFilter(type, value) {
 
 // Alias para o onclick inline dos cards PCT e botão limpar
 function setPctFilter(v) { setVolFilter('pct', v); }
+
+// ── Copiar report Volumoso para SeaTalk ─────────────────────────────────────
+function copyVolReport() {
+  const tos   = getVolumosoTOs();   // sempre usa todos, sem filtro ativo
+  const total = tos.length;
+  const gt20  = tos.filter(t => t.pacotes > PCT_THRESHOLD).length;
+  const avgH  = total ? tos.reduce((s, t) => s + (t.aging_h || 0), 0) / total : 0;
+  const hh    = Math.floor(avgH);
+  const mm    = Math.round((avgH - hh) * 60);
+  const agingStr = hh > 0 ? `${hh}h ${mm}min` : `${mm}min`;
+
+  const text = [
+    `Report SPP Volumoso:`,
+    `Total TO's: ${total}`,
+    `TO's > 20: ${gt20}`,
+    `Aging Médio: ${agingStr}`,
+    ``,
+    `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
+  ].join('\n');
+
+  const btn  = document.getElementById('btnCopyVolReport');
+  const orig = btn.innerHTML;
+
+  const ok = () => {
+    btn.innerHTML = '✅ Copiado!';
+    btn.style.background = 'rgba(34,197,94,.2)';
+    btn.style.borderColor = 'rgba(34,197,94,.4)';
+    btn.style.color = '#4ade80';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2500);
+  };
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(() => fallback(text, ok));
+  } else {
+    fallback(text, ok);
+  }
+
+  function fallback(t, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); cb(); } catch (_) {}
+    document.body.removeChild(ta);
+  }
+}
 
 function buildVolumoso() {
   // TOs filtrados = fonte de verdade para todos os componentes
