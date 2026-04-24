@@ -182,6 +182,7 @@ table.op-subtable tr:last-child td{border-bottom:none}
     <span id="loadingSpinner" style="display:none"><span class="spinner"></span></span>
     <span id="lastUpdate" style="font-size:10px;color:var(--muted)"></span>
     <button class="btn" id="refreshBtn" onclick="loadData()">↺ Atualizar</button>
+    <button class="btn" id="forceSaveBtn" onclick="forceSave()">💾 Salvar agora</button>
   </div>
 </div>
 
@@ -312,6 +313,28 @@ table.op-subtable tr:last-child td{border-bottom:none}
 </div>
 
 <script>
+async function forceSave() {
+  const btn = document.getElementById('forceSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Salvando...';
+
+  try {
+    const res = await fetch('/api/force-save', {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
+
+    updateStatus('ok', 'Dados salvos manualmente');
+  } catch (e) {
+    updateStatus('err', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 Salvar agora';
+  }
+}  
 // ── Constants ────────────────────────────────────────────────────────────
 const ACTIVITY = {
   11: { label: 'Receiving', cls: 'receiving', color: 'var(--purple)' },
