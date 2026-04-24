@@ -57,6 +57,8 @@
       `Total ativos: ${kpis.total}`,
       `Pendente: ${kpis.pending} | Atribuído: ${kpis.assigned} | Ocupado: ${kpis.occupied} | Em Espera: ${kpis.hold}`,
       `Maior espera: ${kpis.maxWait} (${kpis.maxWaitSub})`,
+      ``,
+      `Link para acompanhamento: https://stage-out.onrender.com/queue_list.html`,
     ].join('\n');
   }
 
