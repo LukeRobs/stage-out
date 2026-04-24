@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Produtividade · SOC-PE2</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --shopee:#EE4D2D;--shopee-soft:rgba(238,77,45,0.12);--shopee-mid:rgba(238,77,45,0.22);
+  --grn:#22C55E;--grn-s:rgba(34,197,94,0.13);
+  --amb:#F59E0B;--amb-s:rgba(245,158,11,0.13);
+  --blu:#3B82F6;--blu-s:rgba(59,130,246,0.13);
+  --pur:#A78BFA;--pur-s:rgba(167,139,250,0.13);
+}
+[data-theme="dark"]{
+  --bg:#181818;--sur:#222;--sur2:#2C2C2C;--sur3:#363636;
+  --brd:rgba(255,255,255,0.07);--brd2:rgba(255,255,255,0.13);
+  --tx:#F0F0F0;--tx2:#999;--tx3:#555;
+  --tog:#EE4D2D;--hr:rgba(255,255,255,0.03);
+}
+[data-theme="light"]{
+  --bg:#F2F2F2;--sur:#FFF;--sur2:#F7F7F7;--sur3:#EBEBEB;
+  --brd:rgba(0,0,0,0.07);--brd2:rgba(0,0,0,0.13);
+  --tx:#111;--tx2:#666;--tx3:#AAA;
+  --tog:#CCC;--hr:rgba(0,0,0,0.025);
+}
+body{background:var(--bg);color:var(--tx);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;min-height:100vh;padding-bottom:4rem;transition:background .25s,color .25s}
+
+/* HEADER */
+.hdr{background:var(--sur);border-bottom:1px solid var(--brd);padding:0 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:50;transition:background .25s}
+.hdr-l{display:flex;align-items:center;gap:12px;padding:.85rem 0}
+.logo{background:var(--shopee);color:#fff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:6px;letter-spacing:.05em}
+.vline{width:1px;height:22px;background:var(--brd2)}
+.htitle{font-size:15px;font-weight:700;color:var(--tx)}
+.hsub{font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;margin-top:2px}
+.hdr-r{display:flex;align-items:center;gap:10px;padding:.85rem 0}
+
+/* TOGGLE */
+.tog-wrap{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.tog-icon{font-size:13px}
+.tog-track{width:40px;height:22px;background:var(--tog);border-radius:11px;position:relative;transition:background .25s;cursor:pointer;flex-shrink:0}
+.tog-knob{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .25s cubic-bezier(.4,0,.2,1);box-shadow:0 1px 4px rgba(0,0,0,.3)}
+[data-theme="dark"] .tog-knob{transform:translateX(18px)}
+
+/* MAIN */
+.main{max-width:1100px;margin:0 auto;padding:1.75rem 1.5rem}
+.pbar{display:flex;align-items:center;gap:8px;margin-bottom:1.5rem;font-size:11px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;flex-wrap:wrap}
+.pchip{background:var(--shopee-soft);color:var(--shopee);border:1px solid rgba(238,77,45,.25);padding:3px 9px;border-radius:4px;font-weight:600}
+.psep{width:1px;height:12px;background:var(--brd2)}
+
+/* SEC */
+.sec{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;margin:1.75rem 0 1rem;display:flex;align-items:center;gap:8px}
+.sec::before{content:'';width:3px;height:13px;background:var(--shopee);border-radius:2px}
+.sec::after{content:'';flex:1;height:1px;background:var(--brd)}
+
+/* CARDS GRID */
+.kgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.75rem}
+.kcard{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:1rem 1.1rem;position:relative;overflow:hidden;transition:border-color .2s,background .25s}
+.kcard:hover{border-color:var(--brd2)}
+.kstripe{position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.klbl{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;margin-top:4px}
+.kval{font-size:1.65rem;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-bottom:6px;line-height:1.1}
+.ksub{font-size:11px;color:var(--tx2)}
+
+/* TABLE ROWS CARDS */
+.rows{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem}
+.row-card{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:1rem 1.25rem;display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1.6fr;align-items:center;gap:12px;transition:border-color .2s,background .25s;position:relative;overflow:hidden}
+.row-card:hover{border-color:var(--brd2)}
+.row-card.header-row{background:var(--sur2);border-color:var(--brd2)}
+.row-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3)}
+.row-packed{font-size:1.1rem;font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--tx)}
+.row-hc{font-size:1.1rem;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--tx2)}
+.row-diarista{font-size:.95rem;font-family:'IBM Plex Mono',monospace;color:var(--tx3)}
+.row-prod{font-size:1.25rem;font-weight:700;font-family:'IBM Plex Mono',monospace}
+.bar-wrap{height:6px;background:var(--sur3);border-radius:3px;overflow:hidden;margin-top:4px}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.prod-cell{display:flex;flex-direction:column;gap:4px}
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:700;font-family:'IBM Plex Mono',monospace;flex-shrink:0}
+.r1{background:rgba(245,158,11,.2);color:#FCD34D}
+.r2{background:rgba(156,163,175,.15);color:#D1D5DB}
+.r3{background:rgba(180,83,9,.15);color:#D97706}
+.r4{background:rgba(100,116,139,.13);color:var(--tx3)}
+.row-left{display:flex;align-items:center;gap:10px}
+
+/* CHART */
+.chart-card{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:12px;transition:background .25s}
+.chart-title{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:2px}
+.chart-desc{font-size:11px;color:var(--tx3);margin-bottom:1rem}
+
+/* INSIGHT CARDS */
+.insights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:1.75rem}
+.ins-card{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:1rem 1.1rem;transition:background .25s}
+.ins-icon{font-size:18px;margin-bottom:8px}
+.ins-title{font-size:11px;font-weight:600;color:var(--tx);margin-bottom:4px}
+.ins-val{font-size:1.3rem;font-weight:700;font-family:'IBM Plex Mono',monospace;margin-bottom:4px}
+.ins-desc{font-size:11px;color:var(--tx2);line-height:1.5}
+
+/* FOOTER */
+.footer{text-align:center;margin-top:3rem;font-size:10px;color:var(--tx3);font-family:'IBM Plex Mono',monospace}
+.footer b{color:var(--shopee)}
+
+@media(max-width:860px){
+  .kgrid{grid-template-columns:repeat(2,1fr)}
+  .insights{grid-template-columns:repeat(2,1fr)}
+  .row-card{grid-template-columns:1fr 1fr;gap:8px}
+  .row-hdr:nth-child(n+3),.row-diarista,.row-hc{display:none}
+  .main{padding:1.25rem 1rem}
+}
+@media(max-width:480px){
+  .kgrid{grid-template-columns:1fr}
+  .insights{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-l">
+    <span class="logo">SHOPEE</span>
+    <div class="vline"></div>
+    <div>
+      <div class="htitle">Produtividade · Packed por HC</div>
+      <div class="hsub">SOC-PE2 · SPX Express</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="tog-wrap" id="toggle">
+      <span class="tog-icon">&#9788;</span>
+      <div class="tog-track"><div class="tog-knob"></div></div>
+      <span class="tog-icon">&#9790;</span>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <div class="pbar">
+    FONTE <span class="pchip">COPEOPLE</span>
+    <div class="psep"></div>
+    4 faixas de HC analisadas
+    <div class="psep"></div>
+    Produtividade = Packed ÷ HC
+  </div>
+
+  <!-- KPIs -->
+  <div class="kgrid" id="kgrid"></div>
+
+  <!-- RANKING -->
+  <div class="sec">Ranking por produtividade</div>
+
+  <div class="rows" id="rowsContainer"></div>
+
+  <!-- CHART -->
+  <div class="sec">Comparativo visual</div>
+  <div class="chart-card">
+    <div class="chart-title">Produtividade por faixa de HC</div>
+    <div class="chart-desc">Packed por colaborador · ordenado por volume de packed</div>
+    <div style="position:relative;width:100%;height:260px">
+      <canvas id="chartProd" role="img" aria-label="Gráfico de produtividade por faixa">Produtividade por faixa de HC.</canvas>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Packed total vs HC efetivo</div>
+    <div class="chart-desc">Relação entre volume processado e headcount</div>
+    <div style="position:relative;width:100%;height:240px">
+      <canvas id="chartPacked" role="img" aria-label="Packed vs HC">Packed vs HC.</canvas>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="sec">Insights</div>
+  <div class="insights" id="insightsGrid"></div>
+
+</main>
+
+<div class="footer">SOC-PE2 · SPX Express · <b>Shopee Logistics</b> · Produtividade operacional</div>
+
+<script>
+const DATA = [
+  { packed: 110426, hc: 205, diarista: 0,  prod: 538.6634146 },
+  { packed: 114006, hc: 239, diarista: 0,  prod: 477.0125523 },
+  { packed: 121780, hc: 254, diarista: 47, prod: 404.5182724 },
+  { packed: 346192, hc: 698, diarista: 47, prod: 464.6872483 },
+];
+
+const COLORS = ['#F59E0B','#94A3B8','#D97706','#64748B'];
+const STRIPE = ['#F59E0B','#3B82F6','#EE4D2D','#A78BFA'];
+
+const fmt  = n => n.toLocaleString('pt-BR');
+const fmtP = n => n.toFixed(2).replace('.',',');
+
+/* sort by prod desc for ranking */
+const ranked = [
+  {...DATA[0], label: '1º turno'},
+  {...DATA[1], label: '2º turno'},
+  {...DATA[2], label: '3º turno'},
+  {...DATA[3], label: 'Total'},
+];
+const maxProd = Math.max(...DATA.map(d=>d.prod));
+const maxPacked = Math.max(...DATA.map(d=>d.packed));
+const totalPacked = DATA.reduce((s,d)=>s+d.packed,0);
+const totalHC = DATA.reduce((s,d)=>s+d.hc,0); /* last row is total, use only first 3 */
+const avgProd = DATA.slice(0,3).reduce((s,d)=>s+d.prod,0)/3;
+
+/* ── KPIs ───────────────────────── */
+const kpiDefs = [
+  { l:'Total packed',   v:fmt(totalPacked),        sub:'pacotes processados',  s:'#EE4D2D' },
+  { l:'Maior produt.',  v:fmtP(Math.max(...DATA.map(d=>d.prod))), sub:'pct/colaborador',  s:'#F59E0B' },
+  { l:'Menor produt.',  v:fmtP(Math.min(...DATA.map(d=>d.prod))), sub:'pct/colaborador',  s:'#3B82F6' },
+  { l:'HC consolidado', v:fmt(DATA[3].hc),          sub:'total acumulado',      s:'#A78BFA' },
+];
+const kg = document.getElementById('kgrid');
+kpiDefs.forEach(k=>{
+  kg.innerHTML+=`<div class="kcard">
+    <div class="kstripe" style="background:${k.s}"></div>
+    <div class="klbl">${k.l}</div>
+    <div class="kval" style="color:${k.s}">${k.v}</div>
+    <div class="ksub">${k.sub}</div>
+  </div>`;
+});
+
+/* ── HEADER ROW ─────────────────── */
+const rc = document.getElementById('rowsContainer');
+rc.innerHTML=`<div class="row-card header-row">
+  <div class="row-hdr">Faixa / packed</div>
+  <div class="row-hdr">HC efetivo</div>
+  <div class="row-hdr">Diaristas</div>
+  <div class="row-hdr">Produtividade</div>
+  <div class="row-hdr">Desempenho</div>
+</div>`;
+
+const rankLabels = ['1º','2º','3º','4º'];
+const rankCls    = ['r1','r2','r3','r4'];
+
+ranked.forEach((d,i)=>{
+  const pct = (d.prod/maxProd*100).toFixed(1);
+  const barColor = STRIPE[i];
+  const isTotal = d.hc === 698;
+  rc.innerHTML+=`<div class="row-card">
+    <div class="row-left">
+      <span class="rank-badge ${rankCls[i]}">${rankLabels[i]}</span>
+      <div>
+        <div class="row-packed">${fmt(d.packed)} pct${isTotal?' <span style="font-size:10px;color:var(--tx3);font-weight:400">(acum.)</span>':''}</div>
+        <div style="font-size:10px;color:var(--tx3);font-family:'IBM Plex Mono',monospace;margin-top:2px">HC ${d.hc}</div>
+      </div>
+    </div>
+    <div class="row-hc">${d.hc}</div>
+    <div class="row-diarista">${d.diarista > 0 ? d.diarista : '—'}</div>
+    <div class="row-prod" style="color:${barColor}">${fmtP(d.prod)}</div>
+    <div class="prod-cell">
+      <div style="font-size:10px;color:var(--tx3);font-family:'IBM Plex Mono',monospace">${pct}% do máx.</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+    </div>
+  </div>`;
+});
+
+/* ── CHARTS ──────────────────────── */
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size   = 10;
+Chart.defaults.color       = '#888';
+Chart.defaults.borderColor = 'rgba(128,128,128,0.08)';
+
+const lbs = DATA.map(d=>'HC '+d.hc+(d.diarista>0?' (+'+d.diarista+'d)':''));
+
+new Chart('chartProd',{
+  type:'bar',
+  data:{
+    labels: lbs,
+    datasets:[{
+      label:'Produtividade (pct/HC)',
+      data: DATA.map(d=>parseFloat(d.prod.toFixed(2))),
+      backgroundColor:['rgba(245,158,11,.75)','rgba(59,130,246,.75)','rgba(238,77,45,.75)','rgba(167,139,250,.75)'],
+      borderRadius:5,
+      borderSkipped:false,
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{display:false},ticks:{maxRotation:0}},
+      y:{
+        grid:{color:'rgba(128,128,128,0.07)'},
+        ticks:{callback:v=>v.toFixed(0)},
+        min:380
+      }
+    }
+  }
+});
+
+new Chart('chartPacked',{
+  type:'bar',
+  data:{
+    labels: lbs,
+    datasets:[
+      {label:'Packed',data:DATA.map(d=>d.packed),backgroundColor:'rgba(238,77,45,.7)',borderRadius:4,borderSkipped:false,yAxisID:'y'},
+      {label:'HC',data:DATA.map(d=>d.hc),backgroundColor:'rgba(59,130,246,.7)',borderRadius:4,borderSkipped:false,yAxisID:'y1'},
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{
+        display:true,
+        labels:{
+          boxWidth:10,boxHeight:10,borderRadius:2,
+          font:{family:"'IBM Plex Mono', monospace",size:10},
+          color:'#888'
+        }
+      }
+    },
+    scales:{
+      x:{grid:{display:false},ticks:{maxRotation:0}},
+      y:{position:'left',grid:{color:'rgba(128,128,128,0.07)'},ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},
+      y1:{position:'right',grid:{display:false},ticks:{color:'#60A5FA'}},
+    }
+  }
+});
+
+/* ── INSIGHTS ──────────────────── */
+const delta = DATA[0].prod - DATA[1].prod;
+const deltaAcum = DATA[3].prod - DATA[0].prod;
+const diaristasImpact = (DATA[2].prod - DATA[0].prod).toFixed(2);
+
+const ins = [
+  {
+    icon:'📦',
+    title:'Melhor produtividade',
+    val: fmtP(DATA[0].prod)+' pct/HC',
+    desc:`Faixa com HC 205 (sem diaristas) lidera com ${fmtP(DATA[0].prod)} pct/colaborador — ${fmtP(delta)} acima da faixa HC 239.`,
+    col:'#F59E0B'
+  },
+  {
+    icon:'👥',
+    title:'Impacto dos diaristas',
+    val:`HC 254 vs 205`,
+    desc:`Com 47 diaristas adicionados (HC 254), a produtividade cai para ${fmtP(DATA[2].prod)} — redução de ${Math.abs(diaristasImpact).replace('-','').replace('.',',')} pct/HC vs faixa sem diaristas.`,
+    col:'#EE4D2D'
+  },
+  {
+    icon:'📊',
+    title:'Consolidado (698 HC)',
+    val: fmtP(DATA[3].prod)+' pct/HC',
+    desc:`A visão acumulada de 698 HC com 346.192 packed entrega ${fmtP(DATA[3].prod)} pct/colaborador — abaixo do pico mas acima do 3º colocado.`,
+    col:'#A78BFA'
+  },
+];
+const ig = document.getElementById('insightsGrid');
+ins.forEach(c=>{
+  ig.innerHTML+=`<div class="ins-card">
+    <div class="ins-icon">${c.icon}</div>
+    <div class="ins-title">${c.title}</div>
+    <div class="ins-val" style="color:${c.col}">${c.val}</div>
+    <div class="ins-desc">${c.desc}</div>
+  </div>`;
+});
+
+/* ── TOGGLE ──────────────────────── */
+const html=document.documentElement;
+const saved=localStorage.getItem('spx-prod-theme');
+if(saved)html.setAttribute('data-theme',saved);
+document.getElementById('toggle').addEventListener('click',()=>{
+  const next=html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme',next);
+  localStorage.setItem('spx-prod-theme',next);
+});
+</script>
+</body>
+</html>

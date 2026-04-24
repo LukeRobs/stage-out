@@ -275,7 +275,7 @@ getData((err, data) => {
 });
 
 // ── SeaTalk report ────────────────────────────────────────────────────
-const SEATALK_GROUP_ID = process.env.SEATALK_GROUP_ID || 'NDE4NzU0MDM1NDEy';
+const SEATALK_GROUP_ID = process.env.SEATALK_GROUP_ID || 'MDQ1OTMwOTc5MzYz';
 const SEATALK_QUEUE_APP_ID     = process.env.SEATALK_QUEUE_APP_ID     || 'MDEwMTk0MDU4NDk1';
 const SEATALK_QUEUE_APP_SECRET = process.env.SEATALK_QUEUE_APP_SECRET || 'X5zPzZyeBkL3MoK9Ks-n_BASneztngPp';
 const SEATALK_QUEUE_GROUP_ID   = process.env.SEATALK_QUEUE_GROUP_ID   || 'MzU3MzMwNjU4MjU1';
