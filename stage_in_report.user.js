@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stage IN - SeaTalk Hourly Report
 // @namespace    spx-express
-// @version      1.3
+// @version      1.4
 // @description  Captura screenshot do dashboard Stage IN e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/stage_in.html
@@ -56,31 +56,52 @@
 
   /* ── Stats Volumoso ─────────────────────────────────────────────── */
   async function fetchVolumosoText() {
+    const now  = new Date();
+    const data = now.toLocaleDateString('pt-BR');
+    const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
     const resp = await fetch(`${SERVER}/api/report-data`);
     if (!resp.ok) throw new Error(`report-data HTTP ${resp.status}`);
-    const data = await resp.json();
+    const rd = await resp.json();
 
-    const volRuas = Object.entries(data.byArea || {})
+    const volRuas = Object.entries(rd.byArea || {})
       .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
       .map(([rua]) => rua);
 
-    let totalTOs = 0, tosGt20 = 0, totalAging = 0;
+    let totalTOs = 0, tosGt20 = 0, totalAging = 0, totalPacotes = 0;
+    const sppPerRua = [];
+
     for (const rua of volRuas) {
-      for (const to of (data.byAreaTOs[rua] || [])) {
-        totalTOs++;
+      const tos        = rd.byAreaTOs?.[rua] || [];
+      const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
+      totalTOs     += tos.length;
+      totalPacotes += ruaPacotes;
+      for (const to of tos) {
         if (to.pacotes > 20) tosGt20++;
         totalAging += to.aging_h;
       }
+      if (tos.length > 0) sppPerRua.push(ruaPacotes / tos.length);
     }
+
     const avgH     = totalTOs > 0 ? totalAging / totalTOs : 0;
     const hh       = Math.floor(avgH);
     const mm       = Math.round((avgH - hh) * 60);
     const agingStr = hh > 0 ? `${hh}h ${mm}min` : `${mm}min`;
+
+    const spp    = totalTOs > 0 ? Math.round(totalPacotes / totalTOs) : '—';
+    const maxSpp = sppPerRua.length ? Math.round(Math.max(...sppPerRua)) : '—';
+    const minSpp = sppPerRua.length ? Math.round(Math.min(...sppPerRua)) : '—';
+
     return [
-      `Report SPP Volumoso:`,
+      `Report - SPP Volumoso (${data}):`,
+      `Hora: ${hora}`,
+      ``,
       `Total TO's: ${totalTOs}`,
       `TO's > 20: ${tosGt20}`,
       `Aging Médio: ${agingStr}`,
+      `SPP: ${spp}`,
+      `MAX SPP: ${maxSpp}`,
+      `MIN SPP: ${minSpp}`,
       ``,
       `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
     ].join('\n');
@@ -168,5 +189,5 @@
     sendReport();
   });
 
-  console.log('[Stage IN Report] ✅ v1.3 — Bot API direto, a cada hora cheia (:00)');
+  console.log('[Stage IN Report] ✅ v1.4 — Bot API direto, a cada hora cheia (:00)');
 })();
