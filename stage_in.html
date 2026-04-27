@@ -777,6 +777,21 @@ function buildZonaSection(areas) {
     return (rdB ? rdB.pacotes : b.tos) - (rdA ? rdA.pacotes : a.tos);
   }).filter(z => !zoneFilter || z.name === zoneFilter);
 
+  // SPP por rua → max/min por zona
+  const zoneSPPRange = {};
+  if (reportData?.byArea) {
+    const sMap = {};
+    active.forEach(a => { sMap[a.area_name] = a.to_quantity; });
+    Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+      if (!ad.zona) return;
+      const tos = sMap[rua] || 0;
+      if (tos === 0) return;
+      const s = ad.pacotes / tos;
+      if (!zoneSPPRange[ad.zona]) zoneSPPRange[ad.zona] = [];
+      zoneSPPRange[ad.zona].push(s);
+    });
+  }
+
   const cardHtml = zoneValues.map(z => {
     const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
     const pico = z.agings.length ? Math.max(...z.agings) : 0;
@@ -786,12 +801,17 @@ function buildZonaSection(areas) {
     const tosLine   = rd ? `<span>${z.tos} TOs</span>` : '';
     const spp       = (rd && z.tos > 0) ? Math.round(rd.pacotes / z.tos) : null;
     const sppLine   = spp !== null ? `<span>SPP: <strong>${spp}</strong></span>` : '';
+    const sppVals   = zoneSPPRange[z.name] || [];
+    const sppMax    = sppVals.length ? Math.round(Math.max(...sppVals)) : null;
+    const sppMin    = sppVals.length ? Math.round(Math.min(...sppVals)) : null;
+    const sppMaxLine = sppMax !== null ? `<span>max <strong>${sppMax}</strong></span>` : '';
+    const sppMinLine = sppMin !== null ? `<span>min <strong>${sppMin}</strong></span>` : '';
     return `
       <div class="zone-card ${zoneCardClass(z.name)}">
         <div class="zone-card-label">${zoneShort(z.name)}</div>
         <div class="zone-card-value">${mainVal}</div>
         <div class="zone-card-meta">
-          <span>${mainLabel}</span>${tosLine}${sppLine}
+          <span>${mainLabel}</span>${tosLine}${sppLine}${sppMaxLine}${sppMinLine}
           ${avg  ? `<span>avg <strong>${fmtDur(Math.round(avg))}</strong></span>` : ''}
           ${pico ? `<span>pico <strong>${fmtDur(pico)}</strong></span>` : ''}
         </div>
@@ -1507,7 +1527,8 @@ function buildVolumoso() {
     : `<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhum TO no filtro atual</div>`;
 
   // ── Histograma de Aging (clicável) ─────────────────────────────────────
-  const hCounts = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
+  const hCounts  = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
+  const hPacotes = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).reduce((s, t) => s + t.pacotes, 0));
   const hMax    = Math.max(...hCounts, 1);
   const HIST_COLORS = ['#22c55e','#4ade80','#a3e635','#facc15','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c','#7f1d1d'];
   document.getElementById('vAgingHist').innerHTML =
@@ -1521,7 +1542,7 @@ function buildVolumoso() {
                        activeVolFilter.value?.label === b.label;
       const val = JSON.stringify({ min: b.min, max: b.max, label: b.label }).replace(/"/g, '&quot;');
       return `<div class="vol-aging-row${isActive?' vol-active':''}"
-        style="display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:10px"
+        style="display:grid;grid-template-columns:72px 1fr 56px 48px;align-items:center;gap:10px"
         onclick="setVolFilter('aging',${val})">
         <span style="font-size:11px;font-weight:700;color:var(--muted);text-align:right;letter-spacing:.3px">${b.label}</span>
         <div style="position:relative;background:var(--surface2);border-radius:8px;height:32px;overflow:hidden">
@@ -1531,6 +1552,7 @@ function buildVolumoso() {
           ${!inside && hCounts[i] > 0 ? `<span style="position:absolute;left:calc(${barW}% + 8px);top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">${hCounts[i].toLocaleString('pt-BR')}</span>` : ''}
           ${hCounts[i] === 0 ? `<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)">—</span>` : ''}
         </div>
+        <span style="font-size:12px;font-weight:600;color:${hCounts[i]>0?color:'var(--muted)'};text-align:right;font-family:monospace">${hCounts[i] > 0 ? (hPacotes[i] / hCounts[i]).toLocaleString('pt-BR', {minimumFractionDigits:1,maximumFractionDigits:1}) : '—'}</span>
         <span style="font-size:12px;font-weight:600;color:${pct>0?color:'var(--muted)'};text-align:right">${pct > 0 ? pct+'%' : '—'}</span>
       </div>`;
     }).join('') + `</div>`;
