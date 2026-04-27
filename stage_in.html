@@ -784,12 +784,14 @@ function buildZonaSection(areas) {
     const mainVal   = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
     const mainLabel = rd ? 'pacotes' : 'TOs';
     const tosLine   = rd ? `<span>${z.tos} TOs</span>` : '';
+    const spp       = (rd && z.tos > 0) ? Math.round(rd.pacotes / z.tos) : null;
+    const sppLine   = spp !== null ? `<span>SPP: <strong>${spp}</strong></span>` : '';
     return `
       <div class="zone-card ${zoneCardClass(z.name)}">
         <div class="zone-card-label">${zoneShort(z.name)}</div>
         <div class="zone-card-value">${mainVal}</div>
         <div class="zone-card-meta">
-          <span>${mainLabel}</span>${tosLine}
+          <span>${mainLabel}</span>${tosLine}${sppLine}
           ${avg  ? `<span>avg <strong>${fmtDur(Math.round(avg))}</strong></span>` : ''}
           ${pico ? `<span>pico <strong>${fmtDur(pico)}</strong></span>` : ''}
         </div>
@@ -846,6 +848,23 @@ function buildZonaSection(areas) {
     counts[idx][z] = (counts[idx][z] || 0) + a.to_quantity;
   });
 
+  // SPP por faixa de aging: só calculado se byAreaTOs existir (pré-requisito crítico)
+  const hasTOData = !!(reportData?.byAreaTOs && Object.keys(reportData.byAreaTOs).length > 0);
+  const tosBins   = BINS.map(() => 0);
+  if (hasTOData && reportData?.byArea) {
+    Object.entries(reportData.byArea).forEach(([rua]) => {
+      const staging = stagingMap[rua];
+      let duration  = staging?.staging_duration_time || 0;
+      if (!duration) {
+        const tos = reportData.byAreaTOs?.[rua] || [];
+        duration  = tos.length ? Math.max(...tos.map(t => t.aging_h * 3600)) : 0;
+      }
+      const idx = BINS.findIndex(b => duration >= b.min && duration < b.max);
+      if (idx < 0) return;
+      tosBins[idx] += (reportData.byAreaTOs[rua]?.length || 0);
+    });
+  }
+
   const colMax = {};
   zoneNames.forEach(z => { colMax[z] = Math.max(...counts.map(r => r[z] || 0), 1); });
 
@@ -878,7 +897,10 @@ function buildZonaSection(areas) {
         </span>
       </td>`;
     }).join('');
-    return `<tr><td class="faixa">${b.label}</td>${cells}<td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td></tr>`;
+    const sppCell = hasTOData
+      ? `<td class="total-cell">${tosBins[i] > 0 ? Math.round(rowTotal / tosBins[i]) : '—'}</td>`
+      : '';
+    return `<tr><td class="faixa">${b.label}</td>${cells}<td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td>${sppCell}</tr>`;
   }).join('');
 
   const grandTotal  = zoneNames.reduce((s, z) => s + (colTotals[z] || 0), 0);
@@ -890,9 +912,9 @@ function buildZonaSection(areas) {
   }).join('');
 
   document.getElementById('crosstabTable').innerHTML = `
-    <thead><tr><th>Faixa Aging</th>${zoneHeaders}<th class="col-total">Total</th></tr></thead>
+    <thead><tr><th>Faixa Aging</th>${zoneHeaders}<th class="col-total">Total</th>${hasTOData ? '<th class="col-total">SPP</th>' : ''}</tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td></tr></tfoot>`;
+    <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td>${hasTOData ? (() => { const gt = tosBins.reduce((s,v) => s+v, 0); return `<td class="total-cell">${gt > 0 ? Math.round(grandTotal / gt) : '—'}</td>`; })() : ''}</tr></tfoot>`;
 }
 
 // ── Top 5 ──────────────────────────────────────────────────────────────
