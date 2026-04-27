@@ -49,13 +49,18 @@
 
   /* ── Monta o texto do report ─────────────────────────────────────── */
   function buildReportText(kpis) {
-    const now = new Date();
-    const hhmm = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const now  = new Date();
+    const data = now.toLocaleDateString('pt-BR');
+    const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     return [
-      `🚛 Queue List · Inbound — ${hhmm}`,
-      '━━━━━━━━━━━━━━━━━━━━━',
+      `Report - Queue List · Inbound (${data})`,
+      `Hora: ${hora}`,
+      ``,
       `Total ativos: ${kpis.total}`,
-      `Pendente: ${kpis.pending} | Atribuído: ${kpis.assigned} | Ocupado: ${kpis.occupied} | Em Espera: ${kpis.hold}`,
+      `Pendente: ${kpis.pending}`,
+      `Atribuído: ${kpis.assigned}`,
+      `Ocupado: ${kpis.occupied}`,
+      `Em Espera: ${kpis.hold}`,
       `Maior espera: ${kpis.maxWait} (${kpis.maxWaitSub})`,
       ``,
       `Link para acompanhamento: https://stage-out.onrender.com/queue_list.html`,
