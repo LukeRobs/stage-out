@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Tower · SPX</title>
+<style>
+/* ══════════════════════════════════════════════════════
+   TOKENS & RESET
+══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* structural */
+  --sidebar-w: 224px;
+  --topbar-h:  52px;
+  --radius:    10px;
+  --radius-sm: 6px;
+
+  /* brand */
+  --orange:  #ee4d2d;
+  --amber:   #f59e0b;
+  --green:   #22c55e;
+  --blue:    #3b82f6;
+  --cyan:    #06b6d4;
+  --violet:  #8b5cf6;
+  --red:     #ef4444;
+  --teal:    #14b8a6;
+}
+
+/* ── Dark theme (default) ── */
+[data-theme="dark"] {
+  --bg:       #0d0f14;
+  --sidebar:  #0f1118;
+  --surface:  #161920;
+  --surface2: #1e2130;
+  --border:   #2a2d3e;
+  --border2:  #353849;
+  --text:     #e2e8f0;
+  --muted:    #6b7280;
+  --muted2:   #4b5563;
+  --input-bg: #1e2130;
+}
+
+/* ── Light theme ── */
+[data-theme="light"] {
+  --bg:       #f1f5f9;
+  --sidebar:  #ffffff;
+  --surface:  #ffffff;
+  --surface2: #f1f5f9;
+  --border:   #e2e8f0;
+  --border2:  #cbd5e1;
+  --text:     #1e293b;
+  --muted:    #64748b;
+  --muted2:   #94a3b8;
+  --input-bg: #f8fafc;
+}
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  transition: background .2s, color .2s;
+}
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: fixed;
+  left: 0; top: 0;
+  z-index: 200;
+  transition: transform .25s cubic-bezier(.4,0,.2,1), background .2s;
+}
+.sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.brand-icon {
+  width: 32px; height: 32px;
+  background: var(--orange);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.brand-name  { font-size: 13px; font-weight: 700; color: var(--text); }
+.brand-sub   { font-size: 10px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+
+.sidebar-nav {
+  flex: 1; overflow-y: auto;
+  padding: 10px 8px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+.nav-section {
+  font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 12px 8px 4px; font-weight: 600;
+}
+.nav-section:first-child { padding-top: 4px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  transition: background .15s, color .15s;
+  border: none; background: none;
+  width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active { background: rgba(238,77,45,.12); color: var(--orange); }
+.nav-icon { width: 16px; height: 16px; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 6px; border-radius: 20px;
+  background: var(--surface2); color: var(--muted);
+  font-family: monospace; min-width: 20px; text-align: center;
+}
+.nav-item.active .nav-badge { background: rgba(238,77,45,.2); color: var(--orange); }
+
+.sidebar-footer {
+  padding: 10px 8px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: 10px; color: var(--muted2);
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN LAYOUT
+══════════════════════════════════════════════════════ */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden;
+  transition: margin-left .25s cubic-bezier(.4,0,.2,1);
+}
+.main.expanded { margin-left: 0; }
+
+/* ── Topbar ── */
+.topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px;
+  flex-shrink: 0; z-index: 100;
+  transition: background .2s;
+}
+.toggle-btn, .icon-btn {
+  width: 32px; height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none; color: var(--muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.toggle-btn:hover, .icon-btn:hover { color: var(--text); background: var(--surface2); }
+.icon-btn svg { width: 14px; height: 14px; }
+
+.topbar-page { font-size: 14px; font-weight: 700; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-meta { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.live-badge  { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot    { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.last-update { font-size: 11px; color: var(--muted); }
+
+.refresh-btn {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: none; color: var(--muted); cursor: pointer;
+  padding: 5px 10px; font-size: 11px;
+  display: flex; align-items: center; gap: 5px;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.refresh-btn:hover { color: var(--orange); border-color: var(--orange); background: rgba(238,77,45,.06); }
+.refresh-btn.spinning svg { animation: spin .6s linear infinite; }
+.refresh-btn svg { width: 12px; height: 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* countdown bar */
+.countdown-bar { height: 2px; background: var(--border); flex-shrink: 0; overflow: hidden; }
+.countdown-fill { height: 100%; background: var(--orange); transition: width 1s linear; }
+
+/* ══════════════════════════════════════════════════════
+   CONTENT AREA & VIEWS
+══════════════════════════════════════════════════════ */
+.content { flex: 1; overflow: hidden; position: relative; }
+
+.view {
+  position: absolute; inset: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding: 20px;
+  display: none;
+}
+.view.active { display: block; }
+.view::-webkit-scrollbar { width: 6px; }
+.view::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ══════════════════════════════════════════════════════
+   SHARED COMPONENT LIBRARY
+══════════════════════════════════════════════════════ */
+
+/* view header */
+.view-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+}
+.view-title { font-size: 16px; font-weight: 700; }
+.view-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* stat cards row */
+.stat-row {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stat-row.c2 { grid-template-columns: repeat(2, 1fr); }
+.stat-row.c3 { grid-template-columns: repeat(3, 1fr); }
+.stat-row.c4 { grid-template-columns: repeat(4, 1fr); }
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  transition: background .2s;
+}
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.stat-value { font-size: 24px; font-weight: 700; font-family: 'Segoe UI', monospace; line-height: 1; }
+.stat-sub   { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* toolbar */
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; flex-wrap: wrap;
+}
+.search-box {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  flex: 1; min-width: 160px; max-width: 320px;
+  transition: border-color .15s;
+}
+.search-box:focus-within { border-color: var(--orange); }
+.search-box svg { width: 13px; height: 13px; color: var(--muted); flex-shrink: 0; }
+.search-box input {
+  background: none; border: none; outline: none;
+  color: var(--text); font-size: 12px; width: 100%;
+}
+.search-box input::placeholder { color: var(--muted2); }
+
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.ftab {
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--border); background: none;
+  color: var(--muted);
+  transition: all .15s;
+}
+.ftab:hover { border-color: var(--border2); color: var(--text); }
+.ftab.active { border-color: var(--orange); background: rgba(238,77,45,.1); color: var(--orange); }
+
+/* table */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px;
+}
+.data-table th {
+  text-align: left; padding: 8px 12px;
+  font-size: 10px; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+.data-table th:hover { color: var(--text); }
+.data-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: var(--surface2); }
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* expandable card (packing / packed / stage-out) */
+.dest-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.dest-card:hover { border-color: var(--border2); }
+.dest-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; cursor: pointer;
+}
+.dest-header:hover { background: var(--surface2); }
+.dest-id   { font-size: 10px; color: var(--muted); font-family: monospace; flex-shrink: 0; }
+.dest-name { font-size: 13px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dest-badges { display: flex; gap: 6px; flex-shrink: 0; }
+.expand-arrow { color: var(--muted2); flex-shrink: 0; transition: transform .2s; }
+.dest-card.open .expand-arrow { transform: rotate(90deg); }
+
+.dest-body { display: none; border-top: 1px solid var(--border); }
+.dest-card.open .dest-body { display: block; }
+.dest-body .data-table th { top: auto; }
+
+/* pills */
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.p-orange { background: rgba(238,77,45,.12);  color: var(--orange); }
+.p-amber  { background: rgba(245,158,11,.12); color: var(--amber);  }
+.p-green  { background: rgba(34,197,94,.12);  color: var(--green);  }
+.p-blue   { background: rgba(59,130,246,.12); color: var(--blue);   }
+.p-cyan   { background: rgba(6,182,212,.12);  color: var(--cyan);   }
+.p-violet { background: rgba(139,92,246,.12); color: var(--violet); }
+.p-red    { background: rgba(239,68,68,.12);  color: var(--red);    }
+.p-muted  { background: var(--surface2);      color: var(--muted);  }
+.p-teal   { background: rgba(20,184,166,.12); color: var(--teal);   }
+
+/* badge (small inline) */
+.badge {
+  font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 20px;
+  white-space: nowrap;
+}
+.b-orange { background: rgba(238,77,45,.15);  color: var(--orange); }
+.b-amber  { background: rgba(245,158,11,.15); color: var(--amber); }
+.b-green  { background: rgba(34,197,94,.15);  color: var(--green);  }
+.b-blue   { background: rgba(59,130,246,.15); color: var(--blue);   }
+.b-cyan   { background: rgba(6,182,212,.15);  color: var(--cyan);   }
+.b-violet { background: rgba(139,92,246,.15); color: var(--violet); }
+.b-muted  { background: var(--surface2);      color: var(--muted);  }
+
+/* wait-time coloring */
+.wt-ok     { color: var(--green);  }
+.wt-warn   { color: var(--amber);  }
+.wt-high   { color: var(--orange); }
+.wt-danger { color: var(--red);    }
+
+/* dur badge */
+.dur        { font-family: monospace; font-size: 11px; }
+.dur-ok     { color: var(--green);  }
+.dur-warn   { color: var(--amber);  }
+.dur-high   { color: var(--orange); }
+.dur-danger { color: var(--red);    }
+
+/* ── Loading & Error states ── */
+.skeleton-wrap { display: flex; flex-direction: column; gap: 10px; }
+.skel {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.skel-stat { height: 80px; border-radius: var(--radius); }
+.skel-row  { height: 44px; }
+.skel-head { height: 32px; }
+
+.state-error {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px;
+  padding: 48px 24px; text-align: center; color: var(--muted);
+}
+.state-error svg { width: 32px; height: 32px; color: var(--amber); }
+.state-error strong { font-size: 13px; color: var(--text); }
+.state-error span   { font-size: 12px; max-width: 340px; line-height: 1.5; }
+.retry-btn {
+  padding: 7px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); cursor: pointer; font-size: 12px;
+  transition: border-color .15s;
+}
+.retry-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+.empty-state {
+  padding: 48px 24px; text-align: center;
+  color: var(--muted); font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════════════
+   DASHBOARD HOME SPECIFIC
+══════════════════════════════════════════════════════ */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+.module-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden; cursor: pointer;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.module-card:hover { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+
+.card-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.card-ico {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.card-meta { flex: 1; }
+.card-title { font-size: 13px; font-weight: 700; }
+.card-desc  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.card-arr   { color: var(--muted2); }
+
+.card-body { padding: 14px 16px; }
+.kpi-row   { display: grid; gap: 12px; }
+.kpi-row.k2 { grid-template-columns: 1fr 1fr; }
+.kpi-row.k3 { grid-template-columns: 1fr 1fr 1fr; }
+.kpi-block  { display: flex; flex-direction: column; gap: 2px; }
+.kpi-label  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.kpi-value  { font-size: 22px; font-weight: 700; font-family: 'Segoe UI', monospace; line-height: 1; }
+.kpi-value.sm { font-size: 16px; }
+.kpi-sub    { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.pill-row   { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+
+.card-ftr {
+  padding: 9px 16px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-ftr-time { font-size: 10px; color: var(--muted2); }
+.card-ftr-link { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+
+.card-skeleton { padding: 14px 16px; }
+
+/* Zone table for stage in */
+.zone-section { margin-bottom: 16px; }
+.zone-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); padding: 10px 0 6px;
+  border-bottom: 1px solid var(--border); margin-bottom: 8px;
+}
+
+/* aging bar */
+.aging-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.aging-bar      { height: 4px; border-radius: 2px; background: var(--border2); flex: 1; min-width: 40px; }
+.aging-fill     { height: 100%; border-radius: 2px; }
+
+/* ── Mobile overlay ── */
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); z-index: 150;
+}
+.sidebar-overlay.active { display: block; }
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .stat-row.c4 { grid-template-columns: 1fr 1fr; }
+  .stat-row.c3 { grid-template-columns: 1fr 1fr; }
+  .module-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .stat-row.c2 { grid-template-columns: 1fr; }
+  .kpi-row.k2 { grid-template-columns: 1fr; }
+  .topbar { padding: 0 14px; gap: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="overlay"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 20h20"/><path d="M12 4v16"/>
+        <path d="M8 8H4l2-4"/><path d="M16 8h4l-2-4"/>
+        <rect x="8" y="8" width="8" height="12"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Central Tower</div>
+      <div class="brand-sub">SPX Operations</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section">Visão Geral</div>
+    <button class="nav-item active" data-page="home" onclick="navigate('home',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      Dashboard
+    </button>
+
+    <div class="nav-section">Outbound</div>
+    <button class="nav-item" data-page="stage_out" onclick="navigate('stage_out',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/>
+      </svg>
+      Stage OUT
+      <span class="nav-badge" id="badge-stage_out">—</span>
+    </button>
+    <button class="nav-item" data-page="packing" onclick="navigate('packing',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.91 8.84L12 2 3.09 8.84"/>
+        <polyline points="3.09 8.84 3 19 12 22 21 19 20.91 8.84"/>
+        <polyline points="12 22 12 11.5"/>
+        <line x1="3.09" y1="8.84" x2="12" y2="11.5"/>
+        <line x1="20.91" y1="8.84" x2="12" y2="11.5"/>
+      </svg>
+      Packing
+      <span class="nav-badge" id="badge-packing">—</span>
+    </button>
+    <button class="nav-item" data-page="packed" onclick="navigate('packed',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16.5 9.4l-9-5.19"/>
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+        <line x1="12" y1="22.08" x2="12" y2="12"/>
+        <polyline points="9 11 12 14 16 9"/>
+      </svg>
+      Packed
+      <span class="nav-badge" id="badge-packed">—</span>
+    </button>
+
+    <div class="nav-section">Inbound</div>
+    <button class="nav-item" data-page="stage_in" onclick="navigate('stage_in',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 7L7 17"/><polyline points="17 17 7 17 7 7"/>
+      </svg>
+      Stage IN
+      <span class="nav-badge" id="badge-stage_in">—</span>
+    </button>
+    <button class="nav-item" data-page="inbound" onclick="navigate('inbound',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1" y="3" width="15" height="13"/>
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+        <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+      </svg>
+      Fila Recebimento
+      <span class="nav-badge" id="badge-inbound">—</span>
+    </button>
+    <button class="nav-item" data-page="transbordo" onclick="navigate('transbordo',this)">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+        <line x1="4" y1="4" x2="9" y2="9"/>
+      </svg>
+      Transbordo
+      <span class="nav-badge" id="badge-transbordo">—</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">v2.1 · Central Tower SPX</div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<div class="main" id="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="toggle-btn" onclick="toggleSidebar()" title="Menu">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="3" y1="6"  x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+
+    <span class="topbar-page" id="pageTitle">Dashboard</span>
+
+    <div class="topbar-meta">
+      <div class="live-badge">
+        <div class="live-dot on" id="liveDot"></div>
+        <span id="liveLabel">Live</span>
+      </div>
+      <span class="last-update" id="lastUpdate">—</span>
+
+      <!-- Theme toggle -->
+      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Alternar tema">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
+
+      <button class="refresh-btn" id="refreshBtn" onclick="refreshCurrent()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+        Atualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- Countdown bar (home only) -->
+  <div class="countdown-bar" id="countdownBar">
+    <div class="countdown-fill" id="countdownFill" style="width:100%"></div>
+  </div>
+
+  <!-- ══ VIEWS ══ -->
+  <div class="content">
+
+    <!-- ── HOME ── -->
+    <div class="view active" id="view-home"></div>
+
+    <!-- ── STAGE OUT ── -->
+    <div class="view" id="view-stage_out"></div>
+
+    <!-- ── PACKING ── -->
+    <div class="view" id="view-packing"></div>
+
+    <!-- ── PACKED ── -->
+    <div class="view" id="view-packed"></div>
+
+    <!-- ── STAGE IN ── -->
+    <div class="view" id="view-stage_in"></div>
+
+    <!-- ── INBOUND (QUEUE) ── -->
+    <div class="view" id="view-inbound"></div>
+
+    <!-- ── TRANSBORDO ── -->
+    <div class="view" id="view-transbordo"></div>
+
+  </div>
+</div>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+// ═════════════════════════════════════════════════
+// CONSTANTS
+// ═════════════════════════════════════════════════
+const REFRESH_INTERVAL = 60;
+
+const MODULE_META = {
+  home:      { title: 'Dashboard',         api: '/api/dashboard',  accentVar: '--orange' },
+  stage_out: { title: 'Stage OUT',         api: '/api/stage-out',  accentVar: '--orange' },
+  packing:   { title: 'Packing',           api: '/api/packing',    accentVar: '--amber'  },
+  packed:    { title: 'Packed',            api: '/api/packed',     accentVar: '--green'  },
+  stage_in:  { title: 'Stage IN',         api: '/api/stage-in',   accentVar: '--blue'   },
+  inbound:   { title: 'Fila Recebimento', api: '/api/inbound',    accentVar: '--cyan'   },
+  transbordo:{ title: 'Transbordo',       api: '/api/transbordo', accentVar: '--violet' },
+};
+
+// ═════════════════════════════════════════════════
+// STATE
+// ═════════════════════════════════════════════════
+let currentPage   = 'home';
+let countdownSecs = REFRESH_INTERVAL;
+let countdownTmr  = null;
+let refreshTmr    = null;
+let sidebarOpen   = window.innerWidth > 768;
+
+// sort state per module
+const sortState = {};
+
+// Stage IN filter
+let stageInZone = 'all';
+
+// Inbound filter
+let inboundFilter = 'all';
+
+// Transbordo filter
+let transbordoFilter = 'all';
+
+// search query per module
+const searchQ = { stage_out: '', packing: '', packed: '', stage_in: '', inbound: '', transbordo: '' };
+
+// ═════════════════════════════════════════════════
+// THEME
+// ═════════════════════════════════════════════════
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('ct_theme', t);
+  const icon = document.getElementById('themeIcon');
+  if (t === 'light') {
+    icon.innerHTML = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>`;
+  } else {
+    icon.innerHTML = `
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>`;
+  }
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+// restore saved theme
+(function() { applyTheme(localStorage.getItem('ct_theme') || 'dark'); })();
+
+// ═════════════════════════════════════════════════
+// SIDEBAR
+// ═════════════════════════════════════════════════
+function toggleSidebar() {
+  const sb  = document.getElementById('sidebar');
+  const mn  = document.getElementById('main');
+  const ov  = document.getElementById('overlay');
+  const mob = window.innerWidth <= 768;
+  if (mob) {
+    sidebarOpen = !sidebarOpen;
+    sb.classList.toggle('open', sidebarOpen);
+    ov.classList.toggle('active', sidebarOpen);
+  } else {
+    sidebarOpen = !sidebarOpen;
+    sb.classList.toggle('collapsed', !sidebarOpen);
+    mn.classList.toggle('expanded', !sidebarOpen);
+  }
+}
+document.getElementById('overlay').addEventListener('click', () => {
+  sidebarOpen = false;
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('active');
+});
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('active');
+  }
+});
+
+// ═════════════════════════════════════════════════
+// NAVIGATION
+// ═════════════════════════════════════════════════
+function navigate(page, navEl) {
+  if (page === currentPage) return;
+
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const target = navEl || document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (target) target.classList.add('active');
+
+  if (window.innerWidth <= 768 && sidebarOpen) {
+    sidebarOpen = false;
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('active');
+  }
+
+  currentPage = page;
+  document.getElementById('pageTitle').textContent = MODULE_META[page]?.title || page;
+
+  // Show/hide views
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(`view-${page}`).classList.add('active');
+
+  // Countdown only on home
+  document.getElementById('countdownBar').style.display = page === 'home' ? 'block' : 'none';
+
+  stopTimers();
+  loadPage(page);
+  if (page === 'home') startCountdown();
+  else startPeriodicRefresh();
+}
+
+// ═════════════════════════════════════════════════
+// TIMERS
+// ═════════════════════════════════════════════════
+function startCountdown() {
+  stopTimers();
+  countdownSecs = REFRESH_INTERVAL;
+  updateCountdownBar();
+  countdownTmr = setInterval(() => {
+    countdownSecs--;
+    updateCountdownBar();
+    if (countdownSecs <= 0) { countdownSecs = REFRESH_INTERVAL; if (currentPage === 'home') loadPage('home'); }
+  }, 1000);
+}
+function startPeriodicRefresh() {
+  refreshTmr = setInterval(() => { if (currentPage !== 'home') loadPage(currentPage); }, REFRESH_INTERVAL * 1000);
+}
+function stopTimers() {
+  if (countdownTmr) { clearInterval(countdownTmr); countdownTmr = null; }
+  if (refreshTmr)   { clearInterval(refreshTmr);   refreshTmr   = null; }
+}
+function updateCountdownBar() {
+  const f = document.getElementById('countdownFill');
+  if (f) f.style.width = `${(countdownSecs / REFRESH_INTERVAL) * 100}%`;
+}
+
+function refreshCurrent() {
+  if (currentPage === 'home') countdownSecs = REFRESH_INTERVAL;
+  loadPage(currentPage);
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  setTimeout(() => btn.classList.remove('spinning'), 800);
+}
+
+// ═════════════════════════════════════════════════
+// FETCH HELPERS
+// ═════════════════════════════════════════════════
+async function apiFetch(url) {
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+
+function setLastUpdate(ts) {
+  const el = document.getElementById('lastUpdate');
+  if (el) {
+    const d = ts ? new Date(ts) : new Date();
+    el.textContent = 'Atualizado ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+}
+
+// ═════════════════════════════════════════════════
+// UTILITIES
+// ═════════════════════════════════════════════════
+function n(v, fallback = '—') {
+  if (v === null || v === undefined || v === '') return fallback;
+  return Number(v).toLocaleString('pt-BR');
+}
+function fmtDur(sec) {
+  if (!sec || sec <= 0) return '—';
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+function fmtTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtHM(sec) {  // format seconds as HH:MM for wait time
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function durClass(sec) {
+  if (sec < 3600)  return 'dur-ok';
+  if (sec < 7200)  return 'dur-warn';
+  if (sec < 14400) return 'dur-high';
+  return 'dur-danger';
+}
+function wtClass(sec) {
+  if (sec < 1800)  return 'wt-ok';
+  if (sec < 3600)  return 'wt-warn';
+  if (sec < 7200)  return 'wt-high';
+  return 'wt-danger';
+}
+function cleanOp(s) {
+  if (!s) return '—';
+  return s.replace(/\[Ops\d+\]/i, '').replace(/@shopee\.com/i, '').trim() || '—';
+}
+function setBadge(page, val) {
+  const el = document.getElementById(`badge-${page}`);
+  if (el) el.textContent = val !== null && val !== undefined ? val : '—';
+}
+
+// skeleton helpers
+function skeletonStats(n) {
+  return `<div class="stat-row c${Math.min(n,4)}">${Array(n).fill('<div class="skel skel-stat"></div>').join('')}</div>`;
+}
+function skeletonRows(n) {
+  return `<div class="table-wrap"><div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+    <div class="skel skel-head"></div>${Array(n).fill('<div class="skel skel-row"></div>').join('')}
+  </div></div>`;
+}
+function errorState(msg, retryFn) {
+  return `<div class="state-error">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    <strong>Falha ao carregar dados</strong>
+    <span>${msg}</span>
+    <button class="retry-btn" onclick="${retryFn}()">Tentar novamente</button>
+  </div>`;
+}
+
+// ═════════════════════════════════════════════════
+// LOAD DISPATCHER
+// ═════════════════════════════════════════════════
+function loadPage(page) {
+  switch (page) {
+    case 'home':      loadHome();       break;
+    case 'stage_out': loadStageOut();   break;
+    case 'packing':   loadTOs('packing');  break;
+    case 'packed':    loadTOs('packed');   break;
+    case 'stage_in':  loadStageIn();    break;
+    case 'inbound':   loadInbound();    break;
+    case 'transbordo':loadTransbordo(); break;
+  }
+}
+
+// ═════════════════════════════════════════════════
+// HOME / DASHBOARD
+// ═════════════════════════════════════════════════
+function showHomeLoading() {
+  document.getElementById('view-home').innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">Visão Executiva</div>
+      <div class="view-sub">Resumo consolidado de todos os módulos operacionais</div></div>
+    </div>
+    <div class="module-grid">${Array(6).fill(cardSkeleton()).join('')}</div>`;
+}
+function cardSkeleton() {
+  return `<div class="module-card" style="pointer-events:none">
+    <div class="card-hdr" style="gap:10px;padding:13px 16px;border-bottom:1px solid var(--border)">
+      <div class="skel" style="width:34px;height:34px;border-radius:8px;flex-shrink:0"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+        <div class="skel" style="height:12px;width:80px"></div>
+        <div class="skel" style="height:9px;width:120px"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="skel" style="height:56px;border-radius:8px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:6px">
+        <div class="skel" style="height:20px;width:70px;border-radius:20px"></div>
+        <div class="skel" style="height:20px;width:90px;border-radius:20px"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadHome() {
+  showHomeLoading();
+  try {
+    const resp = await apiFetch('/api/dashboard');
+    const d    = resp.data;
+    renderHome(d);
+    setLastUpdate(resp.updatedAt);
+  } catch (e) {
+    document.getElementById('view-home').innerHTML = errorState(
+      e.message?.includes('No data') || e.message?.includes('503')
+        ? 'Tampermonkey inativo — dados não disponíveis no servidor.'
+        : e.message,
+      'loadHome'
+    );
+  }
+}
+
+function cardHeader(icon, title, desc, accent) {
+  return `<div class="card-hdr">
+    <div class="card-ico" style="background:${accent}18">${icon}</div>
+    <div class="card-meta">
+      <div class="card-title">${title}</div>
+      <div class="card-desc">${desc}</div>
+    </div>
+    <div class="card-arr">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
+    </div>
+  </div>`;
+}
+function cardFooter(ts, page) {
+  return `<div class="card-ftr">
+    <span class="card-ftr-time">${ts ? 'Atualizado ' + fmtTime(ts) : 'Sem dados'}</span>
+    <span class="card-ftr-link">Ver detalhes
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </span>
+  </div>`;
+}
+function noDataCard() {
+  return `<div class="card-body">
+    <div style="padding:12px 0;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      Sem dados — Tampermonkey inativo
+    </div>
+  </div>`;
+}
+
+function renderHome(d) {
+  const cards = [
+    buildHomeStageOut(d.stageOut),
+    buildHomePacking(d.packing),
+    buildHomePacked(d.packed),
+    buildHomeStageIn(d.stageIn),
+    buildHomeInbound(d.inbound),
+    buildHomeTransbordo(d.transbordo),
+  ];
+  document.getElementById('view-home').innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">Visão Executiva</div>
+      <div class="view-sub">Resumo consolidado de todos os módulos — atualiza a cada ${REFRESH_INTERVAL}s</div></div>
+    </div>
+    <div class="module-grid">${cards.join('')}</div>`;
+}
+
+function buildHomeStageOut(wrap) {
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/></svg>`;
+  if (!wrap?.data) return `<div class="module-card" onclick="navigate('stage_out')">${cardHeader(icon,'Stage OUT','Gaiolas endereçadas','var(--orange)')}${noDataCard()}${cardFooter(null,'stage_out')}</div>`;
+  const list    = wrap.data.list || [];
+  const active  = list.filter(a => (a.to_quantity||0) > 0);
+  const totalTO = active.reduce((s,a) => s + a.to_quantity, 0);
+  setBadge('stage_out', list.length);
+  return `<div class="module-card" onclick="navigate('stage_out')">
+    ${cardHeader(icon,'Stage OUT','Gaiolas endereçadas','var(--orange)')}
+    <div class="card-body">
+      <div class="kpi-row k2">
+        <div class="kpi-block">
+          <span class="kpi-label">Total de TO's</span>
+          <span class="kpi-value" style="color:var(--orange)">${n(totalTO)}</span>
+          <span class="kpi-sub">${n(active.length)} destinos ativos</span>
+        </div>
+        <div class="kpi-block">
+          <span class="kpi-label">Gaiolas Endereçadas</span>
+          <span class="kpi-value">${n(list.length)}</span>
+          <span class="kpi-sub">${n(list.length - active.length)} vazias</span>
+        </div>
+      </div>
+    </div>
+    ${cardFooter(wrap.updatedAt,'stage_out')}
+  </div>`;
+}
+
+function buildHomePacking(wrap) {
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.91 8.84L12 2 3.09 8.84"/><polyline points="3.09 8.84 3 19 12 22 21 19 20.91 8.84"/><polyline points="12 22 12 11.5"/><line x1="3.09" y1="8.84" x2="12" y2="11.5"/><line x1="20.91" y1="8.84" x2="12" y2="11.5"/></svg>`;
+  if (!wrap?.data) return `<div class="module-card" onclick="navigate('packing')">${cardHeader(icon,'Packing','TOs em embalagem','var(--amber)')}${noDataCard()}${cardFooter(null,'packing')}</div>`;
+  const list     = wrap.data.list || [];
+  const totalTOs = wrap.data.total || list.length;
+  const totalPac = list.reduce((s,t) => s + (t.quantity||0), 0);
+  const dests    = new Set(list.map(t => t.dest_station_id)).size;
+  setBadge('packing', totalTOs);
+  return `<div class="module-card" onclick="navigate('packing')">
+    ${cardHeader(icon,'Packing','TOs em embalagem','var(--amber)')}
+    <div class="card-body">
+      <div class="kpi-row k2">
+        <div class="kpi-block">
+          <span class="kpi-label">Total de TO's</span>
+          <span class="kpi-value" style="color:var(--amber)">${n(totalTOs)}</span>
+          <span class="kpi-sub">${n(dests)} destinos</span>
+        </div>
+        <div class="kpi-block">
+          <span class="kpi-label">Total de Pacotes</span>
+          <span class="kpi-value">${n(totalPac)}</span>
+          <span class="kpi-sub">${totalTOs > 0 ? Math.round(totalPac/totalTOs) : '—'} pkgs/TO</span>
+        </div>
+      </div>
+    </div>
+    ${cardFooter(wrap.updatedAt,'packing')}
+  </div>`;
+}
+
+function buildHomePacked(wrap) {
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/><polyline points="9 11 12 14 16 9"/></svg>`;
+  if (!wrap?.data) return `<div class="module-card" onclick="navigate('packed')">${cardHeader(icon,'Packed','TOs finalizados','var(--green)')}${noDataCard()}${cardFooter(null,'packed')}</div>`;
+  const list     = wrap.data.list || [];
+  const totalTOs = wrap.data.total || list.length;
+  const totalPac = list.reduce((s,t) => s + (t.quantity||0), 0);
+  const dests    = new Set(list.map(t => t.dest_station_id)).size;
+  setBadge('packed', totalTOs);
+  return `<div class="module-card" onclick="navigate('packed')">
+    ${cardHeader(icon,'Packed','TOs finalizados','var(--green)')}
+    <div class="card-body">
+      <div class="kpi-row k2">
+        <div class="kpi-block">
+          <span class="kpi-label">Total de TO's</span>
+          <span class="kpi-value" style="color:var(--green)">${n(totalTOs)}</span>
+          <span class="kpi-sub">${n(dests)} destinos</span>
+        </div>
+        <div class="kpi-block">
+          <span class="kpi-label">Total de Pacotes</span>
+          <span class="kpi-value">${n(totalPac)}</span>
+          <span class="kpi-sub">${totalTOs > 0 ? Math.round(totalPac/totalTOs) : '—'} pkgs/TO</span>
+        </div>
+      </div>
+    </div>
+    ${cardFooter(wrap.updatedAt,'packed')}
+  </div>`;
+}
+
+function buildHomeStageIn(wrap) {
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><polyline points="17 17 7 17 7 7"/></svg>`;
+  if (!wrap?.data) return `<div class="module-card" onclick="navigate('stage_in')">${cardHeader(icon,'Stage IN','Staging inbound por zona','var(--blue)')}${noDataCard()}${cardFooter(null,'stage_in')}</div>`;
+  const list    = wrap.data.list || [];
+  const active  = list.filter(a => (a.to_quantity||0) > 0);
+  const totalTO = active.reduce((s,a) => s + a.to_quantity, 0);
+  const maxArea = active.reduce((b,a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
+
+  // All zones
+  const zones = {};
+  active.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    zones[z] = (zones[z]||0) + a.to_quantity;
+  });
+  const topZones = Object.entries(zones).sort((a,b) => b[1]-a[1]);
+  setBadge('stage_in', totalTO);
+
+  const zonePills = topZones.map(([z,c]) =>
+    `<span class="pill p-blue"><span class="pill-dot" style="background:var(--blue)"></span>${z.replace('ZONA ','').substring(0,14)}: ${n(c)}</span>`
+  ).join('');
+
+  return `<div class="module-card" onclick="navigate('stage_in')">
+    ${cardHeader(icon,'Stage IN','Staging inbound por zona','var(--blue)')}
+    <div class="card-body">
+      <div class="kpi-row k2">
+        <div class="kpi-block">
+          <span class="kpi-label">Total de TO's</span>
+          <span class="kpi-value" style="color:var(--blue)">${n(totalTO)}</span>
+          <span class="kpi-sub">${n(active.length)} ruas ativas</span>
+        </div>
+        <div class="kpi-block">
+          <span class="kpi-label">Aging Mais Antigo</span>
+          <span class="kpi-value sm">${maxArea ? fmtDur(maxArea.staging_duration_time) : '—'}</span>
+          <span class="kpi-sub">${maxArea ? (maxArea.area_name||'—') : 'nenhuma rua'}</span>
+        </div>
+      </div>
+      ${topZones.length ? `<div class="pill-row">${zonePills}</div>` : ''}
+    </div>
+    ${cardFooter(wrap.updatedAt,'stage_in')}
+  </div>`;
+}
+
+function buildHomeInbound(wrap) {
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`;
+  if (!wrap?.data) return `<div class="module-card" onclick="navigate('inbound')">${cardHeader(icon,'Fila Recebimento','Veículos na doca','var(--cyan)')}${noDataCard()}${cardFooter(null,'inbound')}</div>`;
+  const list     = wrap.data.list || [];
+  const pending  = list.filter(v => v.queue_status === 1).length;
+  const assigned = list.filter(v => v.queue_status === 2).length;
+  const docked   = list.filter(v => v.queue_status === 3).length;
+  const onHold   = list.filter(v => v.queue_status === 5).length;
+  setBadge('inbound', list.length);
+  return `<div class="module-card" onclick="navigate('inbound')">
+    ${cardHeader(icon,'Fila Recebimento','Veículos na doca','var(--cyan)')}
+    <div class="card-body">
+      <div class="kpi-row k2">
+        <div class="kpi-block">
+          <span class="kpi-label">Total de Veículos</span>
+          <span class="kpi-value" style="color:var(--cyan)">${n(list.length)}</span>
+          <span class="kpi-sub">na fila agora</span>
+        </div>
+        <div class="kpi-block">
+          <span class="kpi-label">Pendentes</span>
+          <span class="kpi-value" style="color:${pending>0?'var(--amber)':'var(--text)'}">${n(pending)}</span>
+          <span class="kpi-sub">aguardando doca</span>
+        </div>
+      </div>
+      <div class="pill-row">
+        <span class="pill p-amber"><span class="pill-dot" style="background:var(--amber)"></span>Pendente: ${pending}</span>
+        <span class="pill p-cyan"><span class="pill-dot" style="background:var(--cyan)"></span>Atribuído: ${assigned}</span>
+        <span class="pill p-green"><span class="pill-dot" style="background:var(--green)"></span>Docado: ${docked}</span>
+        ${onHold ? `<span class="pill p-muted"><span class="pill-dot" style="background:var(--muted)"></span>Em Espera: ${onHold}</span>` : ''}
+      </div>
+    </div>
+    ${cardFooter(wrap.updatedAt,'inbound')}
+  </div>`;
+}
+
+function buildHomeTransbordo(wrap) {
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`;
+  if (!wrap?.data) return `<div class="module-card" onclick="navigate('transbordo')">${cardHeader(icon,'Transbordo','Operações de transshipment','var(--violet)')}${noDataCard()}${cardFooter(null,'transbordo')}</div>`;
+  const list     = wrap.data.list || [];
+  const live     = wrap.data.liveTrips || [];
+  const queue    = wrap.data.queue || [];
+  function destStation(t) { return (t.trip_station||[]).find(s => s.trip_station_status===50 || s.trip_station_status===60); }
+  const transit  = live.filter(t => destStation(t)?.trip_station_status === 50).length;
+  const unloading= live.filter(t => destStation(t)?.trip_station_status === 60).length;
+  const totalPkgs= live.reduce((s,t) => s + (t.order_quantity||0), 0);
+  setBadge('transbordo', live.length || list.length);
+  return `<div class="module-card" onclick="navigate('transbordo')">
+    ${cardHeader(icon,'Transbordo','Operações de transshipment','var(--violet)')}
+    <div class="card-body">
+      <div class="kpi-row k2">
+        <div class="kpi-block">
+          <span class="kpi-label">Viagens Ativas</span>
+          <span class="kpi-value" style="color:var(--violet)">${n(live.length)}</span>
+          <span class="kpi-sub">${n(transit)} em trânsito</span>
+        </div>
+        <div class="kpi-block">
+          <span class="kpi-label">Total de Pacotes</span>
+          <span class="kpi-value">${n(totalPkgs)}</span>
+          <span class="kpi-sub">histórico: ${n(list.length)} viagens</span>
+        </div>
+      </div>
+      <div class="pill-row">
+        <span class="pill p-amber"><span class="pill-dot" style="background:var(--amber)"></span>Em Trânsito: ${transit}</span>
+        <span class="pill p-violet"><span class="pill-dot" style="background:var(--violet)"></span>Descarregando: ${unloading}</span>
+      </div>
+    </div>
+    ${cardFooter(wrap.updatedAt,'transbordo')}
+  </div>`;
+}
+
+// ═════════════════════════════════════════════════
+// STAGE OUT VIEW
+// ═════════════════════════════════════════════════
+async function loadStageOut() {
+  const el = document.getElementById('view-stage_out');
+  el.innerHTML = skeletonStats(2) + skeletonRows(8);
+  try {
+    const data = await apiFetch('/api/stage-out');
+    renderStageOut(data);
+    setLastUpdate(data.fetchedAt);
+  } catch (e) {
+    el.innerHTML = errorState(e.message, 'loadStageOut');
+  }
+}
+
+function renderStageOut(data) {
+  const allList = data.list || [];
+  const q       = searchQ.stage_out.toLowerCase();
+  const list    = q ? allList.filter(a => (a.area_name||'').toLowerCase().includes(q) || String(a.to_quantity).includes(q)) : allList;
+  const active  = list.filter(a => (a.to_quantity||0) > 0);
+  const totalTO = allList.filter(a=>(a.to_quantity||0)>0).reduce((s,a)=>s+a.to_quantity,0);
+  setBadge('stage_out', allList.length);
+
+  const sorted = [...list].sort((a,b) => (b.to_quantity||0)-(a.to_quantity||0));
+
+  const rows = sorted.map(a => {
+    const tos = a.to_quantity || 0;
+    const dur = a.staging_duration_time || 0;
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${a.area_name||'—'}</td>
+      <td>${a.staging_group_name || '—'}</td>
+      <td style="text-align:center;font-weight:700;color:${tos>0?'var(--orange)':'var(--muted)'};font-family:monospace">${tos||'—'}</td>
+      <td><span class="dur ${durClass(dur)}">${fmtDur(dur)}</span></td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${n(a.capacity||0)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="5" class="empty-state">Nenhum resultado</td></tr>`;
+
+  document.getElementById('view-stage_out').innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">Stage OUT</div><div class="view-sub">Gaiolas endereçadas na área de staging outbound</div></div>
+    </div>
+    <div class="stat-row c2">
+      <div class="stat-card">
+        <div class="stat-label">Total de TO's</div>
+        <div class="stat-value" style="color:var(--orange)">${n(totalTO)}</div>
+        <div class="stat-sub">${n(active.length)} destinos com TO's</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gaiolas Endereçadas</div>
+        <div class="stat-value">${n(allList.length)}</div>
+        <div class="stat-sub">${n(allList.length-active.length)} sem TO's</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Buscar destino..." oninput="searchQ.stage_out=this.value;renderStageOut(window._stageOutData||{})"
+               value="${searchQ.stage_out}">
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${sorted.length} resultado${sorted.length!==1?'s':''}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Destino / Rua</th><th>Zona</th>
+          <th style="text-align:center">TO's</th>
+          <th>Aging</th><th>Capacidade</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  window._stageOutData = data;
+}
+
+// ═════════════════════════════════════════════════
+// PACKING / PACKED VIEW (shared)
+// ═════════════════════════════════════════════════
+async function loadTOs(module) {
+  const el = document.getElementById(`view-${module}`);
+  el.innerHTML = skeletonStats(2) + skeletonRows(8);
+  const api = module === 'packing' ? '/api/packing' : '/api/packed';
+  try {
+    const resp = await apiFetch(api);
+    // new normalized format has .data; old format is direct
+    const data = resp.data || resp;
+    renderTOs(module, data);
+    setLastUpdate(data.fetchedAt || resp.updatedAt);
+  } catch (e) {
+    el.innerHTML = errorState(e.message, `()=>loadTOs('${module}')`);
+  }
+}
+
+function renderTOs(module, data) {
+  const allList  = data.list || [];
+  const totalTOs = data.total || allList.length;
+  const totalPac = allList.reduce((s,t) => s+(t.quantity||0), 0);
+  const q        = searchQ[module].toLowerCase();
+  const acc      = module === 'packing' ? 'var(--amber)' : 'var(--green)';
+  const title    = module === 'packing' ? 'Packing' : 'Packed';
+  const sub      = module === 'packing' ? 'TOs em processo de embalagem' : 'TOs com embalagem finalizada';
+  setBadge(module, totalTOs);
+
+  // Group by destination
+  const groups = {};
+  allList.forEach(to => {
+    const id   = to.dest_station_id || 'SEM_DESTINO';
+    const name = to.dest_station_name || to.receiver || '—';
+    if (!groups[id]) groups[id] = { id, name, tos: [] };
+    groups[id].tos.push(to);
+  });
+
+  let grouped = Object.values(groups);
+  if (q) grouped = grouped.filter(g =>
+    g.name.toLowerCase().includes(q) ||
+    g.tos.some(t => (t.to_number||'').toLowerCase().includes(q) || (t.operator||'').toLowerCase().includes(q))
+  );
+  grouped.sort((a,b) => b.tos.length - a.tos.length);
+
+  const cardsHtml = grouped.map(g => {
+    const gPac = g.tos.reduce((s,t)=>s+(t.quantity||0),0);
+    const rows  = g.tos.map(to => {
+      const dur = Date.now()/1000 - (to.ctime||0);
+      return `<tr>
+        <td style="font-family:monospace;font-size:11px;color:var(--cyan)">${to.to_number||'—'}</td>
+        <td>${cleanOp(to.operator)}</td>
+        <td style="text-align:center;font-family:monospace">${to.quantity||0}</td>
+        <td>${to.pack_name||'—'}</td>
+        <td><span class="dur ${durClass(dur)}">${fmtDur(dur)}</span></td>
+      </tr>`;
+    }).join('');
+    return `<div class="dest-card" onclick="this.classList.toggle('open')">
+      <div class="dest-header">
+        <span class="dest-id">#${g.id}</span>
+        <span class="dest-name">${g.name}</span>
+        <div class="dest-badges">
+          <span class="badge b-blue">${g.tos.length} TO${g.tos.length!==1?'s':''}</span>
+          <span class="badge b-muted">${n(gPac)} pac.</span>
+        </div>
+        <svg class="expand-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+      <div class="dest-body">
+        <table class="data-table" style="margin:0">
+          <thead><tr><th>TO</th><th>Operador</th><th>Pacotes</th><th>Tipo</th><th>Tempo</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty-state">Nenhum resultado para "${q}"</div>`;
+
+  document.getElementById(`view-${module}`).innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">${title}</div><div class="view-sub">${sub}</div></div>
+    </div>
+    <div class="stat-row c2">
+      <div class="stat-card">
+        <div class="stat-label">Total de TO's</div>
+        <div class="stat-value" style="color:${acc}">${n(totalTOs)}</div>
+        <div class="stat-sub">${grouped.length} destinos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total de Pacotes</div>
+        <div class="stat-value">${n(totalPac)}</div>
+        <div class="stat-sub">${totalTOs>0?Math.round(totalPac/totalTOs):'—'} pkgs/TO</div>
+      </div>
+    </div>
+    <div class="toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Buscar destino, TO, operador..."
+               oninput="searchQ['${module}']=this.value;renderTOs('${module}',window._tosData_${module}||{})"
+               value="${searchQ[module]}">
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${grouped.length} destino${grouped.length!==1?'s':''}</span>
+    </div>
+    ${cardsHtml}`;
+  window[`_tosData_${module}`] = data;
+}
+
+// ═════════════════════════════════════════════════
+// STAGE IN VIEW
+// ═════════════════════════════════════════════════
+async function loadStageIn() {
+  const el = document.getElementById('view-stage_in');
+  el.innerHTML = skeletonStats(3) + skeletonRows(10);
+  try {
+    const data = await apiFetch('/api/stage-in');
+    window._stageInData = data;
+    stageInZone = 'all';
+    renderStageIn(data);
+    setLastUpdate(data.fetchedAt);
+  } catch (e) {
+    el.innerHTML = errorState(e.message, 'loadStageIn');
+  }
+}
+
+function renderStageIn(data) {
+  const list   = data.list || [];
+  const active = list.filter(a => (a.to_quantity||0) > 0);
+  const q      = searchQ.stage_in.toLowerCase();
+
+  // Build zones
+  const zones = {};
+  active.forEach(a => {
+    const z = (a.staging_group_name||'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { name: z, tos: 0, areas: [], maxAging: 0 };
+    zones[z].tos  += a.to_quantity;
+    zones[z].areas.push(a);
+    if (a.staging_duration_time > zones[z].maxAging) zones[z].maxAging = a.staging_duration_time;
+  });
+
+  const zoneList = Object.values(zones).sort((a,b) => b.tos - a.tos);
+  const allTOs   = active.reduce((s,a)=>s+a.to_quantity,0);
+  const maxArea  = active.reduce((b,a)=>(!b||a.staging_duration_time>b.staging_duration_time)?a:b,null);
+  setBadge('stage_in', allTOs);
+
+  // Zone tabs
+  const tabsHtml = [
+    `<button class="ftab${stageInZone==='all'?' active':''}" onclick="stageInZone='all';renderStageIn(window._stageInData)">Todas (${n(allTOs)})</button>`,
+    ...zoneList.map(z => `<button class="ftab${stageInZone===z.name?' active':''}" onclick="stageInZone='${z.name.replace(/'/g,"\\'")}';renderStageIn(window._stageInData)">${z.name.replace('ZONA ','')} (${n(z.tos)})</button>`)
+  ].join('');
+
+  // Filter areas
+  let filtered = stageInZone === 'all' ? active : active.filter(a => (a.staging_group_name||'OUTRAS').trim() === stageInZone);
+  if (q) filtered = filtered.filter(a => (a.area_name||'').toLowerCase().includes(q));
+  const sortedAreas = [...filtered].sort((a,b) => b.staging_duration_time - a.staging_duration_time);
+
+  // Zone summary cards
+  const zoneSummary = zoneList.map(z => {
+    const maxAg = Math.max(...z.areas.map(a=>a.staging_duration_time),0);
+    const dc    = durClass(maxAg);
+    return `<div class="stat-card" style="cursor:pointer" onclick="stageInZone='${z.name.replace(/'/g,"\\'")}';renderStageIn(window._stageInData)">
+      <div class="stat-label">${z.name.replace('ZONA ','')}</div>
+      <div class="stat-value" style="font-size:20px;color:var(--blue)">${n(z.tos)}</div>
+      <div class="stat-sub"><span class="dur ${dc}" style="font-size:10px">${fmtDur(maxAg)}</span> max aging · ${z.areas.length} ruas</div>
+    </div>`;
+  }).join('');
+
+  // Main table rows
+  const rows = sortedAreas.map(a => {
+    const dur = a.staging_duration_time||0;
+    const pct = a.capacity > 0 ? Math.min(100, Math.round((a.to_quantity/a.capacity)*100)) : 0;
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px">${a.area_name||'—'}</td>
+      <td><span class="pill p-blue" style="font-size:10px">${(a.staging_group_name||'OUTRAS').replace('ZONA ','')}</span></td>
+      <td style="text-align:center;font-weight:700;font-family:monospace;color:var(--blue)">${n(a.to_quantity)}</td>
+      <td>
+        <div class="aging-bar-wrap">
+          <span class="dur ${durClass(dur)}">${fmtDur(dur)}</span>
+          <div class="aging-bar"><div class="aging-fill" style="width:${Math.min(100,dur/3600/24*100)}%;background:${dur>14400?'var(--red)':dur>7200?'var(--orange)':dur>3600?'var(--amber)':'var(--green)'}"></div></div>
+        </div>
+      </td>
+      <td style="text-align:center;font-family:monospace">${n(a.capacity)}</td>
+      <td style="font-family:monospace;font-size:11px;color:${pct>=80?'var(--red)':pct>=60?'var(--amber)':'var(--muted)'}">${a.capacity>0?pct+'%':'—'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="6" class="empty-state">Nenhuma rua ativa nesta zona</td></tr>`;
+
+  document.getElementById('view-stage_in').innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">Stage IN</div><div class="view-sub">Área de staging inbound — ${zoneList.length} zonas · ${active.length} ruas ativas</div></div>
+    </div>
+    <div class="stat-row c3">
+      <div class="stat-card">
+        <div class="stat-label">Total de TO's</div>
+        <div class="stat-value" style="color:var(--blue)">${n(allTOs)}</div>
+        <div class="stat-sub">${n(active.length)} ruas ativas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Aging Mais Antigo</div>
+        <div class="stat-value" style="font-size:18px">${maxArea?fmtDur(maxArea.staging_duration_time):'—'}</div>
+        <div class="stat-sub">${maxArea?maxArea.area_name:'nenhuma rua'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Zonas Ativas</div>
+        <div class="stat-value">${n(zoneList.length)}</div>
+        <div class="stat-sub">clique para filtrar</div>
+      </div>
+    </div>
+
+    ${zoneList.length > 1 ? `<div class="stat-row" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-bottom:16px">${zoneSummary}</div>` : ''}
+
+    <div class="toolbar">
+      <div class="filter-tabs">${tabsHtml}</div>
+      <div class="search-box" style="max-width:220px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Buscar rua..." oninput="searchQ.stage_in=this.value;renderStageIn(window._stageInData)" value="${searchQ.stage_in}">
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${sortedAreas.length} rua${sortedAreas.length!==1?'s':''}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Rua / Área</th><th>Zona</th>
+          <th style="text-align:center">TO's</th>
+          <th>Aging</th>
+          <th style="text-align:center">Capacidade</th>
+          <th style="text-align:center">Ocup.</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ═════════════════════════════════════════════════
+// INBOUND / QUEUE VIEW
+// ═════════════════════════════════════════════════
+const Q_STATUS = { 1:'Pendente', 2:'Atribuído', 3:'Ocupado', 4:'Finalizado', 5:'Em Espera' };
+const Q_CLASS  = { 1:'p-amber', 2:'p-cyan', 3:'p-green', 4:'p-muted', 5:'p-muted' };
+
+async function loadInbound() {
+  const el = document.getElementById('view-inbound');
+  el.innerHTML = skeletonStats(4) + skeletonRows(8);
+  try {
+    const resp = await apiFetch('/api/inbound');
+    const data = resp.data || resp;
+    window._inboundData = data;
+    inboundFilter = 'all';
+    renderInbound(data);
+    setLastUpdate(data.fetchedAt || resp.updatedAt);
+  } catch (e) {
+    el.innerHTML = errorState(e.message, 'loadInbound');
+  }
+}
+
+function renderInbound(data) {
+  const allList  = data.list || [];
+  const q        = searchQ.inbound.toLowerCase();
+  const pending  = allList.filter(v => v.queue_status===1);
+  const assigned = allList.filter(v => v.queue_status===2);
+  const docked   = allList.filter(v => v.queue_status===3);
+  const onHold   = allList.filter(v => v.queue_status===5);
+  setBadge('inbound', allList.length);
+
+  let filtered = inboundFilter === 'all' ? allList : allList.filter(v => {
+    if (inboundFilter === '1') return v.queue_status === 1;
+    if (inboundFilter === '2') return v.queue_status === 2;
+    if (inboundFilter === '3') return v.queue_status === 3;
+    if (inboundFilter === '5') return v.queue_status === 5;
+    return true;
+  });
+  if (q) filtered = filtered.filter(v =>
+    (v.vehicle_number||'').toLowerCase().includes(q) ||
+    (v.driver_name||'').toLowerCase().includes(q) ||
+    (v.route_info?.lh_trip_number||'').toLowerCase().includes(q)
+  );
+  const sorted = [...filtered].sort((a,b) => (b.waiting_time||0)-(a.waiting_time||0));
+
+  const tabsHtml = [
+    `<button class="ftab${inboundFilter==='all'?' active':''}" onclick="inboundFilter='all';renderInbound(window._inboundData)">Todos (${allList.length})</button>`,
+    `<button class="ftab${inboundFilter==='1'?' active':''}" onclick="inboundFilter='1';renderInbound(window._inboundData)">Pendente (${pending.length})</button>`,
+    `<button class="ftab${inboundFilter==='2'?' active':''}" onclick="inboundFilter='2';renderInbound(window._inboundData)">Atribuído (${assigned.length})</button>`,
+    `<button class="ftab${inboundFilter==='3'?' active':''}" onclick="inboundFilter='3';renderInbound(window._inboundData)">Docado (${docked.length})</button>`,
+    onHold.length ? `<button class="ftab${inboundFilter==='5'?' active':''}" onclick="inboundFilter='5';renderInbound(window._inboundData)">Em Espera (${onHold.length})</button>` : ''
+  ].join('');
+
+  const rows = sorted.map(v => {
+    const st  = v.queue_status;
+    const wt  = v.waiting_time || 0;
+    const lh  = v.route_info?.lh_trip_number || '—';
+    const dock = v.assigned_dock_name || v.occupied_dock_name || '—';
+    return `<tr>
+      <td style="font-family:monospace;font-weight:600">${v.vehicle_number||'—'}</td>
+      <td style="color:var(--muted)">${v.vehicle_type_name||'—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--cyan)">${lh}</td>
+      <td>${v.driver_name||'—'}</td>
+      <td style="font-family:monospace;font-size:12px" class="${wtClass(wt)}">${wt>0?fmtHM(wt):'—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${dock}</td>
+      <td><span class="pill ${Q_CLASS[st]||'p-muted'}">${Q_STATUS[st]||st}</span></td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" class="empty-state">Nenhum veículo encontrado</td></tr>`;
+
+  document.getElementById('view-inbound').innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">Fila Recebimento</div><div class="view-sub">Gestão de veículos na doca de recebimento</div></div>
+    </div>
+    <div class="stat-row c4">
+      <div class="stat-card"><div class="stat-label">Total Veículos</div><div class="stat-value" style="color:var(--cyan)">${n(allList.length)}</div></div>
+      <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value" style="color:${pending.length?'var(--amber)':'var(--text)'}">${n(pending.length)}</div></div>
+      <div class="stat-card"><div class="stat-label">Docados</div><div class="stat-value" style="color:var(--green)">${n(docked.length)}</div></div>
+      <div class="stat-card"><div class="stat-label">Em Espera</div><div class="stat-value">${n(onHold.length)}</div></div>
+    </div>
+    <div class="toolbar">
+      <div class="filter-tabs">${tabsHtml}</div>
+      <div class="search-box" style="max-width:220px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Buscar placa, LH, motorista..." oninput="searchQ.inbound=this.value;renderInbound(window._inboundData)" value="${searchQ.inbound}">
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${sorted.length} veículo${sorted.length!==1?'s':''}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Placa</th><th>Tipo</th><th>LH#</th><th>Motorista</th>
+          <th>Espera</th><th>Doca</th><th>Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ═════════════════════════════════════════════════
+// TRANSBORDO VIEW
+// ═════════════════════════════════════════════════
+async function loadTransbordo() {
+  const el = document.getElementById('view-transbordo');
+  el.innerHTML = skeletonStats(4) + skeletonRows(8);
+  try {
+    const resp = await apiFetch('/api/transbordo');
+    const data = resp.data || resp;
+    window._transbData = data;
+    transbordoFilter = 'all';
+    renderTransbordo(data);
+    setLastUpdate(data.fetchedAt || resp.updatedAt);
+  } catch (e) {
+    el.innerHTML = errorState(e.message, 'loadTransbordo');
+  }
+}
+
+function renderTransbordo(data) {
+  const live  = data.liveTrips || data.list || [];
+  const hist  = data.list || [];
+  const queue = data.queue || [];
+  const q     = searchQ.transbordo.toLowerCase();
+
+  const queueMap = {};
+  queue.forEach(v => {
+    const tn = v.route_info?.lh_trip_number;
+    if (tn) queueMap[tn] = v;
+  });
+
+  function destStation(t) {
+    return (t.trip_station||[]).find(s => s.trip_station_status===50 || s.trip_station_status===60);
+  }
+
+  const inTransit  = live.filter(t => destStation(t)?.trip_station_status===50);
+  const unloading  = live.filter(t => destStation(t)?.trip_station_status===60);
+  const totalPkgs  = live.reduce((s,t) => s+(t.order_quantity||0), 0);
+  const recvPkgs   = unloading.reduce((s,t) => s+(t.unload_quantity||t.order_quantity||0),0);
+  setBadge('transbordo', live.length);
+
+  let filtered = transbordoFilter === 'all' ? live
+    : transbordoFilter === 'transit'    ? inTransit
+    : transbordoFilter === 'unloading'  ? unloading
+    : live;
+  if (q) filtered = filtered.filter(t =>
+    (t.trip_number||'').toLowerCase().includes(q) ||
+    (t.vehicle_number||'').toLowerCase().includes(q) ||
+    (t.driver_name||'').toLowerCase().includes(q)
+  );
+  const sorted = [...filtered].sort((a,b) => (b.order_quantity||0)-(a.order_quantity||0));
+
+  const tabs = [
+    `<button class="ftab${transbordoFilter==='all'?' active':''}" onclick="transbordoFilter='all';renderTransbordo(window._transbData)">Todas (${live.length})</button>`,
+    `<button class="ftab${transbordoFilter==='transit'?' active':''}" onclick="transbordoFilter='transit';renderTransbordo(window._transbData)">Em Trânsito (${inTransit.length})</button>`,
+    `<button class="ftab${transbordoFilter==='unloading'?' active':''}" onclick="transbordoFilter='unloading';renderTransbordo(window._transbData)">Descarregando (${unloading.length})</button>`,
+  ].join('');
+
+  const rows = sorted.map(t => {
+    const dest = destStation(t);
+    const qs   = t.trip_number ? queueMap[t.trip_number] : null;
+    const st50 = dest?.trip_station_status === 50;
+    const st60 = dest?.trip_station_status === 60;
+    const stPill = st60
+      ? `<span class="pill p-green">Descarregando</span>`
+      : st50
+      ? `<span class="pill p-amber">Em Trânsito</span>`
+      : `<span class="pill p-muted">—</span>`;
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--violet)">${t.trip_number||'—'}</td>
+      <td style="font-family:monospace;font-weight:600">${t.vehicle_number||qs?.vehicle_number||'—'}</td>
+      <td>${t.driver_name||qs?.driver_name||'—'}</td>
+      <td style="text-align:center;font-family:monospace;font-weight:600">${n(t.order_quantity)}</td>
+      <td style="text-align:center;font-family:monospace;color:var(--green)">${n(t.unload_quantity||0)}</td>
+      <td>${stPill}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="6" class="empty-state">Nenhuma viagem encontrada</td></tr>`;
+
+  document.getElementById('view-transbordo').innerHTML = `
+    <div class="view-title-row">
+      <div><div class="view-title">Transbordo</div><div class="view-sub">Operações de transshipment — viagens ativas</div></div>
+    </div>
+    <div class="stat-row c4">
+      <div class="stat-card"><div class="stat-label">Viagens Ativas</div><div class="stat-value" style="color:var(--violet)">${n(live.length)}</div></div>
+      <div class="stat-card"><div class="stat-label">Em Trânsito</div><div class="stat-value" style="color:${inTransit.length?'var(--amber)':'var(--text)'}">${n(inTransit.length)}</div></div>
+      <div class="stat-card"><div class="stat-label">Total de Pacotes</div><div class="stat-value">${n(totalPkgs)}</div></div>
+      <div class="stat-card"><div class="stat-label">Pkgs Recebidos</div><div class="stat-value" style="color:var(--green)">${n(recvPkgs)}</div></div>
+    </div>
+    <div class="toolbar">
+      <div class="filter-tabs">${tabs}</div>
+      <div class="search-box" style="max-width:220px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" placeholder="Buscar viagem, placa..." oninput="searchQ.transbordo=this.value;renderTransbordo(window._transbData)" value="${searchQ.transbordo}">
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${sorted.length} viagem${sorted.length!==1?'ns':''}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Nº Viagem</th><th>Placa</th><th>Motorista</th>
+          <th style="text-align:center">Pkgs Total</th>
+          <th style="text-align:center">Recebidos</th>
+          <th>Status</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+// ═════════════════════════════════════════════════
+// INIT
+// ═════════════════════════════════════════════════
+(function init() {
+  loadHome();
+  startCountdown();
+  document.getElementById('countdownBar').style.display = 'block';
+})();
+</script>
+</body>
+</html>

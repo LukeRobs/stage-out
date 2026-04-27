@@ -1054,6 +1054,71 @@
       return;
     }
 
+    // ── Normalized module helpers ─────────────────────────────────────────
+    function moduleWrap(name, cache) {
+      if (!cache) return { module: name, updatedAt: null, data: null };
+      return { module: name, updatedAt: cache.fetchedAt || new Date().toISOString(), data: cache };
+    }
+
+    // GET /api/packing — normalized alias for tos-packing
+    if (urlPath === '/api/packing') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(moduleWrap('packing', toPackingCache)));
+      return;
+    }
+
+    // GET /api/packed — normalized alias for tos-packed
+    if (urlPath === '/api/packed') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(moduleWrap('packed', toPackedCache)));
+      return;
+    }
+
+    // GET /api/inbound — normalized alias for queue
+    if (urlPath === '/api/inbound') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(moduleWrap('inbound', queueCache)));
+      return;
+    }
+
+    // GET /api/transbordo — normalized alias combining trip-history + live trips + queue
+    if (urlPath === '/api/transbordo') {
+      const combined = {
+        list:      tripHistoryCache.list || [],
+        liveTrips: tripCache?.list        || [],
+        queue:     queueCache?.list       || [],
+        fetchedAt: tripHistoryCache.fetchedAt,
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(moduleWrap('transbordo', combined)));
+      return;
+    }
+
+    // GET /api/dashboard — single consolidated snapshot of all modules
+    if (urlPath === '/api/dashboard') {
+      const transbData = {
+        list:      tripHistoryCache.list || [],
+        liveTrips: tripCache?.list        || [],
+        queue:     queueCache?.list       || [],
+        fetchedAt: tripHistoryCache.fetchedAt,
+      };
+      const dashboard = {
+        module:    'dashboard',
+        updatedAt: new Date().toISOString(),
+        data: {
+          stageOut:   moduleWrap('stage_out',   stageCache),
+          packing:    moduleWrap('packing',      toPackingCache),
+          packed:     moduleWrap('packed',       toPackedCache),
+          stageIn:    moduleWrap('stage_in',     stageInCache),
+          inbound:    moduleWrap('inbound',      queueCache),
+          transbordo: moduleWrap('transbordo',   transbData),
+        },
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(dashboard));
+      return;
+    }
+
     let filePath = path.join(__dirname, urlPath === '/' ? 'dashboard.html' : urlPath);
     if (!filePath.startsWith(__dirname)) { res.writeHead(403); res.end('Forbidden'); return; }
 
