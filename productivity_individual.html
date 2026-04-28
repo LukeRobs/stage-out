@@ -127,10 +127,8 @@ table.main-t tbody tr:hover td{background:rgba(255,255,255,.025)}
 [data-theme="light"] table.main-t tbody tr:hover td{background:rgba(0,0,0,.025)}
 
 /* Row states */
-table.main-t tbody tr.row-problema td{background:rgba(239,68,68,.05);border-left:3px solid var(--red)}
-table.main-t tbody tr.row-anomalia td{background:rgba(139,92,246,.05);border-left:3px solid var(--purple)}
-table.main-t tbody tr.row-problema:hover td{background:rgba(239,68,68,.09)}
-table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.09)}
+table.main-t tbody tr.row-anomalia td:first-child{border-left:2px solid var(--purple)}
+table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.05)}
 
 /* ── Rank ── */
 .rank{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;min-width:24px;display:inline-block;text-align:right;color:var(--muted)}
