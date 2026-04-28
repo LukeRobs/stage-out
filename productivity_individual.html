@@ -400,7 +400,7 @@ table.hm-t th.hm-active{color:var(--blue)}
   <div class="heatmap-section" id="heatmapSection" style="display:none">
     <div class="heatmap-header">
       <span class="sec-title">Heatmap · Itens/hora por Operador</span>
-      <span class="sec-hint">Top 25 operadores · uma célula = média ponderada da hora</span>
+      <span class="sec-hint" id="hmHint">— operadores · uma célula = média ponderada da hora</span>
     </div>
     <div class="heatmap-wrap">
       <table class="hm-t" id="hmTable">
@@ -743,7 +743,8 @@ function buildHeatmap() {
       opMap[o.id].max = Math.max(opMap[o.id].max, o.prod);
     });
   });
-  const top = Object.values(opMap).sort((a,b) => b.max - a.max).slice(0,25);
+  const top = Object.values(opMap).filter(o => o.max > 0).sort((a,b) => b.max - a.max);
+  document.getElementById('hmHint').textContent = `${top.length} operadores · uma célula = média ponderada da hora`;
 
   // Build lookup
   const lk = {};
