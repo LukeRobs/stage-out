@@ -439,6 +439,7 @@
   let tripCache         = null; // { list, fetchedAt } — trip list v2
   let tripHistoryCache  = { list: [], fetchedAt: null }; // { list, fetchedAt } — trip history (last 7 days)
   let workstationCache  = null; // { workstations, operators, startTime, endTime, fetchedAt }
+  let prodIndividualCache = {}; // hora_key → { hora, records, total, start_time, end_time, fetchedAt }
 
   function buildHourlyRows() {
     if (!workstationCache) return [];
@@ -1116,6 +1117,43 @@
       };
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify(dashboard));
+      return;
+    }
+
+    // POST /api/productivity-individual-data — receives hourly operator data from Tampermonkey
+    if (urlPath === '/api/productivity-individual-data' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const payload = JSON.parse(body);
+          const key = payload.hora;
+          if (!key) throw new Error('Missing hora field');
+          prodIndividualCache[key] = payload;
+          // Keep only last 24 hours
+          const keys = Object.keys(prodIndividualCache).sort();
+          if (keys.length > 24) keys.slice(0, keys.length - 24).forEach(k => delete prodIndividualCache[k]);
+          console.log(`[prod-individual] ${key}: ${payload.records?.length} registros`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/productivity-individual — serves per-hour operator productivity to dashboard
+    if (urlPath === '/api/productivity-individual') {
+      const keys = Object.keys(prodIndividualCache);
+      if (!keys.length) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ hours: prodIndividualCache }));
       return;
     }
 

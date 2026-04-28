@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Produtividade Individual</title>
+<style>
+:root {
+  --bg:#0d0f14; --surface:#161920; --surface2:#1e2130;
+  --border:#2a2d3e; --border2:#353849;
+  --text:#e2e8f0; --muted:#6b7280;
+  --green:#22c55e; --yellow:#f59e0b; --orange:#ee4d2d;
+  --red:#ef4444; --blue:#3b82f6; --purple:#8b5cf6;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;min-height:100vh;padding-bottom:36px}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:8px}
+.header-left{display:flex;align-items:center;gap:12px}
+.header-title{font-size:15px;font-weight:700}
+.header-sub{font-size:11px;color:var(--muted)}
+.header-right{display:flex;align-items:center;gap:10px}
+.btn{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:11px;white-space:nowrap}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Content ── */
+.content{padding:16px 20px;max-width:1440px;margin:0 auto}
+
+/* ── KPI grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:5px}
+.kpi-val{font-size:24px;font-weight:700;line-height:1.1}
+.kpi-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.kpi-card.accent-blue{border-top:2px solid var(--blue)}
+.kpi-card.accent-green{border-top:2px solid var(--green)}
+.kpi-card.accent-yellow{border-top:2px solid var(--yellow)}
+.kpi-card.accent-red{border-top:2px solid var(--red)}
+.kpi-card.accent-purple{border-top:2px solid var(--purple)}
+
+/* ── Hour tabs ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.hour-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.hour-tab{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--muted);cursor:pointer;font-size:11px;font-weight:600;font-family:monospace;transition:.15s}
+.hour-tab:hover{border-color:var(--blue);color:var(--blue)}
+.hour-tab.active{background:var(--blue);color:#fff;border-color:transparent}
+.filter-group{display:flex;align-items:center;gap:8px}
+.filter-label{font-size:10px;color:var(--muted)}
+.toggle-outlier{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--muted)}
+.toggle-outlier input{cursor:pointer;accent-color:var(--blue)}
+.table-count{font-size:11px;color:var(--muted)}
+
+/* ── Section title ── */
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
+
+/* ── Main table ── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px}
+table.main-table{width:100%;border-collapse:collapse}
+table.main-table th{background:var(--surface2);padding:8px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+table.main-table th:hover{color:var(--text)}
+table.main-table th.sorted{color:var(--text)}
+table.main-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.main-table tr:last-child > td{border-bottom:none}
+table.main-table tr:hover > td{background:rgba(255,255,255,.02)}
+.sa{font-size:9px;margin-left:2px}
+.rank-num{font-size:10px;color:var(--muted);font-weight:700;font-family:monospace;min-width:22px;display:inline-block;text-align:right}
+.rank-1{color:var(--yellow)} .rank-2{color:#a0a0a0} .rank-3{color:#cd7f32}
+.op-name{font-weight:600}
+.op-id{font-size:10px;color:var(--muted);font-family:monospace}
+
+/* ── Classification pills ── */
+.cls-pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.cls-bom{background:rgba(34,197,94,.15);color:var(--green)}
+.cls-ok{background:rgba(245,158,11,.15);color:var(--yellow)}
+.cls-ruim{background:rgba(239,68,68,.15);color:var(--red)}
+
+/* ── Outlier badge ── */
+.outlier-badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:700;background:rgba(139,92,246,.15);color:var(--purple);letter-spacing:.2px}
+
+/* ── Prod bar ── */
+.prod-bar-wrap{display:flex;align-items:center;gap:7px}
+.prod-bar{flex:1;min-width:60px;height:4px;background:var(--border);border-radius:3px;overflow:hidden}
+.prod-fill{height:100%;border-radius:3px;transition:width .3s}
+.prod-fill.bom{background:var(--green)}
+.prod-fill.ok{background:var(--yellow)}
+.prod-fill.ruim{background:var(--red)}
+.prod-num{font-family:monospace;font-size:12px;font-weight:700;min-width:42px;text-align:right}
+
+/* ── Two-col ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.panel-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700;margin-bottom:12px}
+
+/* ── Distribution ── */
+.dist-bar-wrap{display:flex;height:20px;border-radius:6px;overflow:hidden;margin-bottom:12px;gap:2px}
+.dist-seg{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;transition:width .4s;min-width:0}
+.dist-seg.bom{background:rgba(34,197,94,.35);color:var(--green)}
+.dist-seg.ok{background:rgba(245,158,11,.35);color:var(--yellow)}
+.dist-seg.ruim{background:rgba(239,68,68,.35);color:var(--red)}
+.dist-legend{display:flex;gap:16px;font-size:11px}
+.dist-item{display:flex;align-items:center;gap:5px}
+.dist-dot{width:8px;height:8px;border-radius:50%}
+
+/* ── Heatmap ── */
+.heatmap-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;margin-bottom:14px;max-height:400px}
+.heatmap-table{border-collapse:collapse;font-size:11px;width:100%}
+.heatmap-table th{background:var(--surface2);padding:7px 10px;text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);position:sticky;top:0;white-space:nowrap}
+.heatmap-table th:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--surface2)}
+.heatmap-table td{padding:5px 8px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;font-family:monospace;font-size:10px;font-weight:600;white-space:nowrap}
+.heatmap-table td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);z-index:1;font-family:inherit;font-size:11px;font-weight:600;padding:5px 10px;border-right:1px solid var(--border2);min-width:160px}
+.heatmap-table tr:last-child td{border-bottom:none}
+.hm-bom{background:rgba(34,197,94,.22);color:var(--green)}
+.hm-ok{background:rgba(245,158,11,.2);color:var(--yellow)}
+.hm-ruim{background:rgba(239,68,68,.2);color:var(--red)}
+.hm-empty{background:transparent;color:var(--border2)}
+
+/* ── Alerts ── */
+.alert-list{display:flex;flex-direction:column;gap:7px}
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;font-size:11px}
+.alert-item.problema{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2)}
+.alert-item.distorcao{background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.2)}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.alert-body{flex:1}
+.alert-name{font-weight:700;margin-bottom:2px}
+.alert-meta{color:var(--muted);line-height:1.5}
+
+/* ── Status bar ── */
+.status-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:4px 20px;font-size:10px;color:var(--muted);display:flex;gap:20px;z-index:50}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.status-dot.ok{background:var(--green)} .status-dot.warn{background:var(--yellow)} .status-dot.err{background:var(--red)}
+
+.empty-msg{text-align:center;padding:40px;color:var(--muted);font-size:12px}
+.wh-pill{font-family:monospace;font-size:11px;color:var(--muted)}
+
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <div class="header-title">👷 Produtividade Individual</div>
+      <div class="header-sub" id="headerSub">Carregando...</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="loadingSpinner" style="display:none"><span class="spinner"></span></span>
+    <span id="lastUpdate" style="font-size:10px;color:var(--muted)"></span>
+    <button class="btn" id="refreshBtn" onclick="loadData()">↺ Atualizar</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- KPI row -->
+  <div class="kpi-grid">
+    <div class="kpi-card accent-blue">
+      <div class="kpi-label">Operadores</div>
+      <div class="kpi-val" id="kpiTotal">—</div>
+      <div class="kpi-sub">com wh ≥ 0.5</div>
+    </div>
+    <div class="kpi-card accent-green">
+      <div class="kpi-label">🟢 Bom</div>
+      <div class="kpi-val" id="kpiBom">—</div>
+      <div class="kpi-sub" id="kpiBomPct">prod > 500</div>
+    </div>
+    <div class="kpi-card accent-yellow">
+      <div class="kpi-label">🟡 OK</div>
+      <div class="kpi-val" id="kpiOk">—</div>
+      <div class="kpi-sub" id="kpiOkPct">200 – 500</div>
+    </div>
+    <div class="kpi-card accent-red">
+      <div class="kpi-label">🔴 Ruim</div>
+      <div class="kpi-val" id="kpiRuim">—</div>
+      <div class="kpi-sub" id="kpiRuimPct">prod < 200</div>
+    </div>
+    <div class="kpi-card accent-purple">
+      <div class="kpi-label">Outliers</div>
+      <div class="kpi-val" id="kpiOutliers">—</div>
+      <div class="kpi-sub">prod>800 ou wh&lt;0.5</div>
+    </div>
+  </div>
+
+  <!-- Hour selector + toggle -->
+  <div class="toolbar">
+    <div class="hour-tabs" id="hourTabs">
+      <span style="font-size:11px;color:var(--muted)">Aguardando dados...</span>
+    </div>
+    <div class="filter-group">
+      <label class="toggle-outlier">
+        <input type="checkbox" id="chkRankingFilter" checked>
+        <span>Ranking: wh ≥ 0.5</span>
+      </label>
+      <label class="toggle-outlier" style="margin-left:6px">
+        <input type="checkbox" id="chkShowAll">
+        <span>Mostrar todos (incl. excluídos)</span>
+      </label>
+      <span class="table-count" id="tableCount"></span>
+    </div>
+  </div>
+
+  <!-- Main ranking table -->
+  <div class="table-wrap">
+    <table class="main-table" id="rankingTable">
+      <thead>
+        <tr>
+          <th style="width:36px;cursor:default">#</th>
+          <th data-col="op_name">Operador <span class="sa"></span></th>
+          <th data-col="wh" style="text-align:center">Horas <span class="sa"></span></th>
+          <th data-col="tp" style="text-align:center">Throughput <span class="sa"></span></th>
+          <th data-col="prod">Prod/h <span class="sa"></span></th>
+          <th data-col="classe" style="text-align:center">Status <span class="sa"></span></th>
+          <th style="text-align:center;cursor:default">Outlier</th>
+        </tr>
+      </thead>
+      <tbody id="rankBody">
+        <tr><td colspan="7" class="empty-msg">Aguardando dados do Tampermonkey...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Distribution + Alerts -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-title">Distribuição — hora selecionada</div>
+      <div class="dist-bar-wrap" id="distBar">
+        <div class="dist-seg bom" style="width:0%"></div>
+        <div class="dist-seg ok" style="width:0%"></div>
+        <div class="dist-seg ruim" style="width:0%"></div>
+      </div>
+      <div class="dist-legend">
+        <div class="dist-item"><div class="dist-dot" style="background:var(--green)"></div><span id="legBom">Bom: —</span></div>
+        <div class="dist-item"><div class="dist-dot" style="background:var(--yellow)"></div><span id="legOk">OK: —</span></div>
+        <div class="dist-item"><div class="dist-dot" style="background:var(--red)"></div><span id="legRuim">Ruim: —</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🚨 Alertas — hora selecionada</div>
+      <div class="alert-list" id="alertList">
+        <div class="empty-msg" style="padding:16px">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Heatmap (multi-hour) -->
+  <div id="heatmapSection" style="display:none">
+    <div class="section-hdr">
+      <div class="section-title">Heatmap · Produtividade por Hora</div>
+      <span style="font-size:10px;color:var(--muted)">Top 25 operadores · média ponderada</span>
+    </div>
+    <div class="heatmap-wrap">
+      <table class="heatmap-table" id="heatmapTable">
+        <thead id="heatmapHead"></thead>
+        <tbody id="heatmapBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span><span class="status-dot" id="statusDot"></span><span id="statusText">—</span></span>
+  <span id="statusHora"></span>
+  <span id="statusTotal"></span>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────
+const BASE_URL    = '';
+const REFRESH_INT = 60_000;
+const MAX_PROD    = 800; // bar reference
+
+// ── State ────────────────────────────────────────────────────────────────
+let allHours    = {};   // hora_key → { records, fetchedAt, hora, start_time, end_time }
+let activeHora  = null;
+let processed   = {};   // hora_key → processed[] (after filter+group)
+let sortCol     = 'prod';
+let sortAsc     = false;
+
+// ── Processing pipeline ───────────────────────────────────────────────────
+function parseOps(ops) {
+  const m = ops.match(/^\[(\w+)\](.*)/);
+  if (!m) return { op_id: ops, op_name: ops };
+  return { op_id: m[1], op_name: m[2].trim() };
+}
+
+function processRecords(records, showAll = false) {
+  const groups = {};
+
+  for (const r of records) {
+    const { op_id, op_name } = parseOps(r.ops || '');
+    const wh = r.working_hours    ?? 0;
+    const tp = r.total_throughput ?? 0;
+
+    if (!showAll) {
+      if (wh === 0)            continue;  // wh = 0
+      if (wh < 0.3)            continue;  // wh < 0.3
+      if (tp === 0 && wh > 0)  continue;  // inatividade
+    }
+
+    if (!groups[op_id]) groups[op_id] = { op_id, op_name, wh: 0, tp: 0, rows: 0 };
+    groups[op_id].wh   += wh;
+    groups[op_id].tp   += tp;
+    groups[op_id].rows++;
+    if (wh === 0) groups[op_id].excluded_wh0 = true;
+  }
+
+  return Object.values(groups).map(g => {
+    const prod       = g.wh > 0 ? Math.round(g.tp / g.wh) : 0;
+    const classe     = prod < 200 ? 'Ruim' : prod <= 500 ? 'OK' : 'Bom';
+    const is_outlier = prod > 800 || g.wh < 0.5;
+    return { ...g, wh: +g.wh.toFixed(2), prod, classe, is_outlier };
+  }).sort((a, b) => b.prod - a.prod);
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────
+async function loadData() {
+  setLoading(true);
+  try {
+    const res  = await fetch(`${BASE_URL}/api/productivity-individual`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    allHours = data.hours || {};
+    const keys = Object.keys(allHours).sort();
+    if (!keys.length) throw new Error('Sem dados');
+
+    // Pre-process each hour
+    const showAll = document.getElementById('chkShowAll').checked;
+    processed = {};
+    keys.forEach(k => { processed[k] = processRecords(allHours[k].records || [], showAll); });
+
+    // Default to most recent hour
+    if (!activeHora || !allHours[activeHora]) activeHora = keys[keys.length - 1];
+
+    buildHourTabs(keys);
+    render();
+    setStatus('ok', keys);
+  } catch (e) {
+    setStatus('err', null, e.message);
+    console.error('[ProdInd]', e);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────
+function buildHourTabs(keys) {
+  const container = document.getElementById('hourTabs');
+  container.innerHTML = keys.map(k => {
+    const label = k.split(' ')[1] || k; // "13:00"
+    const active = k === activeHora ? 'active' : '';
+    return `<button class="hour-tab ${active}" data-hora="${k}" onclick="selectHora('${k}')">${label}</button>`;
+  }).join('');
+}
+
+function selectHora(hora) {
+  activeHora = hora;
+  document.querySelectorAll('.hour-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.hora === hora);
+  });
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  if (!activeHora || !processed[activeHora]) return;
+
+  const all     = processed[activeHora];
+  const rankingFilter = document.getElementById('chkRankingFilter').checked;
+  const ranking = rankingFilter ? all.filter(o => o.wh >= 0.5) : all;
+
+  buildKPIs(all, ranking);
+  buildTable(ranking);
+  buildDistribution(all);
+  buildAlerts(all);
+  buildHeatmap();
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────────────
+function buildKPIs(all, ranking) {
+  const bom    = all.filter(o => o.classe === 'Bom').length;
+  const ok     = all.filter(o => o.classe === 'OK').length;
+  const ruim   = all.filter(o => o.classe === 'Ruim').length;
+  const total  = all.length;
+  const out    = all.filter(o => o.is_outlier).length;
+
+  document.getElementById('kpiTotal').textContent   = ranking.length;
+  document.getElementById('kpiBom').textContent     = bom;
+  document.getElementById('kpiBomPct').textContent  = `${pct(bom, total)}% de ${total}`;
+  document.getElementById('kpiOk').textContent      = ok;
+  document.getElementById('kpiOkPct').textContent   = `${pct(ok, total)}% de ${total}`;
+  document.getElementById('kpiRuim').textContent    = ruim;
+  document.getElementById('kpiRuimPct').textContent = `${pct(ruim, total)}% de ${total}`;
+  document.getElementById('kpiOutliers').textContent = out;
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────
+function buildTable(rows) {
+  // Sort
+  const sorted = [...rows].sort((a, b) => {
+    const va = a[sortCol], vb = b[sortCol];
+    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  // Update sort headers
+  document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.col === sortCol);
+    const sa = th.querySelector('.sa');
+    if (sa) sa.textContent = th.dataset.col === sortCol ? (sortAsc ? '▲' : '▼') : '';
+  });
+
+  document.getElementById('tableCount').textContent = `${sorted.length} operadores`;
+
+  if (!sorted.length) {
+    document.getElementById('rankBody').innerHTML = `<tr><td colspan="7" class="empty-msg">Nenhum operador nesta hora</td></tr>`;
+    return;
+  }
+
+  document.getElementById('rankBody').innerHTML = sorted.map((o, i) => {
+    const rank     = i + 1;
+    const rankCls  = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+    const clsPill  = `<span class="cls-pill cls-${o.classe.toLowerCase()}">${o.classe}</span>`;
+    const outBadge = o.is_outlier ? `<span class="outlier-badge">Outlier</span>` : '—';
+    const barPct   = Math.min(100, Math.round(o.prod / MAX_PROD * 100));
+    const barCls   = o.classe.toLowerCase();
+
+    return `
+      <tr>
+        <td><span class="rank-num ${rankCls}">${rank}</span></td>
+        <td>
+          <div class="op-name">${escHtml(o.op_name)}</div>
+          <div class="op-id">${o.op_id}</div>
+        </td>
+        <td style="text-align:center"><span class="wh-pill">${o.wh.toFixed(2)}</span></td>
+        <td style="text-align:center;font-family:monospace;font-weight:600">${o.tp.toLocaleString('pt-BR')}</td>
+        <td>
+          <div class="prod-bar-wrap">
+            <div class="prod-bar"><div class="prod-fill ${barCls}" style="width:${barPct}%"></div></div>
+            <span class="prod-num">${o.prod}</span>
+          </div>
+        </td>
+        <td style="text-align:center">${clsPill}</td>
+        <td style="text-align:center">${outBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Distribution ─────────────────────────────────────────────────────────
+function buildDistribution(all) {
+  const total = all.length || 1;
+  const bom   = all.filter(o => o.classe === 'Bom').length;
+  const ok    = all.filter(o => o.classe === 'OK').length;
+  const ruim  = all.filter(o => o.classe === 'Ruim').length;
+
+  const segs = document.querySelectorAll('#distBar .dist-seg');
+  segs[0].style.width = `${pct(bom, total)}%`;
+  segs[0].textContent = bom > 0 ? `${pct(bom, total)}%` : '';
+  segs[1].style.width = `${pct(ok, total)}%`;
+  segs[1].textContent = ok > 0 ? `${pct(ok, total)}%` : '';
+  segs[2].style.width = `${pct(ruim, total)}%`;
+  segs[2].textContent = ruim > 0 ? `${pct(ruim, total)}%` : '';
+
+  document.getElementById('legBom').textContent  = `Bom: ${bom} (${pct(bom, total)}%)`;
+  document.getElementById('legOk').textContent   = `OK: ${ok} (${pct(ok, total)}%)`;
+  document.getElementById('legRuim').textContent = `Ruim: ${ruim} (${pct(ruim, total)}%)`;
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────
+function buildAlerts(all) {
+  const alerts = [];
+
+  // Problema real: baixa prod + alto tempo
+  all.filter(o => o.classe === 'Ruim' && o.wh >= 0.5).forEach(o => {
+    alerts.push({
+      type : 'problema',
+      icon : '🚨',
+      name : o.op_name,
+      meta : `Prod: ${o.prod} · wh: ${o.wh.toFixed(2)} · ${o.op_id} — baixa produtividade com tempo alto`,
+    });
+  });
+
+  // Distorção: alta prod + baixo tempo
+  all.filter(o => o.prod > 500 && o.wh < 0.5).forEach(o => {
+    alerts.push({
+      type : 'distorcao',
+      icon : '⚠️',
+      name : o.op_name,
+      meta : `Prod: ${o.prod} · wh: ${o.wh.toFixed(2)} · ${o.op_id} — alta produtividade com tempo baixo`,
+    });
+  });
+
+  const el = document.getElementById('alertList');
+  if (!alerts.length) {
+    el.innerHTML = `<div class="empty-msg" style="padding:16px;font-size:11px">Nenhum alerta nesta hora ✓</div>`;
+    return;
+  }
+  el.innerHTML = alerts.map(a => `
+    <div class="alert-item ${a.type}">
+      <span class="alert-icon">${a.icon}</span>
+      <div class="alert-body">
+        <div class="alert-name">${escHtml(a.name)}</div>
+        <div class="alert-meta">${a.meta}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Heatmap ───────────────────────────────────────────────────────────────
+function buildHeatmap() {
+  const hours = Object.keys(allHours).sort();
+  if (hours.length < 2) {
+    document.getElementById('heatmapSection').style.display = 'none';
+    return;
+  }
+  document.getElementById('heatmapSection').style.display = '';
+
+  // Collect top 25 operators by max productivity across hours
+  const opMap = {};
+  hours.forEach(h => {
+    (processed[h] || []).forEach(o => {
+      if (!opMap[o.op_id]) opMap[o.op_id] = { op_id: o.op_id, op_name: o.op_name, maxProd: 0 };
+      opMap[o.op_id].maxProd = Math.max(opMap[o.op_id].maxProd, o.prod);
+    });
+  });
+  const topOps = Object.values(opMap)
+    .sort((a, b) => b.maxProd - a.maxProd)
+    .slice(0, 25);
+
+  // Build lookup: hora → op_id → operator data
+  const lookup = {};
+  hours.forEach(h => {
+    lookup[h] = {};
+    (processed[h] || []).forEach(o => { lookup[h][o.op_id] = o; });
+  });
+
+  // Header
+  const hourLabels = hours.map(h => h.split(' ')[1] || h);
+  document.getElementById('heatmapHead').innerHTML = `
+    <tr>
+      <th>Operador</th>
+      ${hourLabels.map((l, i) => `<th class="${hours[i] === activeHora ? 'sorted' : ''}">${l}</th>`).join('')}
+    </tr>
+  `;
+
+  // Rows
+  document.getElementById('heatmapBody').innerHTML = topOps.map(op => {
+    const cells = hours.map(h => {
+      const o = lookup[h][op.op_id];
+      if (!o) return `<td class="hm-empty">—</td>`;
+      const cls = `hm-${o.classe.toLowerCase()}`;
+      return `<td class="${cls}" title="${op.op_name}: prod=${o.prod} wh=${o.wh}">${o.prod}</td>`;
+    }).join('');
+    return `<tr><td>${escHtml(op.op_name)}</td>${cells}</tr>`;
+  }).join('');
+}
+
+// ── Sort ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = col === 'op_name'; }
+    if (activeHora && processed[activeHora]) {
+      const rankingFilter = document.getElementById('chkRankingFilter').checked;
+      buildTable(rankingFilter ? processed[activeHora].filter(o => o.wh >= 0.5) : processed[activeHora]);
+    }
+  });
+});
+
+// ── Filters ───────────────────────────────────────────────────────────────
+document.getElementById('chkRankingFilter').addEventListener('change', render);
+document.getElementById('chkShowAll').addEventListener('change', () => {
+  // Reprocess with/without showAll flag
+  const showAll = document.getElementById('chkShowAll').checked;
+  const keys = Object.keys(allHours).sort();
+  processed = {};
+  keys.forEach(k => { processed[k] = processRecords(allHours[k].records || [], showAll); });
+  render();
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function pct(n, total) { return total > 0 ? Math.round(n / total * 100) : 0; }
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setLoading(on) {
+  document.getElementById('loadingSpinner').style.display = on ? '' : 'none';
+  document.getElementById('refreshBtn').disabled = on;
+}
+
+function setStatus(state, keys, msg) {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const hora = document.getElementById('statusHora');
+  const tot  = document.getElementById('statusTotal');
+
+  dot.className = `status-dot ${state}`;
+
+  if (state === 'ok' && keys) {
+    const last   = allHours[activeHora];
+    const at     = last?.fetchedAt ? new Date(last.fetchedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : '—';
+    text.textContent = `Atualizado ${at}`;
+    hora.textContent = `Hora ativa: ${activeHora}`;
+    tot.textContent  = `${keys.length} hora(s) disponível(is)`;
+    document.getElementById('headerSub').textContent = `${activeHora} · ${(processed[activeHora]||[]).length} operadores`;
+    document.getElementById('lastUpdate').textContent = at;
+  } else if (state === 'err') {
+    text.textContent = `Erro: ${msg}`;
+    hora.textContent = '';
+    tot.textContent  = '';
+    document.getElementById('headerSub').textContent = 'Erro ao carregar dados';
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+loadData();
+setInterval(loadData, REFRESH_INT);
+</script>
+
+</body>
+</html>
