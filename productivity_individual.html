@@ -581,11 +581,23 @@ function buildKPIs(all, view) {
     prodHoraLabel = 'itens · operadores filtrados';
   }
 
-  // Produção do dia — soma todos os timestamps do timelist
+  // Produção do dia — janela de turno: 06:00 hoje → 05:00 amanhã
+  // Se agora < 06:00, turno começou ontem às 06:00
+  function shiftWindow() {
+    const now = new Date();
+    const d   = new Date(now);
+    if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+    d.setHours(6, 0, 0, 0);
+    const start = Math.floor(d.getTime() / 1000);
+    const end   = start + 23 * 3600; // 06:00 → 05:00 = 23h
+    return { start, end };
+  }
+  const { start: shiftStart, end: shiftEnd } = shiftWindow();
   let prodDia = 0, prodDiaLabel;
   if (timelist.length) {
-    prodDia = timelist.reduce((s, t) => s + (t.total || 0), 0);
-    prodDiaLabel = `itens reais · ${timelist.length} hora${timelist.length !== 1 ? 's' : ''}`;
+    const shiftList = timelist.filter(t => t.timestamp >= shiftStart && t.timestamp < shiftEnd);
+    prodDia = shiftList.reduce((s, t) => s + (t.total || 0), 0);
+    prodDiaLabel = `itens reais · ${shiftList.length} hora${shiftList.length !== 1 ? 's' : ''}`;
   } else {
     prodDia = Object.values(processed).reduce((s, ops) => s + ops.reduce((ss, o) => ss + o.tp, 0), 0);
     const nH = Object.keys(processed).length;
