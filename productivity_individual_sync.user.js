@@ -18,7 +18,8 @@
   const ACTIVITY_TYPE  = 12;
   const PAGE_SIZE      = 50;
 
-  const HOURS_BACK = 3; // hora atual + 2 anteriores
+  // Cache de horas completas já enviadas — não rebusca a cada sync
+  const doneHours = new Set();
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -26,23 +27,25 @@
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
   }
 
-  // Retorna array de janelas: [hora_atual, hora-1, hora-2, ...]
-  function getHourWindows() {
-    const now     = new Date();
-    const windows = [];
-    for (let i = 0; i < HOURS_BACK; i++) {
-      const start = new Date(now);
-      start.setMinutes(0, 0, 0);
-      start.setHours(start.getHours() - i);
-      // hora atual: end = agora; horas passadas: end = início da hora seguinte
-      const end = i === 0 ? new Date(now) : new Date(start.getTime() + 3600_000);
-      windows.push({
-        hora:       fmtHora(start),
-        start_time: Math.floor(start.getTime() / 1000),
-        end_time:   Math.floor(end.getTime()   / 1000),
-      });
-    }
-    return windows;
+  // Deriva janelas a partir do time_list (todas as horas com produção > 0)
+  function windowsFromTimelist(time_list) {
+    const now           = new Date();
+    const nowTs         = Math.floor(now.getTime() / 1000);
+    const curHourStart  = Math.floor(nowTs / 3600) * 3600;
+
+    return time_list
+      .filter(t => t.total > 0) // ignora horas sem produção
+      .map(t => {
+        const isCurrentHour = t.timestamp === curHourStart;
+        return {
+          hora:        fmtHora(new Date(t.timestamp * 1000)),
+          start_time:  t.timestamp,
+          end_time:    isCurrentHour ? nowTs : t.timestamp + 3600,
+          isCompleted: !isCurrentHour,
+        };
+      })
+      // Pula horas completas já enviadas (economiza chamadas de API)
+      .filter(w => !w.isCompleted || !doneHours.has(w.hora));
   }
 
   // Busca time_list do dashboard/list (totais reais por hora, todas atividades)
@@ -106,19 +109,22 @@
     dot.textContent      = '🔄 Prod...';
     dot.style.background = '#888';
     try {
-      // Busca time_list e janelas individuais em paralelo
-      const [time_list, windows] = await Promise.all([
-        fetchTimelist(),
-        Promise.resolve(getHourWindows()),
-      ]);
-
-      // Envia time_list (totais reais por hora)
+      const time_list = await fetchTimelist();
       sendTimelist(time_list);
 
-      // Envia dados por operador para cada janela
+      const windows = windowsFromTimelist(time_list);
+
       for (const w of windows) {
-        const { records, total } = await fetchAllRecords(w.start_time, w.end_time);
-        sendToServer({ ...w, records, total, fetchedAt: Date.now() }, w.hora);
+        const { records } = await fetchAllRecords(w.start_time, w.end_time);
+        sendToServer({
+          hora:       w.hora,
+          start_time: w.start_time,
+          end_time:   w.end_time,
+          records,
+          total:      records.length,
+          fetchedAt:  Date.now(),
+        }, w.hora);
+        if (w.isCompleted) doneHours.add(w.hora);
       }
 
       const at = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
