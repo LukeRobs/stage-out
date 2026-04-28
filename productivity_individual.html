@@ -114,7 +114,7 @@ button{font-family:var(--font);cursor:pointer}
 .tcount{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 
 /* ── Table ── */
-.table-wrap{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;box-shadow:var(--shadow)}
+.table-wrap{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);overflow:clip;margin-bottom:14px;box-shadow:var(--shadow)}
 table.main-t{width:100%;border-collapse:collapse}
 table.main-t thead{position:sticky;top:56px;z-index:10}
 table.main-t th{background:var(--surf3);padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s}
@@ -176,14 +176,18 @@ table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.09)}
 .panel-title{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;margin-bottom:14px}
 
 /* ── Distribution ── */
-.dist-bar{display:flex;height:28px;border-radius:8px;overflow:hidden;gap:2px;margin-bottom:12px}
-.dist-seg{display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border-radius:4px;transition:width .5s ease;min-width:0;overflow:hidden;white-space:nowrap}
-.dist-seg.bom{background:var(--green-bg);color:var(--green)}
-.dist-seg.ok{background:var(--yellow-bg);color:var(--yellow)}
-.dist-seg.ruim{background:var(--red-bg);color:var(--red)}
-.dist-legend{display:flex;gap:14px;flex-wrap:wrap}
-.dist-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
-.dist-swatch{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+.dist-rows{display:flex;flex-direction:column;gap:11px;padding:2px 0}
+.dist-row{display:grid;grid-template-columns:72px 1fr 36px 44px;align-items:center;gap:10px}
+.dist-lbl{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text)}
+.dist-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.dist-dot.bom{background:var(--green)}.dist-dot.ok{background:var(--yellow)}.dist-dot.ruim{background:var(--red)}
+.dist-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.dist-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.dist-fill.bom{background:var(--green)}.dist-fill.ok{background:var(--yellow)}.dist-fill.ruim{background:var(--red)}
+.dist-n{font-family:monospace;font-weight:700;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+.dist-p{font-size:11px;font-weight:700;text-align:right}
+.dist-p.bom{color:var(--green)}.dist-p.ok{color:var(--yellow)}.dist-p.ruim{color:var(--red)}
+.dist-total{font-size:10px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 
 /* ── Alerts ── */
 .alert-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto}
@@ -344,16 +348,27 @@ table.hm-t th.hm-active{color:var(--blue)}
   <div class="two-col">
     <div class="panel">
       <div class="panel-title">Distribuição — hora selecionada</div>
-      <div class="dist-bar" id="distBar">
-        <div class="dist-seg bom" style="flex:0 1 0%"></div>
-        <div class="dist-seg ok"  style="flex:0 1 0%"></div>
-        <div class="dist-seg ruim" style="flex:0 1 0%"></div>
+      <div class="dist-rows">
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot bom"></span>Bom</div>
+          <div class="dist-bar"><div class="dist-fill bom" id="dbarBom" style="width:0%"></div></div>
+          <span class="dist-n" id="dnBom">—</span>
+          <span class="dist-p bom" id="dpBom">—</span>
+        </div>
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot ok"></span>OK</div>
+          <div class="dist-bar"><div class="dist-fill ok" id="dbarOk" style="width:0%"></div></div>
+          <span class="dist-n" id="dnOk">—</span>
+          <span class="dist-p ok" id="dpOk">—</span>
+        </div>
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot ruim"></span>Ruim</div>
+          <div class="dist-bar"><div class="dist-fill ruim" id="dbarRuim" style="width:0%"></div></div>
+          <span class="dist-n" id="dnRuim">—</span>
+          <span class="dist-p ruim" id="dpRuim">—</span>
+        </div>
       </div>
-      <div class="dist-legend">
-        <div class="dist-item"><div class="dist-swatch" style="background:var(--green)"></div><span id="legBom">Bom: —</span></div>
-        <div class="dist-item"><div class="dist-swatch" style="background:var(--yellow)"></div><span id="legOk">OK: —</span></div>
-        <div class="dist-item"><div class="dist-swatch" style="background:var(--red)"></div><span id="legRuim">Ruim: —</span></div>
-      </div>
+      <div class="dist-total" id="distTotal"></div>
     </div>
     <div class="panel">
       <div class="panel-title">Alertas — hora selecionada</div>
@@ -591,18 +606,17 @@ function buildDistribution(all) {
   const ok   = all.filter(o => o.classe === 'OK').length;
   const ruim = all.filter(o => o.classe === 'Ruim').length;
 
-  const segs = document.querySelectorAll('#distBar .dist-seg');
-  const setS = (el, n) => {
+  const set = (barId, nId, pId, n) => {
     const p = pct(n, t);
-    el.style.flex = `0 1 ${p}%`;
-    el.textContent = p >= 8 ? `${p}%` : '';
-    el.title = `${p}% (${n})`;
+    document.getElementById(barId).style.width = `${p}%`;
+    document.getElementById(nId).textContent   = n;
+    document.getElementById(pId).textContent   = `${p}%`;
   };
-  setS(segs[0], bom); setS(segs[1], ok); setS(segs[2], ruim);
+  set('dbarBom',  'dnBom',  'dpBom',  bom);
+  set('dbarOk',   'dnOk',   'dpOk',   ok);
+  set('dbarRuim', 'dnRuim', 'dpRuim', ruim);
 
-  document.getElementById('legBom').textContent  = `Bom: ${bom} (${pct(bom,t)}%)`;
-  document.getElementById('legOk').textContent   = `OK: ${ok} (${pct(ok,t)}%)`;
-  document.getElementById('legRuim').textContent = `Ruim: ${ruim} (${pct(ruim,t)}%)`;
+  document.getElementById('distTotal').textContent = `Total: ${t} operadores na hora selecionada`;
 }
 
 // ── Alerts ────────────────────────────────────────────────────────────────

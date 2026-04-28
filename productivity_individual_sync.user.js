@@ -18,18 +18,31 @@
   const ACTIVITY_TYPE  = 12;
   const PAGE_SIZE      = 50;
 
+  const HOURS_BACK = 3; // hora atual + 2 anteriores
+
   function pad(n) { return String(n).padStart(2, '0'); }
 
-  function getCurrentHourWindow() {
-    const now   = new Date();
-    const start = new Date(now);
-    start.setMinutes(0, 0, 0);
-    const hora = `${start.getFullYear()}-${pad(start.getMonth()+1)}-${pad(start.getDate())} ${pad(start.getHours())}:00`;
-    return {
-      hora,
-      start_time: Math.floor(start.getTime() / 1000),
-      end_time:   Math.floor(now.getTime() / 1000),
-    };
+  function fmtHora(d) {
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
+  }
+
+  // Retorna array de janelas: [hora_atual, hora-1, hora-2, ...]
+  function getHourWindows() {
+    const now     = new Date();
+    const windows = [];
+    for (let i = 0; i < HOURS_BACK; i++) {
+      const start = new Date(now);
+      start.setMinutes(0, 0, 0);
+      start.setHours(start.getHours() - i);
+      // hora atual: end = agora; horas passadas: end = início da hora seguinte
+      const end = i === 0 ? new Date(now) : new Date(start.getTime() + 3600_000);
+      windows.push({
+        hora:       fmtHora(start),
+        start_time: Math.floor(start.getTime() / 1000),
+        end_time:   Math.floor(end.getTime()   / 1000),
+      });
+    }
+    return windows;
   }
 
   async function fetchAllRecords(start_time, end_time) {
@@ -48,24 +61,16 @@
     return { records: all, total: all.length };
   }
 
-  function sendToServer(payload) {
+  function sendToServer(payload, label) {
     GM_xmlhttpRequest({
       method  : 'POST',
       url     : SERVER_BASE + '/api/productivity-individual-data',
       headers : { 'Content-Type': 'application/json' },
       data    : JSON.stringify(payload),
       onload  : r => {
-        const ok = r.status === 200;
-        dot.textContent      = ok
-          ? `✅ Prod ${new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })}`
-          : `⚠️ Server ${r.status}`;
-        dot.style.background = ok ? '#2db55d' : '#cc7700';
-        console.log(`[ProdInd] ${payload.hora}: ${payload.records.length} registros → ${r.status}`);
+        console.log(`[ProdInd] ${label}: ${payload.records.length} reg → ${r.status}`);
       },
-      onerror : () => {
-        dot.textContent      = '❌ Server offline';
-        dot.style.background = '#cc0000';
-      },
+      onerror : () => console.warn(`[ProdInd] ${label}: server offline`),
     });
   }
 
@@ -73,9 +78,16 @@
     dot.textContent      = '🔄 Prod...';
     dot.style.background = '#888';
     try {
-      const { hora, start_time, end_time } = getCurrentHourWindow();
-      const { records, total }             = await fetchAllRecords(start_time, end_time);
-      sendToServer({ hora, start_time, end_time, records, total, fetchedAt: Date.now() });
+      const windows = getHourWindows();
+      let sent = 0;
+      for (const w of windows) {
+        const { records, total } = await fetchAllRecords(w.start_time, w.end_time);
+        sendToServer({ ...w, records, total, fetchedAt: Date.now() }, w.hora);
+        sent += records.length;
+      }
+      const at = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+      dot.textContent      = `✅ ${windows.length}h · ${at}`;
+      dot.style.background = '#2db55d';
     } catch (e) {
       dot.textContent      = '⚠️ Erro Prod';
       dot.style.background = '#cc7700';
