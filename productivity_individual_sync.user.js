@@ -45,6 +45,34 @@
     return windows;
   }
 
+  // Busca time_list do dashboard/list (totais reais por hora, todas atividades)
+  async function fetchTimelist() {
+    const res = await fetch('/api/wfm/admin/dashboard/list', {
+      method      : 'POST',
+      credentials : 'include',
+      headers     : { 'Content-Type': 'application/json' },
+      body        : JSON.stringify({
+        unit_type: 1, process_type: 2, period_type: 1,
+        operator_email: '', pageno: 1, count: 1,
+        event_id_list: [], order_by_total: 100, productivity: 1,
+      }),
+    });
+    const json = await res.json();
+    if (json.retcode !== 0) throw new Error(`dashboard/list retcode ${json.retcode}`);
+    return json.data.time_list || [];
+  }
+
+  function sendTimelist(time_list) {
+    GM_xmlhttpRequest({
+      method  : 'POST',
+      url     : SERVER_BASE + '/api/productivity-timelist',
+      headers : { 'Content-Type': 'application/json' },
+      data    : JSON.stringify({ time_list, fetchedAt: Date.now() }),
+      onload  : r => console.log(`[ProdInd] timelist: ${time_list.length} horas → ${r.status}`),
+      onerror : () => console.warn('[ProdInd] timelist: server offline'),
+    });
+  }
+
   async function fetchAllRecords(start_time, end_time) {
     let pageno = 1, all = [], total = null;
     while (true) {
@@ -78,13 +106,21 @@
     dot.textContent      = '🔄 Prod...';
     dot.style.background = '#888';
     try {
-      const windows = getHourWindows();
-      let sent = 0;
+      // Busca time_list e janelas individuais em paralelo
+      const [time_list, windows] = await Promise.all([
+        fetchTimelist(),
+        Promise.resolve(getHourWindows()),
+      ]);
+
+      // Envia time_list (totais reais por hora)
+      sendTimelist(time_list);
+
+      // Envia dados por operador para cada janela
       for (const w of windows) {
         const { records, total } = await fetchAllRecords(w.start_time, w.end_time);
         sendToServer({ ...w, records, total, fetchedAt: Date.now() }, w.hora);
-        sent += records.length;
       }
+
       const at = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
       dot.textContent      = `✅ ${windows.length}h · ${at}`;
       dot.style.background = '#2db55d';

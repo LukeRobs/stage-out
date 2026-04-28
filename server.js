@@ -440,6 +440,7 @@
   let tripHistoryCache  = { list: [], fetchedAt: null }; // { list, fetchedAt } — trip history (last 7 days)
   let workstationCache  = null; // { workstations, operators, startTime, endTime, fetchedAt }
   let prodIndividualCache = {}; // hora_key → { hora, records, total, start_time, end_time, fetchedAt }
+  let prodTimelistCache   = null; // { time_list: [{timestamp, total}], fetchedAt }
 
   function buildHourlyRows() {
     if (!workstationCache) return [];
@@ -1117,6 +1118,31 @@
       };
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify(dashboard));
+      return;
+    }
+
+    // POST /api/productivity-timelist — receives time_list from dashboard/list (authoritative hourly totals)
+    if (urlPath === '/api/productivity-timelist' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          prodTimelistCache = JSON.parse(body);
+          console.log(`[prod-timelist] ${prodTimelistCache.time_list?.length} horas`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/productivity-timelist
+    if (urlPath === '/api/productivity-timelist') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(prodTimelistCache || { time_list: [] }));
       return;
     }
 

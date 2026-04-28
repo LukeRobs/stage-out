@@ -427,6 +427,7 @@ const BAR_REF = 800; // prod value at 100% bar width
 // ── State ─────────────────────────────────────────────────────────────────
 let allHours   = {};
 let processed  = {};
+let timelist   = []; // [{timestamp, total}] from dashboard/list — authoritative totals
 let activeHora = null;
 let sortCol    = 'prod';
 let sortAsc    = false;
@@ -493,10 +494,19 @@ function processRecords(records, showAll) {
 async function loadData() {
   setLoading(true);
   try {
-    const res  = await fetch('/api/productivity-individual');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const [indRes, tlRes] = await Promise.all([
+      fetch('/api/productivity-individual'),
+      fetch('/api/productivity-timelist'),
+    ]);
+    if (!indRes.ok) throw new Error(`HTTP ${indRes.status}`);
+    const data = await indRes.json();
     if (data.error) throw new Error(data.error);
+
+    // Timelist (tolera falha — não bloqueia o dashboard)
+    if (tlRes.ok) {
+      const tlData = await tlRes.json();
+      timelist = tlData.time_list || [];
+    }
 
     allHours = data.hours || {};
     const keys = Object.keys(allHours).sort();
@@ -554,19 +564,38 @@ function buildKPIs(all, view) {
   const ruim = all.filter(o => o.classe === 'Ruim').length;
   const anom = all.filter(o => o.anomalia).length;
 
-  // Produção da hora selecionada
-  const prodHora = all.reduce((s, o) => s + o.tp, 0);
+  // Produção da hora selecionada — usa timelist se disponível
+  let prodHora = 0, prodHoraLabel = 'operadores filtrados';
+  if (timelist.length) {
+    // Converte activeHora ("2026-04-28 13:00") para timestamp Unix do início da hora
+    const [datePart, timePart] = (activeHora || '').split(' ');
+    if (datePart && timePart) {
+      const d = new Date(`${datePart}T${timePart}:00`);
+      const ts = Math.floor(d.getTime() / 1000);
+      const entry = timelist.find(t => t.timestamp === ts);
+      if (entry) { prodHora = entry.total; prodHoraLabel = 'itens reais · dashboard'; }
+    }
+  }
+  if (!prodHora) { // fallback: soma dos operadores
+    prodHora = all.reduce((s, o) => s + o.tp, 0);
+    prodHoraLabel = 'itens · operadores filtrados';
+  }
 
-  // Produção do dia: soma de todas as horas disponíveis
-  const prodDia = Object.values(processed).reduce((s, ops) => {
-    return s + ops.reduce((ss, o) => ss + o.tp, 0);
-  }, 0);
-  const nHoras = Object.keys(processed).length;
+  // Produção do dia — soma todos os timestamps do timelist
+  let prodDia = 0, prodDiaLabel;
+  if (timelist.length) {
+    prodDia = timelist.reduce((s, t) => s + (t.total || 0), 0);
+    prodDiaLabel = `itens reais · ${timelist.length} hora${timelist.length !== 1 ? 's' : ''}`;
+  } else {
+    prodDia = Object.values(processed).reduce((s, ops) => s + ops.reduce((ss, o) => ss + o.tp, 0), 0);
+    const nH = Object.keys(processed).length;
+    prodDiaLabel = `itens · ${nH} hora${nH !== 1 ? 's' : ''}`;
+  }
 
   document.getElementById('kpiProdHora').textContent    = fmt(prodHora);
-  document.getElementById('kpiProdHoraSub').textContent = `itens · ${activeHora?.split(' ')[1] || '—'}`;
+  document.getElementById('kpiProdHoraSub').textContent = `${activeHora?.split(' ')[1] || '—'} · ${prodHoraLabel}`;
   document.getElementById('kpiProdDia').textContent     = fmt(prodDia);
-  document.getElementById('kpiProdDiaSub').textContent  = `itens · ${nHoras} hora${nHoras !== 1 ? 's' : ''}`;
+  document.getElementById('kpiProdDiaSub').textContent  = prodDiaLabel;
 
   document.getElementById('kpiTotal').textContent   = view.length;
   document.getElementById('kpiBom').textContent     = bom;
