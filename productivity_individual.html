@@ -25,11 +25,14 @@
   --purple:   #8b5cf6;
   --blue:     #6366f1;
   --teal:     #14b8a6;
+  --orange:   #f97316;
   --green-bg: rgba(16,185,129,.12);
   --yellow-bg:rgba(245,158,11,.12);
   --red-bg:   rgba(239,68,68,.12);
   --purple-bg:rgba(139,92,246,.12);
   --blue-bg:  rgba(99,102,241,.12);
+  --teal-bg:  rgba(20,184,166,.12);
+  --orange-bg:rgba(249,115,22,.12);
   --radius:   10px;
   --radius-sm:6px;
   --shadow:   0 1px 3px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.25);
@@ -55,6 +58,10 @@
   --red-bg:   rgba(220,38,38,.1);
   --purple-bg:rgba(124,58,237,.1);
   --blue-bg:  rgba(79,70,229,.1);
+  --teal-bg:  rgba(13,148,136,.1);
+  --orange-bg:rgba(234,88,12,.1);
+  --teal:     #0d9488;
+  --orange:   #ea580c;
   --shadow:   0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.06);
 }
 
@@ -85,7 +92,7 @@ button{font-family:var(--font);cursor:pointer}
 .content{padding:20px 24px;max-width:1520px;margin:0 auto}
 
 /* ── KPI grid ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
 .kpi-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
 .kpi-card.k-blue::before{background:var(--blue)}
@@ -93,6 +100,8 @@ button{font-family:var(--font);cursor:pointer}
 .kpi-card.k-yellow::before{background:var(--yellow)}
 .kpi-card.k-red::before{background:var(--red)}
 .kpi-card.k-purple::before{background:var(--purple)}
+.kpi-card.k-teal::before{background:var(--teal)}
+.kpi-card.k-orange::before{background:var(--orange)}
 .kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:6px}
 .kpi-val{font-size:28px;font-weight:700;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
 .kpi-sub{font-size:10px;color:var(--text2);margin-top:5px}
@@ -224,7 +233,8 @@ table.hm-t th.hm-active{color:var(--blue)}
 .sec-hint{font-size:10px;color:var(--muted)}
 
 /* ── Responsive ── */
-@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:900px){
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
   .two-col{grid-template-columns:1fr}
@@ -277,6 +287,16 @@ table.hm-t th.hm-active{color:var(--blue)}
 
   <!-- ── KPI cards ── -->
   <div class="kpi-grid">
+    <div class="kpi-card k-teal">
+      <div class="kpi-label">Produção da Hora</div>
+      <div class="kpi-val" id="kpiProdHora">—</div>
+      <div class="kpi-sub" id="kpiProdHoraSub">itens · hora selecionada</div>
+    </div>
+    <div class="kpi-card k-orange">
+      <div class="kpi-label">Produção do Dia</div>
+      <div class="kpi-val" id="kpiProdDia">—</div>
+      <div class="kpi-sub" id="kpiProdDiaSub">itens · todas as horas</div>
+    </div>
     <div class="kpi-card k-blue">
       <div class="kpi-label">Operadores</div>
       <div class="kpi-val" id="kpiTotal">—</div>
@@ -533,6 +553,20 @@ function buildKPIs(all, view) {
   const ok   = all.filter(o => o.classe === 'OK').length;
   const ruim = all.filter(o => o.classe === 'Ruim').length;
   const anom = all.filter(o => o.anomalia).length;
+
+  // Produção da hora selecionada
+  const prodHora = all.reduce((s, o) => s + o.tp, 0);
+
+  // Produção do dia: soma de todas as horas disponíveis
+  const prodDia = Object.values(processed).reduce((s, ops) => {
+    return s + ops.reduce((ss, o) => ss + o.tp, 0);
+  }, 0);
+  const nHoras = Object.keys(processed).length;
+
+  document.getElementById('kpiProdHora').textContent    = fmt(prodHora);
+  document.getElementById('kpiProdHoraSub').textContent = `itens · ${activeHora?.split(' ')[1] || '—'}`;
+  document.getElementById('kpiProdDia').textContent     = fmt(prodDia);
+  document.getElementById('kpiProdDiaSub').textContent  = `itens · ${nHoras} hora${nHoras !== 1 ? 's' : ''}`;
 
   document.getElementById('kpiTotal').textContent   = view.length;
   document.getElementById('kpiBom').textContent     = bom;
