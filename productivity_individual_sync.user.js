@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Productivity Individual → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.2
 // @description  Sincroniza produtividade individual por hora com o dashboard
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
@@ -12,14 +12,52 @@
 (function () {
   'use strict';
 
-  const SERVER_BASE    = 'https://stage-out.onrender.com';
-  const INTERVAL       = 60 * 1000;
-  const API_URL        = '/api/wfm/admin/workstation/productivity/productivity_individual_list';
-  const ACTIVITY_TYPE  = 12;
-  const PAGE_SIZE      = 50;
+  const SERVER_BASE   = 'https://stage-out.onrender.com';
+  const INTERVAL      = 60 * 1000;
+  const API_URL       = '/api/wfm/admin/workstation/productivity/productivity_individual_list';
+  const ACTIVITY_TYPE = 12;
+  const PAGE_SIZE     = 50;
+  const STORAGE_KEY   = 'prodInd_cache_v2';
+  const REFETCH_MS    = 10 * 60 * 1000; // re-busca hora completa a cada 10 min
 
-  // Cache de horas completas já enviadas — não rebusca a cada sync
-  const doneHours = new Set();
+  // ── localStorage helpers ─────────────────────────────────────────────────
+
+  function shiftStartTs() {
+    const d = new Date();
+    if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+    d.setHours(6, 0, 0, 0);
+    return Math.floor(d.getTime() / 1000);
+  }
+
+  function loadCache() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  }
+
+  function saveCache(cache) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cache)); } catch {}
+  }
+
+  function pruneCache(cache) {
+    const cutoff = shiftStartTs() * 1000;
+    for (const k of Object.keys(cache)) {
+      if ((cache[k].savedAt || 0) < cutoff) delete cache[k];
+    }
+  }
+
+  // Ao iniciar: re-envia ao servidor tudo que está no localStorage do turno atual
+  function restoreFromCache() {
+    const cache = loadCache();
+    pruneCache(cache);
+    saveCache(cache);
+    const entries = Object.entries(cache);
+    if (!entries.length) return;
+    console.log(`[ProdInd] Restaurando ${entries.length} horas do localStorage…`);
+    for (const [hora, payload] of entries) {
+      sendToServer(payload, `[restore] ${hora}`);
+    }
+  }
+
+  // ── Utilitários ──────────────────────────────────────────────────────────
 
   function pad(n) { return String(n).padStart(2, '0'); }
 
@@ -27,14 +65,15 @@
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
   }
 
-  // Deriva janelas a partir do time_list (todas as horas com produção > 0)
+  // Deriva janelas a partir do time_list.
+  // Horas completas: re-busca apenas se não estiver no cache local ou cache expirou (10 min).
   function windowsFromTimelist(time_list) {
-    const now           = new Date();
-    const nowTs         = Math.floor(now.getTime() / 1000);
-    const curHourStart  = Math.floor(nowTs / 3600) * 3600;
+    const cache        = loadCache();
+    const nowTs        = Math.floor(Date.now() / 1000);
+    const curHourStart = Math.floor(nowTs / 3600) * 3600;
 
     return time_list
-      .filter(t => t.total > 0) // ignora horas sem produção
+      .filter(t => t.total > 0)
       .map(t => {
         const isCurrentHour = t.timestamp === curHourStart;
         return {
@@ -44,11 +83,16 @@
           isCompleted: !isCurrentHour,
         };
       })
-      // Pula horas completas já enviadas (economiza chamadas de API)
-      .filter(w => !w.isCompleted || !doneHours.has(w.hora));
+      .filter(w => {
+        if (!w.isCompleted) return true; // hora atual: sempre re-busca
+        const cached = cache[w.hora];
+        if (!cached) return true;        // sem cache: busca
+        return Date.now() - cached.savedAt > REFETCH_MS; // cache expirado: busca
+      });
   }
 
-  // Busca time_list do dashboard/list (totais reais por hora, todas atividades)
+  // ── API calls ────────────────────────────────────────────────────────────
+
   async function fetchTimelist() {
     const res = await fetch('/api/wfm/admin/dashboard/list', {
       method      : 'POST',
@@ -98,12 +142,12 @@
       url     : SERVER_BASE + '/api/productivity-individual-data',
       headers : { 'Content-Type': 'application/json' },
       data    : JSON.stringify(payload),
-      onload  : r => {
-        console.log(`[ProdInd] ${label}: ${payload.records.length} reg → ${r.status}`);
-      },
+      onload  : r => console.log(`[ProdInd] ${label}: ${payload.records.length} reg → ${r.status}`),
       onerror : () => console.warn(`[ProdInd] ${label}: server offline`),
     });
   }
+
+  // ── Sync principal ───────────────────────────────────────────────────────
 
   async function sync() {
     dot.textContent      = '🔄 Prod...';
@@ -113,19 +157,28 @@
       sendTimelist(time_list);
 
       const windows = windowsFromTimelist(time_list);
+      const cache   = loadCache();
 
       for (const w of windows) {
         const { records } = await fetchAllRecords(w.start_time, w.end_time);
-        sendToServer({
+        const payload = {
           hora:       w.hora,
           start_time: w.start_time,
           end_time:   w.end_time,
           records,
           total:      records.length,
           fetchedAt:  Date.now(),
-        }, w.hora);
-        if (w.isCompleted) doneHours.add(w.hora);
+        };
+        sendToServer(payload, w.hora);
+
+        // Persiste hora completa no localStorage (hora atual não — muda a cada minuto)
+        if (w.isCompleted) {
+          cache[w.hora] = { ...payload, savedAt: Date.now() };
+        }
       }
+
+      pruneCache(cache);
+      saveCache(cache);
 
       const at = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
       dot.textContent      = `✅ ${windows.length}h · ${at}`;
@@ -153,6 +206,8 @@
   dot.addEventListener('click', sync);
   document.body.appendChild(dot);
 
+  // Restaura dados históricos do turno antes do primeiro sync
+  restoreFromCache();
   sync();
   setInterval(sync, INTERVAL);
 })();
