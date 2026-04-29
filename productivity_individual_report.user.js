@@ -132,13 +132,13 @@
       ? `${melhor.name} — ${fmt(melhor.prod)} itens/h`
       : '—';
 
-    const now  = new Date();
-    const data = now.toLocaleDateString('pt-BR');
-    const hora = horaKey.split(' ')[1] || '—';
+    const now      = new Date();
+    const data     = now.toLocaleDateString('pt-BR');
+    const horaReport = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    return [
+    const text = [
       `Report - Produtividade Packing (${data}):`,
-      `Hora: ${hora}`,
+      `Hora: ${horaReport}`,
       ``,
       `Produção da Hora: ${fmt(prodHora)}`,
       `Produção do Dia: ${fmt(prodDia)}`,
@@ -152,6 +152,8 @@
       ``,
       `Link: ${SERVER}/productivity_individual.html`,
     ].join('\n');
+
+    return { text, horaKey };
   }
 
   /* ── Captura screenshot ──────────────────────────────────────────────── */
@@ -189,14 +191,35 @@
     });
   }
 
+  /* ── Seleciona aba da hora no dashboard ─────────────────────────────── */
+  async function selectHoraTab(horaKey) {
+    const tab = document.querySelector(`.hour-tab[data-hora="${horaKey}"]`);
+    if (!tab) return null;
+    const prevActive = document.querySelector('.hour-tab.active')?.dataset.hora || null;
+    tab.click();
+    await sleep(1500); // aguarda dashboard re-renderizar
+    return prevActive;
+  }
+
   /* ── Fluxo principal ─────────────────────────────────────────────────── */
   async function sendReport() {
+    let prevHoraTab = null;
     try {
       setBadge('📊 Buscando dados...', '#a855f7');
-      const text = await buildReportText();
+      const { text, horaKey } = await buildReportText();
+
+      // Muda para aba da hora reportada antes de capturar
+      setBadge('🔄 Selecionando hora...', '#f59e0b');
+      prevHoraTab = await selectHoraTab(horaKey);
 
       setBadge('📸 Capturando...', '#f59e0b');
       const image = await captureScreen();
+
+      // Restaura aba anterior
+      if (prevHoraTab && prevHoraTab !== horaKey) {
+        const orig = document.querySelector(`.hour-tab[data-hora="${prevHoraTab}"]`);
+        if (orig) orig.click();
+      }
 
       setBadge('📤 Enviando...', '#3b82f6');
       await postReport(image, text);
