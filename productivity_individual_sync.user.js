@@ -136,14 +136,23 @@
     return { records: all, total: all.length };
   }
 
+  // sendToServer retorna Promise<boolean> — true se servidor confirmou (HTTP 200)
   function sendToServer(payload, label) {
-    GM_xmlhttpRequest({
-      method  : 'POST',
-      url     : SERVER_BASE + '/api/productivity-individual-data',
-      headers : { 'Content-Type': 'application/json' },
-      data    : JSON.stringify(payload),
-      onload  : r => console.log(`[ProdInd] ${label}: ${payload.records.length} reg → ${r.status}`),
-      onerror : () => console.warn(`[ProdInd] ${label}: server offline`),
+    return new Promise(resolve => {
+      GM_xmlhttpRequest({
+        method  : 'POST',
+        url     : SERVER_BASE + '/api/productivity-individual-data',
+        headers : { 'Content-Type': 'application/json' },
+        data    : JSON.stringify(payload),
+        onload  : r => {
+          console.log(`[ProdInd] ${label}: ${payload.records.length} reg → ${r.status}`);
+          resolve(r.status === 200);
+        },
+        onerror : () => {
+          console.warn(`[ProdInd] ${label}: server offline`);
+          resolve(false);
+        },
+      });
     });
   }
 
@@ -169,10 +178,10 @@
           total:      records.length,
           fetchedAt:  Date.now(),
         };
-        sendToServer(payload, w.hora);
+        const ok = await sendToServer(payload, w.hora);
 
-        // Persiste hora completa no localStorage (hora atual não — muda a cada minuto)
-        if (w.isCompleted) {
+        // Só persiste no localStorage se o servidor confirmou (evita falso-cache em cold start)
+        if (w.isCompleted && ok) {
           cache[w.hora] = { ...payload, savedAt: Date.now() };
         }
       }
