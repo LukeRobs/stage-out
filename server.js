@@ -986,6 +986,37 @@
       return;
     }
 
+    // POST /api/seatalk-packing-report — Produtividade Packing → mesmo bot da Queue
+    if (urlPath === '/api/seatalk-packing-report' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', async () => {
+        try {
+          const { image, text } = JSON.parse(body);
+          if (!image) throw new Error('image é obrigatório');
+          const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
+          const imgBuffer = Buffer.from(b64, 'base64');
+          screenshotStore['packing'] = imgBuffer;
+          const now = Date.now();
+          if (lastReportSent['packing'] && now - lastReportSent['packing'] < REPORT_COOLDOWN) {
+            console.log('[seatalk-packing] cooldown ativo');
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true, cooldown: true }));
+            return;
+          }
+          lastReportSent['packing'] = now;
+          sendSeaTalkQueueReport(imgBuffer, text || '📦 Produtividade Packing').catch(e => console.error('[seatalk-packing]', e.message));
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          console.error('[seatalk-packing-report]', e.message);
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
     // GET /api/screenshot/:tab.png — serve o último screenshot em memória
     if (urlPath.startsWith('/api/screenshot/') && req.method === 'GET') {
       const tab = urlPath.replace('/api/screenshot/', '').replace('.png', '');
