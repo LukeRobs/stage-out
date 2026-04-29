@@ -201,22 +201,29 @@
     return prevActive;
   }
 
+  /* ── Chave da hora atual (hora do report = aba a selecionar) ─────────── */
+  function currentHoraKey() {
+    const d = new Date(Math.floor(Date.now() / 1000 / 3600) * 3600 * 1000);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
+  }
+
   /* ── Fluxo principal ─────────────────────────────────────────────────── */
   async function sendReport() {
     let prevHoraTab = null;
+    const snapHoraKey = currentHoraKey(); // aba a mostrar no screenshot (14:00)
     try {
       setBadge('📊 Buscando dados...', '#a855f7');
-      const { text, horaKey } = await buildReportText();
+      const { text } = await buildReportText();
 
-      // Muda para aba da hora reportada antes de capturar
+      // Muda para aba da hora do report (14:00) antes de capturar — igual ao stage_in
       setBadge('🔄 Selecionando hora...', '#f59e0b');
-      prevHoraTab = await selectHoraTab(horaKey);
+      prevHoraTab = await selectHoraTab(snapHoraKey);
 
       setBadge('📸 Capturando...', '#f59e0b');
       const image = await captureScreen();
 
       // Restaura aba anterior
-      if (prevHoraTab && prevHoraTab !== horaKey) {
+      if (prevHoraTab && prevHoraTab !== snapHoraKey) {
         const orig = document.querySelector(`.hour-tab[data-hora="${prevHoraTab}"]`);
         if (orig) orig.click();
       }
