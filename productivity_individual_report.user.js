@@ -111,7 +111,7 @@
     // Produção da hora: timelist tem o total real
     const horaTs     = new Date(`${horaKey.replace(' ', 'T')}:00`).getTime() / 1000;
     const tlEntry    = timelist.find(t => t.timestamp === Math.floor(horaTs));
-    const prodHora   = tlEntry?.total ?? ops.reduce((s, o) => s + o.tp, 0);
+    const prodHora   = tlEntry?.total || ops.reduce((s, o) => s + o.tp, 0);
 
     // Produção do dia: janela 06:00 → 05:00 do dia seguinte
     const shiftStart = shiftStartTs();
