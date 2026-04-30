@@ -1005,8 +1005,20 @@ function buildTurnoDonut() {
 
 // ── Ocupação por Zona ─────────────────────────────────────────────────
 function buildOccByZone(areas) {
+  // Log first area keys once so we can verify the status field name in console
+  if (areas.length && !buildOccByZone._logged) {
+    buildOccByZone._logged = true;
+    console.log('[OccByZone] sample area keys:', Object.keys(areas[0]));
+  }
+
+  // Filter to Available areas only; falls back to all if field is absent in the data
+  const hasStatusField = areas.some(a => 'area_status' in a || 'status' in a);
+  const avail = hasStatusField
+    ? areas.filter(a => (a.area_status || a.status || '').toLowerCase() === 'available')
+    : areas;
+
   const zones = {};
-  areas.forEach(a => {
+  avail.forEach(a => {
     const z = (a.staging_group_name || 'OUTRAS').trim();
     if (!zones[z]) zones[z] = { tos: 0, cap: 0 };
     zones[z].tos += a.to_quantity || 0;
