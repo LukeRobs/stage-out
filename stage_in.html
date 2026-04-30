@@ -1011,10 +1011,10 @@ function buildOccByZone(areas) {
     console.log('[OccByZone] sample area keys:', Object.keys(areas[0]));
   }
 
-  // Filter to Available areas only; falls back to all if field is absent in the data
-  const hasStatusField = areas.some(a => 'area_status' in a || 'status' in a);
+  // status 1 = Available, status 2 = Occupied (SPX WFM API)
+  const hasStatusField = areas.some(a => 'status' in a);
   const avail = hasStatusField
-    ? areas.filter(a => (a.area_status || a.status || '').toLowerCase() === 'available')
+    ? areas.filter(a => a.status === 1)
     : areas;
 
   const zones = {};
