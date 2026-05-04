@@ -448,7 +448,7 @@ function occBadgeClass(p) {
 function renderCard(g, expanded) {
   const oc = occBadgeClass(g.avgOcc);
   const statusMap = {1:'s1',2:'s2',3:'s3'};
-  const statusLabel = {1:'Aberto',2:'Fechado',3:'Despacho'};
+  const statusLabel = {1:'Aberto',2:'Fechado',3:'Em Carregamento'};
 
   const ruasRows = g.ruas
     .sort((a,b) => (b.staging_duration_time||0) - (a.staging_duration_time||0))
@@ -556,7 +556,7 @@ async function loadData() {
     const allList = data.list || [];
     // staging_area_status: 1=Aberto (Available), 2=Fechado, 3=Despacho
     const availList = allList.some(r => 'staging_area_status' in r)
-      ? allList.filter(r => r.staging_area_status === 1)
+      ? allList.filter(r => r.staging_area_status === 1 || r.staging_area_status === 3)
       : allList;
     groups = buildGroups(availList);
     updateStats({ ...data, list: availList });
