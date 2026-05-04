@@ -553,8 +553,13 @@ async function loadData() {
     if (data.error) return;
     if (data.fetchedAt === lastAt) return; // no change
     lastAt = data.fetchedAt;
-    groups = buildGroups(data.list || []);
-    updateStats(data);
+    const allList = data.list || [];
+    // staging_area_status: 1=Aberto (Available), 2=Fechado, 3=Despacho
+    const availList = allList.some(r => 'staging_area_status' in r)
+      ? allList.filter(r => r.staging_area_status === 1)
+      : allList;
+    groups = buildGroups(availList);
+    updateStats({ ...data, list: availList });
     render();
   } catch(e) {}
 }
