@@ -246,14 +246,17 @@ table.trips-table tbody tr:hover td { background: rgba(59,130,246,.06); }
         <th data-col="etaReal">ETA Real <span class="sort-arrow"></span></th>
         <th data-col="checkinAgo">Check-in x Agora <span class="sort-arrow"></span></th>
         <th data-col="horDesc">Hor. Descarga <span class="sort-arrow"></span></th>
-        <th class="num" data-col="toTotal">TO Total <span class="sort-arrow"></span></th>
         <th class="num" data-col="toSaca">TO Saca <span class="sort-arrow"></span></th>
-        <th class="num" data-col="pctSaca">%Saca <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pckSaca">PCK Saca <span class="sort-arrow"></span></th>
+        <th class="num" data-col="sppSaca">SPP Saca <span class="sort-arrow"></span></th>
         <th class="num" data-col="toScuttle">TO Scuttle <span class="sort-arrow"></span></th>
-        <th class="num" data-col="pctScuttle">%Scuttle <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pckScuttle">PCK Scuttle <span class="sort-arrow"></span></th>
+        <th class="num" data-col="sppScuttle">SPP Scuttle <span class="sort-arrow"></span></th>
         <th class="num" data-col="toPallet">TO Pallet <span class="sort-arrow"></span></th>
-        <th class="num" data-col="pctPallet">%Pallet <span class="sort-arrow"></span></th>
-        <th class="num" data-col="pctTotal">%Total <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pckPallet">PCK Pallet <span class="sort-arrow"></span></th>
+        <th class="num" data-col="sppPallet">SPP Pallet <span class="sort-arrow"></span></th>
+        <th class="num" data-col="toTotal">TO Total <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pckTotal">PCK Total <span class="sort-arrow"></span></th>
         <th class="num" data-col="spp">SPP <span class="sort-arrow"></span></th>
       </tr>
     </thead>
@@ -323,17 +326,12 @@ function getStationData(trip) {
 }
 
 function parseTrip(trip) {
-  if (!parseTrip._logged) {
-    parseTrip._logged = true;
-    console.log('[Trip keys]', Object.keys(trip));
-    console.log('[Trip sample]', JSON.stringify(trip, null, 2));
-  }
   const now = Math.floor(Date.now() / 1000);
 
   const sta   = getStationData(trip);
   const pack  = parsePack(trip.pack_type);
   const toTot = trip.to_inbound_quantity;    // -1 = sem dados
-  const order = trip.order_inbound_quantity; // -1 = sem dados
+  const order = trip.order_inbound_quantity; // total de pacotes (-1 = sem dados)
 
   // ETA Plan = sta.sta (Unix ts)
   const etaPlanTs = sta.sta  || 0;
@@ -358,16 +356,12 @@ function parseTrip(trip) {
     checkinAgoSecs = now - sta.ata;
   }
 
-  // Pack breakdown
+  // Pack breakdown por tipo de TO
   let toSaca = 0, toScuttle = 0, toPallet = 0;
   let packKnown = false;
-  let toForPct  = (toTot > 0) ? toTot : 0;
 
   if (pack) {
-    if (pack.unknown) {
-      // numeric total, no breakdown
-      toForPct = pack.numericTotal;
-    } else {
+    if (!pack.unknown) {
       toSaca    = pack.saca;
       toScuttle = pack.scuttle;
       toPallet  = pack.pallet;
@@ -375,15 +369,32 @@ function parseTrip(trip) {
     }
   }
 
-  const pctSaca    = (packKnown && toForPct > 0) ? toSaca    / toForPct * 100 : -1;
-  const pctScuttle = (packKnown && toForPct > 0) ? toScuttle / toForPct * 100 : -1;
-  const pctPallet  = (packKnown && toForPct > 0) ? toPallet  / toForPct * 100 : -1;
-  const pctTotal   = (packKnown && toForPct > 0) ? (toSaca + toScuttle + toPallet) / toForPct * 100 : -1;
-
-  // SPP
+  // SPP geral (API só fornece pacotes totais — sem breakdown por tipo)
+  const pckTotal = (order >= 0) ? order : -1;
   let spp = -1;
-  if (order !== -1 && toTot > 0 && order >= 0) {
-    spp = Math.round(order / toTot);
+  if (pckTotal >= 0 && toTot > 0) {
+    spp = Math.round(pckTotal / toTot);
+  }
+
+  // Pacotes estimados por tipo = SPP × TOs do tipo (proporcional ao SPP geral)
+  // A API não fornece pacotes por tipo individualmente
+  let pckSaca = -1, sppSaca = -1;
+  let pckScuttle = -1, sppScuttle = -1;
+  let pckPallet = -1, sppPallet = -1;
+
+  if (packKnown && pckTotal >= 0 && toTot > 0) {
+    if (toSaca > 0) {
+      pckSaca  = Math.round(toSaca    / toTot * pckTotal);
+      sppSaca  = Math.round(pckSaca   / toSaca);
+    }
+    if (toScuttle > 0) {
+      pckScuttle = Math.round(toScuttle / toTot * pckTotal);
+      sppScuttle = Math.round(pckScuttle / toScuttle);
+    }
+    if (toPallet > 0) {
+      pckPallet  = Math.round(toPallet  / toTot * pckTotal);
+      sppPallet  = Math.round(pckPallet  / toPallet);
+    }
   }
 
   return {
@@ -397,16 +408,13 @@ function parseTrip(trip) {
     checkinAgoSecs,
     horDescTs:    sta.unseal_time || 0,
     toTotal:      toTot,
-    toSaca,
-    toScuttle,
-    toPallet,
-    pctSaca,
-    pctScuttle,
-    pctPallet,
-    pctTotal,
+    pckTotal,
     spp,
+    toSaca,    pckSaca,    sppSaca,
+    toScuttle, pckScuttle, sppScuttle,
+    toPallet,  pckPallet,  sppPallet,
     packKnown,
-    packUnknown:  pack ? pack.unknown : false,
+    packUnknown: pack ? pack.unknown : false,
     _raw: trip,
   };
 }
@@ -494,15 +502,15 @@ function renderTable() {
       ? `<span class="mono">${fmtDur(r.checkinAgoSecs)}</span>`
       : '<span class="muted">—</span>';
 
+    const fmtTO  = (v, known) => v > 0 ? `<span class="mono">${v}</span>` : (known ? '<span class="muted">0</span>' : '<span class="muted">—</span>');
+    const fmtPCK = (v)        => v >= 0 ? `<span class="mono">${v.toLocaleString('pt-BR')}</span>` : '<span class="muted">—</span>';
+    const fmtSPP = (v)        => v >= 0 ? `<span class="mono">${v}</span>` : '<span class="muted">—</span>';
+
     const toTotalHtml = r.toTotal > 0
       ? `<span class="mono">${r.toTotal}</span>`
       : (r.packUnknown
           ? `<span class="mono muted">${r._raw.pack_type}</span>`
           : '<span class="muted">—</span>');
-
-    const sppHtml = r.spp >= 0
-      ? `<span class="mono">${r.spp}</span>`
-      : '<span class="muted">—</span>';
 
     return `<tr>
       <td><span class="lt-cell">${r.lt}</span></td>
@@ -513,15 +521,18 @@ function renderTable() {
       <td>${etaRealHtml}</td>
       <td>${checkinHtml}</td>
       <td><span class="mono">${fmtTs(r.horDescTs)}</span></td>
+      <td class="num">${fmtTO(r.toSaca,    r.packKnown)}</td>
+      <td class="num">${fmtPCK(r.pckSaca)}</td>
+      <td class="num">${fmtSPP(r.sppSaca)}</td>
+      <td class="num">${fmtTO(r.toScuttle, r.packKnown)}</td>
+      <td class="num">${fmtPCK(r.pckScuttle)}</td>
+      <td class="num">${fmtSPP(r.sppScuttle)}</td>
+      <td class="num">${fmtTO(r.toPallet,  r.packKnown)}</td>
+      <td class="num">${fmtPCK(r.pckPallet)}</td>
+      <td class="num">${fmtSPP(r.sppPallet)}</td>
       <td class="num">${toTotalHtml}</td>
-      <td class="num"><span class="mono">${r.toSaca > 0 ? r.toSaca : (r.packKnown ? '0' : '—')}</span></td>
-      <td class="num">${fmtPct(r.pctSaca)}</td>
-      <td class="num"><span class="mono">${r.toScuttle > 0 ? r.toScuttle : (r.packKnown ? '0' : '—')}</span></td>
-      <td class="num">${fmtPct(r.pctScuttle)}</td>
-      <td class="num"><span class="mono">${r.toPallet > 0 ? r.toPallet : (r.packKnown ? '0' : '—')}</span></td>
-      <td class="num">${fmtPct(r.pctPallet)}</td>
-      <td class="num">${fmtPct(r.pctTotal)}</td>
-      <td class="num">${sppHtml}</td>
+      <td class="num">${fmtPCK(r.pckTotal)}</td>
+      <td class="num">${fmtSPP(r.spp)}</td>
     </tr>`;
   }).join('');
 }
