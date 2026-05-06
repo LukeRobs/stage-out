@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trips Dashboard</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --orange: #ee4d2d;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.header-icon {
+  width: 34px; height: 34px; background: var(--blue);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 17px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 14px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── KPIs ── */
+.stats {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  gap: 10px; padding: 14px 24px;
+}
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+@media (max-width: 1100px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px)  { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Toolbar ── */
+.toolbar {
+  padding: 0 24px 10px;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.ftab {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.ftab:hover { border-color: var(--border2); color: var(--text); }
+.ftab.active { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.3); color: var(--blue); }
+.ftab .tab-count {
+  background: var(--surface); color: var(--muted);
+  font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border);
+}
+.ftab.active .tab-count { background: rgba(59,130,246,.15); color: var(--blue); border-color: rgba(59,130,246,.3); }
+
+.search-wrap { position: relative; min-width: 200px; flex: 1; max-width: 300px; margin-left: auto; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-input:focus { border-color: var(--blue); }
+
+/* ── Table ── */
+.table-wrap { padding: 0 24px 32px; overflow-x: auto; }
+table.trips-table { width: 100%; border-collapse: collapse; min-width: 1100px; }
+table.trips-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 10px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 600;
+  cursor: pointer; user-select: none; white-space: nowrap;
+  background: var(--surface2); position: sticky; top: 56px;
+}
+table.trips-table th:hover { color: var(--text); }
+table.trips-table th.sorted { color: var(--blue); }
+table.trips-table th .sort-arrow { margin-left: 3px; font-size: 9px; opacity: .7; }
+table.trips-table th.num, table.trips-table td.num { text-align: right; }
+table.trips-table td {
+  padding: 7px 10px; border-bottom: 1px solid rgba(42,45,62,.5);
+  vertical-align: middle;
+}
+table.trips-table tr:last-child td { border-bottom: none; }
+table.trips-table tbody tr:nth-child(even) td { background: rgba(255,255,255,.012); }
+table.trips-table tbody tr:hover td { background: rgba(59,130,246,.06); }
+
+/* cells */
+.lt-cell  { font-family: monospace; font-weight: 700; font-size: 12px; color: var(--blue); white-space: nowrap; }
+.mono     { font-family: monospace; font-size: 12px; }
+.muted    { color: var(--muted); }
+
+/* Status pills */
+.pill {
+  display: inline-block; padding: 2px 9px; border-radius: 10px;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+.pill-planned  { background: rgba(107,114,128,.15); color: #9ca3af; border: 1px solid rgba(107,114,128,.25); }
+.pill-transit  { background: rgba(59,130,246,.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,.3); }
+.pill-checkin  { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
+.pill-unload   { background: rgba(34,197,94,.15);   color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+
+/* ETA color */
+.eta-ok   { color: var(--green); }
+.eta-late { color: var(--red); }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty p  { font-size: 13px; }
+
+/* ── Loading spinner ── */
+.loading {
+  text-align: center; padding: 60px 20px; color: var(--muted);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.spinner {
+  width: 28px; height: 28px; border: 3px solid var(--border);
+  border-top-color: var(--blue); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-icon">🚚</div>
+  <div class="header-title">
+    <h1>Trips Dashboard</h1>
+    <p>Viagens em trânsito e aguardando descarga</p>
+  </div>
+  <div class="header-right">
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="updateTime">carregando…</span>
+    </div>
+    <div class="meta-tag" id="totalBadge">— trips</div>
+  </div>
+</div>
+
+<!-- ── KPIs ── -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Total LTs</div>
+    <div class="stat-value" id="kTotal">—</div>
+    <div class="stat-sub">trips no período</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Em Trânsito</div>
+    <div class="stat-value" style="color:var(--blue)" id="kTransit">—</div>
+    <div class="stat-sub">status 40</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Check-in</div>
+    <div class="stat-value" style="color:var(--yellow)" id="kCheckin">—</div>
+    <div class="stat-sub">aguardando descarga</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Em Descarga</div>
+    <div class="stat-value" style="color:var(--green)" id="kUnload">—</div>
+    <div class="stat-sub">status 60</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total TOs</div>
+    <div class="stat-value" id="kTOs">—</div>
+    <div class="stat-sub">to_inbound_quantity</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">SPP Médio</div>
+    <div class="stat-value" style="color:var(--purple)" id="kSPP">—</div>
+    <div class="stat-sub">order / TO</div>
+  </div>
+</div>
+
+<!-- ── Toolbar ── -->
+<div class="toolbar">
+  <div class="filter-tabs" id="filterTabs">
+    <button class="ftab active" data-filter="all">Todos <span class="tab-count" id="cntAll">0</span></button>
+    <button class="ftab" data-filter="40">Em Trânsito <span class="tab-count" id="cntTransit">0</span></button>
+    <button class="ftab" data-filter="50">Check-in <span class="tab-count" id="cntCheckin">0</span></button>
+    <button class="ftab" data-filter="60">Em Descarga <span class="tab-count" id="cntUnload">0</span></button>
+  </div>
+  <div class="search-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="searchInput" type="text" placeholder="Buscar LT, origem, tipo…">
+  </div>
+</div>
+
+<!-- ── Table ── -->
+<div class="table-wrap" id="tableWrap">
+  <div class="loading" id="loadingEl">
+    <div class="spinner"></div>
+    <span>Aguardando dados do servidor…</span>
+  </div>
+  <table class="trips-table" id="tripsTable" style="display:none">
+    <thead>
+      <tr>
+        <th data-col="lt">LT <span class="sort-arrow"></span></th>
+        <th data-col="origem">Origem <span class="sort-arrow"></span></th>
+        <th data-col="tipo">Tipo <span class="sort-arrow"></span></th>
+        <th data-col="status">Status <span class="sort-arrow"></span></th>
+        <th data-col="etaPlan">ETA Plan <span class="sort-arrow"></span></th>
+        <th data-col="etaReal">ETA Real <span class="sort-arrow"></span></th>
+        <th data-col="checkinAgo">Check-in x Agora <span class="sort-arrow"></span></th>
+        <th data-col="horDesc">Hor. Descarga <span class="sort-arrow"></span></th>
+        <th class="num" data-col="toTotal">TO Total <span class="sort-arrow"></span></th>
+        <th class="num" data-col="toSaca">TO Saca <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pctSaca">%Saca <span class="sort-arrow"></span></th>
+        <th class="num" data-col="toScuttle">TO Scuttle <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pctScuttle">%Scuttle <span class="sort-arrow"></span></th>
+        <th class="num" data-col="toPallet">TO Pallet <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pctPallet">%Pallet <span class="sort-arrow"></span></th>
+        <th class="num" data-col="pctTotal">%Total <span class="sort-arrow"></span></th>
+        <th class="num" data-col="spp">SPP <span class="sort-arrow"></span></th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div class="empty" id="emptyEl" style="display:none">
+    <h2>Sem dados</h2>
+    <p>Nenhuma trip encontrada com os filtros atuais.</p>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const API_URL    = 'https://stage-out.onrender.com/api/trip-data';
+const REFRESH_MS = 30 * 1000;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allTrips  = [];
+let rows      = [];   // parsed row objects
+let sortCol   = 'etaPlan';
+let sortAsc   = true;
+let filterStatus = 'all';
+let searchQ   = '';
+
+// ── Parsing helpers ──────────────────────────────────────────────────────────
+
+function fmtTs(ts) {
+  if (!ts || ts <= 0) return '—';
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDur(secs) {
+  if (!secs || secs <= 0) return '—';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
+
+function parsePack(packType) {
+  if (!packType || packType.trim() === '') return null; // sem dados
+  // Pure number => unknown type
+  if (/^\d+$/.test(packType.trim())) {
+    return { unknown: true, numericTotal: parseInt(packType, 10) };
+  }
+  let saca = 0, scuttle = 0, pallet = 0;
+  // Match patterns like "10Pallet", "150Saca", "433Saca Sorter", "10Scuttle"
+  const re = /(\d+)(Pallet|Saca Sorter|Saca|Scuttle)/gi;
+  let m;
+  while ((m = re.exec(packType)) !== null) {
+    const qty  = parseInt(m[1], 10);
+    const type = m[2].toLowerCase();
+    if (type === 'pallet')      pallet  += qty;
+    else if (type === 'saca sorter') saca += qty;
+    else if (type === 'saca')   saca    += qty;
+    else if (type === 'scuttle') scuttle += qty;
+  }
+  return { pallet, saca, scuttle, unknown: false };
+}
+
+function getStationData(trip) {
+  const stations = trip.trip_station || [];
+  // Find station 10963
+  return stations.find(s => s.station === 10963) || stations[stations.length - 1] || {};
+}
+
+function parseTrip(trip) {
+  const now = Math.floor(Date.now() / 1000);
+
+  const sta   = getStationData(trip);
+  const pack  = parsePack(trip.pack_type);
+  const toTot = trip.to_inbound_quantity;    // -1 = sem dados
+  const order = trip.order_inbound_quantity; // -1 = sem dados
+
+  // ETA Plan = sta.sta (Unix ts)
+  const etaPlanTs = sta.sta  || 0;
+  // ETA Real: se status >= 50 usa ata, se 40 usa eta
+  const ds = trip.display_status;
+  let etaRealTs = 0;
+  let etaClass  = '';
+  if (ds >= 50) {
+    etaRealTs = sta.ata || 0;
+  } else if (ds === 40) {
+    etaRealTs = (sta.eta && sta.eta > 0) ? sta.eta : 0;
+  }
+  if (etaRealTs > 0 && etaPlanTs > 0) {
+    etaClass = etaRealTs <= etaPlanTs ? 'eta-ok' : (etaRealTs > etaPlanTs + 1800 ? 'eta-late' : '');
+  }
+
+  // Check-in x Agora
+  let checkinAgoSecs = 0;
+  if (sta.add_into_queue_time > 0) {
+    checkinAgoSecs = now - sta.add_into_queue_time;
+  } else if (sta.ata > 0) {
+    checkinAgoSecs = now - sta.ata;
+  }
+
+  // Pack breakdown
+  let toSaca = 0, toScuttle = 0, toPallet = 0;
+  let packKnown = false;
+  let toForPct  = (toTot > 0) ? toTot : 0;
+
+  if (pack) {
+    if (pack.unknown) {
+      // numeric total, no breakdown
+      toForPct = pack.numericTotal;
+    } else {
+      toSaca    = pack.saca;
+      toScuttle = pack.scuttle;
+      toPallet  = pack.pallet;
+      packKnown = true;
+    }
+  }
+
+  const pctSaca    = (packKnown && toForPct > 0) ? toSaca    / toForPct * 100 : -1;
+  const pctScuttle = (packKnown && toForPct > 0) ? toScuttle / toForPct * 100 : -1;
+  const pctPallet  = (packKnown && toForPct > 0) ? toPallet  / toForPct * 100 : -1;
+  const pctTotal   = (packKnown && toForPct > 0) ? (toSaca + toScuttle + toPallet) / toForPct * 100 : -1;
+
+  // SPP
+  let spp = -1;
+  if (order !== -1 && toTot > 0 && order >= 0) {
+    spp = Math.round(order / toTot);
+  }
+
+  return {
+    lt:           trip.trip_number || '',
+    origem:       trip.pre_station_name || '—',
+    tipo:         trip.vehicle_type_name || '—',
+    status:       ds,
+    etaPlanTs,
+    etaRealTs,
+    etaClass,
+    checkinAgoSecs,
+    horDescTs:    sta.unseal_time || 0,
+    toTotal:      toTot,
+    toSaca,
+    toScuttle,
+    toPallet,
+    pctSaca,
+    pctScuttle,
+    pctPallet,
+    pctTotal,
+    spp,
+    packKnown,
+    packUnknown:  pack ? pack.unknown : false,
+    _raw: trip,
+  };
+}
+
+// ── Status helpers ───────────────────────────────────────────────────────────
+
+function statusPill(ds) {
+  switch (ds) {
+    case 5:  return '<span class="pill pill-planned">Planejado</span>';
+    case 40: return '<span class="pill pill-transit">Em Trânsito</span>';
+    case 50: return '<span class="pill pill-checkin">Check-in</span>';
+    case 60: return '<span class="pill pill-unload">Em Descarga</span>';
+    default: return `<span class="pill pill-planned">${ds}</span>`;
+  }
+}
+
+function fmtPct(v) {
+  if (v < 0) return '<span class="muted">—</span>';
+  return `${Math.round(v)}%`;
+}
+
+function fmtNum(v) {
+  if (v < 0) return '<span class="muted">—</span>';
+  if (v === 0) return '<span class="muted">0</span>';
+  return v;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+
+function renderTable() {
+  const filtered = rows.filter(r => {
+    if (filterStatus !== 'all' && r.status !== parseInt(filterStatus)) return false;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      if (!r.lt.toLowerCase().includes(q) &&
+          !r.origem.toLowerCase().includes(q) &&
+          !r.tipo.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (va === undefined) va = '';
+    if (vb === undefined) vb = '';
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va < vb) return sortAsc ? -1 : 1;
+    if (va > vb) return sortAsc ?  1 : -1;
+    return 0;
+  });
+
+  // Update sort arrows
+  document.querySelectorAll('table.trips-table th').forEach(th => {
+    const arrow = th.querySelector('.sort-arrow');
+    if (th.dataset.col === sortCol) {
+      th.classList.add('sorted');
+      arrow.textContent = sortAsc ? ' ↑' : ' ↓';
+    } else {
+      th.classList.remove('sorted');
+      arrow.textContent = '';
+    }
+  });
+
+  const tbody = document.getElementById('tableBody');
+  const now   = Math.floor(Date.now() / 1000);
+
+  if (filtered.length === 0) {
+    document.getElementById('tripsTable').style.display = 'none';
+    document.getElementById('emptyEl').style.display    = '';
+    tbody.innerHTML = '';
+    return;
+  }
+
+  document.getElementById('tripsTable').style.display = '';
+  document.getElementById('emptyEl').style.display    = 'none';
+
+  tbody.innerHTML = filtered.map(r => {
+    const etaRealHtml = r.etaRealTs > 0
+      ? `<span class="${r.etaClass} mono">${fmtTs(r.etaRealTs)}</span>`
+      : '<span class="muted">—</span>';
+
+    const checkinHtml = r.checkinAgoSecs > 0
+      ? `<span class="mono">${fmtDur(r.checkinAgoSecs)}</span>`
+      : '<span class="muted">—</span>';
+
+    const toTotalHtml = r.toTotal > 0
+      ? `<span class="mono">${r.toTotal}</span>`
+      : (r.packUnknown
+          ? `<span class="mono muted">${r._raw.pack_type}</span>`
+          : '<span class="muted">—</span>');
+
+    const sppHtml = r.spp >= 0
+      ? `<span class="mono">${r.spp}</span>`
+      : '<span class="muted">—</span>';
+
+    return `<tr>
+      <td><span class="lt-cell">${r.lt}</span></td>
+      <td>${r.origem}</td>
+      <td><span class="muted">${r.tipo}</span></td>
+      <td>${statusPill(r.status)}</td>
+      <td><span class="mono">${fmtTs(r.etaPlanTs)}</span></td>
+      <td>${etaRealHtml}</td>
+      <td>${checkinHtml}</td>
+      <td><span class="mono">${fmtTs(r.horDescTs)}</span></td>
+      <td class="num">${toTotalHtml}</td>
+      <td class="num"><span class="mono">${r.toSaca > 0 ? r.toSaca : (r.packKnown ? '0' : '—')}</span></td>
+      <td class="num">${fmtPct(r.pctSaca)}</td>
+      <td class="num"><span class="mono">${r.toScuttle > 0 ? r.toScuttle : (r.packKnown ? '0' : '—')}</span></td>
+      <td class="num">${fmtPct(r.pctScuttle)}</td>
+      <td class="num"><span class="mono">${r.toPallet > 0 ? r.toPallet : (r.packKnown ? '0' : '—')}</span></td>
+      <td class="num">${fmtPct(r.pctPallet)}</td>
+      <td class="num">${fmtPct(r.pctTotal)}</td>
+      <td class="num">${sppHtml}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateKPIs() {
+  const total   = rows.length;
+  const transit = rows.filter(r => r.status === 40).length;
+  const checkin = rows.filter(r => r.status === 50).length;
+  const unload  = rows.filter(r => r.status === 60).length;
+
+  const toSum = rows.reduce((s, r) => r.toTotal > 0 ? s + r.toTotal : s, 0);
+
+  const sppList = rows.filter(r => r.spp >= 0).map(r => r.spp);
+  const sppAvg  = sppList.length ? Math.round(sppList.reduce((a, b) => a + b, 0) / sppList.length) : -1;
+
+  document.getElementById('kTotal').textContent   = total;
+  document.getElementById('kTransit').textContent = transit;
+  document.getElementById('kCheckin').textContent = checkin;
+  document.getElementById('kUnload').textContent  = unload;
+  document.getElementById('kTOs').textContent     = toSum > 0 ? toSum.toLocaleString('pt-BR') : '—';
+  document.getElementById('kSPP').textContent     = sppAvg >= 0 ? sppAvg : '—';
+
+  document.getElementById('totalBadge').textContent = `${total} trips`;
+
+  // Tab counts
+  document.getElementById('cntAll').textContent     = total;
+  document.getElementById('cntTransit').textContent = transit;
+  document.getElementById('cntCheckin').textContent = checkin;
+  document.getElementById('cntUnload').textContent  = unload;
+}
+
+// ── Fetch ────────────────────────────────────────────────────────────────────
+
+async function loadData() {
+  try {
+    const res = await fetch(API_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    allTrips = json.list || [];
+    rows     = allTrips.map(parseTrip);
+
+    const fetchedAt = json.fetchedAt
+      ? new Date(json.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('updateTime').textContent = `Atualizado às ${fetchedAt}`;
+    document.getElementById('liveDot').classList.add('on');
+
+    document.getElementById('loadingEl').style.display = 'none';
+
+    updateKPIs();
+    renderTable();
+  } catch (e) {
+    console.error('[Trips Dashboard]', e);
+    document.getElementById('updateTime').textContent = 'Erro ao carregar';
+    document.getElementById('liveDot').classList.remove('on');
+    if (rows.length === 0) {
+      document.getElementById('loadingEl').innerHTML =
+        '<div style="color:var(--muted);padding:60px 20px;text-align:center">' +
+        '<h2 style="font-size:18px;color:var(--text);margin-bottom:8px">Sem dados</h2>' +
+        '<p>Servidor indisponível ou nenhum dado recebido ainda.</p>' +
+        '<p style="margin-top:8px;font-size:11px">Verifique se o script <code>trips_sync.user.js</code> está ativo.</p>' +
+        '</div>';
+    }
+  }
+}
+
+// ── Events ───────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('table.trips-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = true; }
+    renderTable();
+  });
+});
+
+document.getElementById('filterTabs').addEventListener('click', e => {
+  const btn = e.target.closest('.ftab');
+  if (!btn) return;
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterStatus = btn.dataset.filter;
+  renderTable();
+});
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQ = e.target.value.trim();
+  renderTable();
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+loadData();
+setInterval(loadData, REFRESH_MS);
+</script>
+</body>
+</html>
