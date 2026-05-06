@@ -323,6 +323,11 @@ function getStationData(trip) {
 }
 
 function parseTrip(trip) {
+  if (!parseTrip._logged) {
+    parseTrip._logged = true;
+    console.log('[Trip keys]', Object.keys(trip));
+    console.log('[Trip sample]', JSON.stringify(trip, null, 2));
+  }
   const now = Math.floor(Date.now() / 1000);
 
   const sta   = getStationData(trip);
