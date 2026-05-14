@@ -510,6 +510,159 @@ body {
   .kpi-row.k2 { grid-template-columns: 1fr; }
   .topbar { padding: 0 14px; gap: 8px; }
 }
+
+/* ══════════════════════════════════════════════════════
+   HOME DASHBOARD — REDESIGN OPERACIONAL
+══════════════════════════════════════════════════════ */
+
+/* Grid layout: 2 priority cards on top, 4 secondary below */
+.home-grid-priority {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.home-grid-secondary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* Priority card (Stage OUT / Stage IN) */
+.priority-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.priority-card:hover { border-color: var(--border2); box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+.priority-card.warn  { border-color: rgba(245,158,11,.4); }
+.priority-card.crit  { border-color: rgba(239,68,68,.5); box-shadow: 0 0 0 1px rgba(239,68,68,.15); }
+
+/* Compact secondary card */
+.sec-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.sec-card:hover { border-color: var(--border2); box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+
+.sec-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.sec-ico {
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.sec-title { font-size: 12px; font-weight: 700; flex: 1; }
+.sec-body  { padding: 10px 12px; }
+.sec-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sec-kpi-val { font-size: 20px; font-weight: 700; font-family: monospace; line-height: 1; }
+.sec-kpi-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+.sec-kpi-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.sec-ftr { padding: 7px 12px; border-top: 1px solid var(--border); font-size: 10px; color: var(--muted2); display: flex; justify-content: space-between; }
+
+/* KPI trio (Stage OUT 3 metrics) */
+.kpi-trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.kpi-trio-item {
+  padding: 14px 16px;
+  border-right: 1px solid var(--border);
+}
+.kpi-trio-item:last-child { border-right: none; }
+.kpi-trio-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+.kpi-trio-val   { font-size: 26px; font-weight: 800; font-family: 'Segoe UI', monospace; line-height: 1; }
+.kpi-trio-sub   { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+/* Capacity bar */
+.cap-row   { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.cap-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.cap-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.cap-pct   { font-size: 12px; font-weight: 700; font-family: monospace; }
+.cap-bar   { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.cap-fill  { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+/* Top destinations mini-bar (Stage OUT) */
+.dest-mini-list { padding: 10px 16px; display: flex; flex-direction: column; gap: 5px; }
+.dest-mini-row  { display: grid; grid-template-columns: 90px 1fr 36px; align-items: center; gap: 8px; }
+.dest-mini-name { font-size: 10px; font-family: monospace; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dest-mini-bar-wrap { height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.dest-mini-bar  { height: 100%; border-radius: 2px; }
+.dest-mini-val  { font-size: 10px; font-family: monospace; font-weight: 700; text-align: right; }
+
+/* Alert banner */
+.alert-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px;
+  font-size: 11px; font-weight: 600;
+  border-top: 1px solid var(--border);
+}
+.alert-banner.warn { background: rgba(245,158,11,.08); color: var(--amber); border-top-color: rgba(245,158,11,.2); }
+.alert-banner.crit { background: rgba(239,68,68,.08); color: var(--red);   border-top-color: rgba(239,68,68,.2);  }
+.alert-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; animation: pulse 1.5s infinite; }
+
+/* Stage IN zone sub-cards */
+.zone-cards-wrap { padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.zone-subcard {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  transition: border-color .15s;
+}
+.zone-subcard.zone-crit  { border-left: 3px solid var(--red);    background: rgba(239,68,68,.04); }
+.zone-subcard.zone-warn  { border-left: 3px solid var(--amber);  background: rgba(245,158,11,.04); }
+.zone-subcard.zone-ok    { border-left: 3px solid var(--green);  background: rgba(34,197,94,.04); }
+.zone-sub-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+.zone-sub-name   { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.zone-sub-pkgs   { font-size: 13px; font-weight: 700; font-family: monospace; }
+.zone-sub-grid   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.zone-sub-metric { display: flex; flex-direction: column; gap: 1px; }
+.zone-sub-lbl    { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.zone-sub-val    { font-size: 12px; font-weight: 700; font-family: monospace; line-height: 1.2; }
+
+/* Stage IN summary row */
+.stage-in-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.si-summary-item { padding: 12px 14px; border-right: 1px solid var(--border); }
+.si-summary-item:last-child { border-right: none; }
+.si-summary-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.si-summary-val { font-size: 22px; font-weight: 800; font-family: monospace; line-height: 1; }
+.si-summary-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* Trend indicators */
+.trend-up   { color: var(--red);    font-size: 10px; }
+.trend-down { color: var(--green);  font-size: 10px; }
+.trend-flat { color: var(--muted);  font-size: 10px; }
+
+/* No-data inline */
+.no-data-inline { padding: 20px 16px; text-align: center; font-size: 11px; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+@media (max-width: 1100px) {
+  .home-grid-priority  { grid-template-columns: 1fr; }
+  .home-grid-secondary { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 700px) {
+  .home-grid-secondary { grid-template-columns: 1fr; }
+  .kpi-trio { grid-template-columns: 1fr 1fr; }
+  .zone-sub-grid { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
@@ -969,9 +1122,12 @@ function cardSkeleton() {
 async function loadHome() {
   showHomeLoading();
   try {
-    const resp = await apiFetch('/api/dashboard');
-    const d    = resp.data;
-    renderHome(d);
+    const [resp, reportResp] = await Promise.all([
+      apiFetch('/api/dashboard'),
+      apiFetch('/api/report-data').catch(() => null),
+    ]);
+    const d = resp.data;
+    renderHome(d, reportResp);
     setLastUpdate(resp.updatedAt);
   } catch (e) {
     document.getElementById('view-home').innerHTML = errorState(
@@ -1019,215 +1175,341 @@ function noDataCard() {
   </div>`;
 }
 
-function renderHome(d) {
-  const cards = [
-    buildHomeStageOut(d.stageOut),
-    buildHomePacking(d.packing),
-    buildHomePacked(d.packed),
-    buildHomeStageIn(d.stageIn),
-    buildHomeInbound(d.inbound),
-    buildHomeTransbordo(d.transbordo),
-  ];
+function renderHome(d, reportData) {
+  const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   document.getElementById('view-home').innerHTML = `
     <div class="view-title-row">
-      <div><div class="view-title">Visão Executiva</div>
-      <div class="view-sub">Resumo consolidado de todos os módulos — atualiza a cada ${REFRESH_INTERVAL}s</div></div>
+      <div>
+        <div class="view-title">Visão Executiva</div>
+        <div class="view-sub">Painel operacional consolidado · atualiza a cada ${REFRESH_INTERVAL}s · ${now}</div>
+      </div>
     </div>
-    <div class="module-grid">${cards.join('')}</div>`;
+    <div class="home-grid-priority">
+      ${buildHomeStageOut(d.stageOut)}
+      ${buildHomeStageIn(d.stageIn, reportData)}
+    </div>
+    <div class="home-grid-secondary">
+      ${buildHomePacking(d.packing)}
+      ${buildHomePacked(d.packed)}
+      ${buildHomeInbound(d.inbound)}
+      ${buildHomeTransbordo(d.transbordo)}
+    </div>`;
 }
 
 function buildHomeStageOut(wrap) {
   const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/></svg>`;
-  if (!wrap?.data) return `<div class="module-card" onclick="navigate('stage_out')">${cardHeader(icon,'Stage OUT','Gaiolas endereçadas','var(--orange)')}${noDataCard()}${cardFooter(null,'stage_out')}</div>`;
-  const list    = wrap.data.list || [];
-  const active  = list.filter(a => (a.to_quantity||0) > 0);
-  const totalTO = active.reduce((s,a) => s + a.to_quantity, 0);
-  setBadge('stage_out', list.length);
-  return `<div class="module-card" onclick="navigate('stage_out')">
-    ${cardHeader(icon,'Stage OUT','Gaiolas endereçadas','var(--orange)')}
-    <div class="card-body">
-      <div class="kpi-row k2">
-        <div class="kpi-block">
-          <span class="kpi-label">Total de TO's</span>
-          <span class="kpi-value" style="color:var(--orange)">${n(totalTO)}</span>
-          <span class="kpi-sub">${n(active.length)} destinos ativos</span>
-        </div>
-        <div class="kpi-block">
-          <span class="kpi-label">Gaiolas Endereçadas</span>
-          <span class="kpi-value">${n(list.length)}</span>
-          <span class="kpi-sub">${n(list.length - active.length)} vazias</span>
-        </div>
+
+  if (!wrap?.data) {
+    return `<div class="priority-card" onclick="navigate('stage_out')">
+      <div class="card-hdr">${cardHeader(icon,'Stage OUT','Visão operacional de expedição','var(--orange)').replace('<div class="card-hdr">','').replace('</div>','')}</div>
+      <div class="no-data-inline"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Sem dados — Tampermonkey inativo</div>
+    </div>`;
+  }
+
+  const list     = wrap.data.list || [];
+  const active   = list.filter(a => (a.to_quantity||0) > 0);
+  const totalTO  = active.reduce((s,a) => s + a.to_quantity, 0);
+  const totalCap = list.reduce((s,a) => s + (a.capacity||0), 0);
+  const totalRuas = list.length;
+  const ruasOcup  = active.length;
+  const gaiolas   = totalCap || list.reduce((s,a) => s + (a.to_quantity||0), 0);
+
+  const ruasPct  = totalRuas > 0 ? Math.round(ruasOcup / totalRuas * 100) : 0;
+  const satPct   = totalCap  > 0 ? Math.round(totalTO  / totalCap  * 100) : Math.min(100, Math.round(totalTO / Math.max(gaiolas,1) * 100));
+
+  const isCrit = ruasPct >= 95;
+  const isWarn = ruasPct >= 85 && !isCrit;
+
+  const ruasColor = isCrit ? 'var(--red)' : isWarn ? 'var(--amber)' : 'var(--green)';
+  const satColor  = satPct >= 90 ? 'var(--red)' : satPct >= 75 ? 'var(--amber)' : 'var(--green)';
+  const cardClass = isCrit ? 'priority-card crit' : isWarn ? 'priority-card warn' : 'priority-card';
+
+  setBadge('stage_out', totalRuas);
+
+  // Top 5 destinations by TOs
+  const topDests = [...active].sort((a,b) => (b.to_quantity||0)-(a.to_quantity||0)).slice(0,5);
+  const maxTO    = topDests[0]?.to_quantity || 1;
+  const destRows = topDests.map(a => {
+    const barW = Math.round((a.to_quantity / maxTO) * 100);
+    return `<div class="dest-mini-row">
+      <span class="dest-mini-name">${a.area_name||'—'}</span>
+      <div class="dest-mini-bar-wrap"><div class="dest-mini-bar" style="width:${barW}%;background:var(--orange)"></div></div>
+      <span class="dest-mini-val" style="color:var(--orange)">${a.to_quantity}</span>
+    </div>`;
+  }).join('');
+
+  const alertBanner = isCrit
+    ? `<div class="alert-banner crit"><div class="alert-dot" style="background:var(--red)"></div>CRÍTICO — Ocupação acima de 95% das ruas</div>`
+    : isWarn
+    ? `<div class="alert-banner warn"><div class="alert-dot" style="background:var(--amber)"></div>ATENÇÃO — Ocupação acima de 85% das ruas</div>`
+    : '';
+
+  return `<div class="${cardClass}" onclick="navigate('stage_out')">
+    <div class="card-hdr">
+      <div class="card-ico" style="background:rgba(238,77,45,.15)">${icon}</div>
+      <div class="card-meta">
+        <div class="card-title">Stage OUT</div>
+        <div class="card-desc">Visão operacional de expedição</div>
+      </div>
+      <div class="card-arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="kpi-trio">
+      <div class="kpi-trio-item">
+        <div class="kpi-trio-label">Total de Ruas</div>
+        <div class="kpi-trio-val" style="color:var(--orange)">${n(totalRuas)}</div>
+        <div class="kpi-trio-sub">${n(ruasOcup)} ocupadas</div>
+      </div>
+      <div class="kpi-trio-item">
+        <div class="kpi-trio-label">Gaiolas</div>
+        <div class="kpi-trio-val">${n(gaiolas)}</div>
+        <div class="kpi-trio-sub">capacidade total</div>
+      </div>
+      <div class="kpi-trio-item">
+        <div class="kpi-trio-label">TOs</div>
+        <div class="kpi-trio-val">${n(totalTO)}</div>
+        <div class="kpi-trio-sub">em staging</div>
       </div>
     </div>
-    ${cardFooter(wrap.updatedAt,'stage_out')}
+    <div class="cap-row">
+      <div class="cap-label">
+        <span class="cap-title">Ocupação das Ruas</span>
+        <span class="cap-pct" style="color:${ruasColor}">${ruasPct}%</span>
+      </div>
+      <div class="cap-bar"><div class="cap-fill" style="width:${ruasPct}%;background:${ruasColor}"></div></div>
+    </div>
+    ${totalCap > 0 ? `<div class="cap-row" style="border-bottom:none">
+      <div class="cap-label">
+        <span class="cap-title">Saturação (TOs / Capacidade)</span>
+        <span class="cap-pct" style="color:${satColor}">${satPct}%</span>
+      </div>
+      <div class="cap-bar"><div class="cap-fill" style="width:${Math.min(100,satPct)}%;background:${satColor}"></div></div>
+    </div>` : ''}
+    ${destRows ? `<div style="padding:8px 16px 4px;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-top:1px solid var(--border)">Top Destinos por TOs</div>
+    <div class="dest-mini-list">${destRows}</div>` : ''}
+    ${alertBanner}
+    <div class="card-ftr">
+      <span class="card-ftr-time">${wrap.updatedAt ? 'Atualizado ' + fmtTime(wrap.updatedAt) : 'Sem dados'}</span>
+      <span class="card-ftr-link">Ver detalhes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+    </div>
   </div>`;
 }
 
 function buildHomePacking(wrap) {
-  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.91 8.84L12 2 3.09 8.84"/><polyline points="3.09 8.84 3 19 12 22 21 19 20.91 8.84"/><polyline points="12 22 12 11.5"/><line x1="3.09" y1="8.84" x2="12" y2="11.5"/><line x1="20.91" y1="8.84" x2="12" y2="11.5"/></svg>`;
-  if (!wrap?.data) return `<div class="module-card" onclick="navigate('packing')">${cardHeader(icon,'Packing','TOs em embalagem','var(--amber)')}${noDataCard()}${cardFooter(null,'packing')}</div>`;
-  const list     = wrap.data.list || [];
-  const totalTOs = wrap.data.total || list.length;
-  const totalPac = list.reduce((s,t) => s + (t.quantity||0), 0);
-  const dests    = new Set(list.map(t => t.dest_station_id)).size;
-  setBadge('packing', totalTOs);
-  return `<div class="module-card" onclick="navigate('packing')">
-    ${cardHeader(icon,'Packing','TOs em embalagem','var(--amber)')}
-    <div class="card-body">
-      <div class="kpi-row k2">
-        <div class="kpi-block">
-          <span class="kpi-label">Total de TO's</span>
-          <span class="kpi-value" style="color:var(--amber)">${n(totalTOs)}</span>
-          <span class="kpi-sub">${n(dests)} destinos</span>
-        </div>
-        <div class="kpi-block">
-          <span class="kpi-label">Total de Pacotes</span>
-          <span class="kpi-value">${n(totalPac)}</span>
-          <span class="kpi-sub">${totalTOs > 0 ? Math.round(totalPac/totalTOs) : '—'} pkgs/TO</span>
-        </div>
+  const icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.91 8.84L12 2 3.09 8.84"/><polyline points="3.09 8.84 3 19 12 22 21 19 20.91 8.84"/><polyline points="12 22 12 11.5"/><line x1="3.09" y1="8.84" x2="12" y2="11.5"/><line x1="20.91" y1="8.84" x2="12" y2="11.5"/></svg>`;
+  if (!wrap?.data) return `<div class="sec-card" onclick="navigate('packing')"><div class="sec-hdr"><div class="sec-ico" style="background:rgba(245,158,11,.15)">${icon}</div><span class="sec-title">Packing</span></div><div class="no-data-inline" style="padding:14px">Sem dados</div></div>`;
+  const list=wrap.data.list||[], total=wrap.data.total||list.length;
+  const pkgs=list.reduce((s,t)=>s+(t.quantity||0),0), dests=new Set(list.map(t=>t.dest_station_id)).size;
+  setBadge('packing', total);
+  return `<div class="sec-card" onclick="navigate('packing')">
+    <div class="sec-hdr"><div class="sec-ico" style="background:rgba(245,158,11,.15)">${icon}</div><span class="sec-title">Packing</span><span class="badge b-amber">${n(total)}</span></div>
+    <div class="sec-body">
+      <div class="sec-kpi-row">
+        <div><div class="sec-kpi-lbl">TOs</div><div class="sec-kpi-val" style="color:var(--amber)">${n(total)}</div><div class="sec-kpi-sub">${n(dests)} destinos</div></div>
+        <div><div class="sec-kpi-lbl">Pacotes</div><div class="sec-kpi-val">${n(pkgs)}</div><div class="sec-kpi-sub">${total>0?Math.round(pkgs/total):'—'} p/TO</div></div>
       </div>
     </div>
-    ${cardFooter(wrap.updatedAt,'packing')}
+    <div class="sec-ftr"><span>${wrap.updatedAt?'Atualizado '+fmtTime(wrap.updatedAt):'—'}</span><span>Ver →</span></div>
   </div>`;
 }
 
 function buildHomePacked(wrap) {
-  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/><polyline points="9 11 12 14 16 9"/></svg>`;
-  if (!wrap?.data) return `<div class="module-card" onclick="navigate('packed')">${cardHeader(icon,'Packed','TOs finalizados','var(--green)')}${noDataCard()}${cardFooter(null,'packed')}</div>`;
-  const list     = wrap.data.list || [];
-  const totalTOs = wrap.data.total || list.length;
-  const totalPac = list.reduce((s,t) => s + (t.quantity||0), 0);
-  const dests    = new Set(list.map(t => t.dest_station_id)).size;
-  setBadge('packed', totalTOs);
-  return `<div class="module-card" onclick="navigate('packed')">
-    ${cardHeader(icon,'Packed','TOs finalizados','var(--green)')}
-    <div class="card-body">
-      <div class="kpi-row k2">
-        <div class="kpi-block">
-          <span class="kpi-label">Total de TO's</span>
-          <span class="kpi-value" style="color:var(--green)">${n(totalTOs)}</span>
-          <span class="kpi-sub">${n(dests)} destinos</span>
-        </div>
-        <div class="kpi-block">
-          <span class="kpi-label">Total de Pacotes</span>
-          <span class="kpi-value">${n(totalPac)}</span>
-          <span class="kpi-sub">${totalTOs > 0 ? Math.round(totalPac/totalTOs) : '—'} pkgs/TO</span>
-        </div>
+  const icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/><polyline points="9 11 12 14 16 9"/></svg>`;
+  if (!wrap?.data) return `<div class="sec-card" onclick="navigate('packed')"><div class="sec-hdr"><div class="sec-ico" style="background:rgba(34,197,94,.15)">${icon}</div><span class="sec-title">Packed</span></div><div class="no-data-inline" style="padding:14px">Sem dados</div></div>`;
+  const list=wrap.data.list||[], total=wrap.data.total||list.length;
+  const pkgs=list.reduce((s,t)=>s+(t.quantity||0),0), dests=new Set(list.map(t=>t.dest_station_id)).size;
+  setBadge('packed', total);
+  return `<div class="sec-card" onclick="navigate('packed')">
+    <div class="sec-hdr"><div class="sec-ico" style="background:rgba(34,197,94,.15)">${icon}</div><span class="sec-title">Packed</span><span class="badge b-green">${n(total)}</span></div>
+    <div class="sec-body">
+      <div class="sec-kpi-row">
+        <div><div class="sec-kpi-lbl">TOs</div><div class="sec-kpi-val" style="color:var(--green)">${n(total)}</div><div class="sec-kpi-sub">${n(dests)} destinos</div></div>
+        <div><div class="sec-kpi-lbl">Pacotes</div><div class="sec-kpi-val">${n(pkgs)}</div><div class="sec-kpi-sub">${total>0?Math.round(pkgs/total):'—'} p/TO</div></div>
       </div>
     </div>
-    ${cardFooter(wrap.updatedAt,'packed')}
+    <div class="sec-ftr"><span>${wrap.updatedAt?'Atualizado '+fmtTime(wrap.updatedAt):'—'}</span><span>Ver →</span></div>
   </div>`;
 }
 
-function buildHomeStageIn(wrap) {
+function buildHomeStageIn(wrap, reportData) {
   const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17"/><polyline points="17 17 7 17 7 7"/></svg>`;
-  if (!wrap?.data) return `<div class="module-card" onclick="navigate('stage_in')">${cardHeader(icon,'Stage IN','Staging inbound por zona','var(--blue)')}${noDataCard()}${cardFooter(null,'stage_in')}</div>`;
-  const list    = wrap.data.list || [];
-  const active  = list.filter(a => (a.to_quantity||0) > 0);
-  const totalTO = active.reduce((s,a) => s + a.to_quantity, 0);
-  const maxArea = active.reduce((b,a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
 
-  // All zones
+  if (!wrap?.data) {
+    return `<div class="priority-card" onclick="navigate('stage_in')">
+      <div class="card-hdr">
+        <div class="card-ico" style="background:rgba(59,130,246,.15)">${icon}</div>
+        <div class="card-meta"><div class="card-title">Stage IN</div><div class="card-desc">Staging inbound por zona operacional</div></div>
+      </div>
+      <div class="no-data-inline"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Sem dados — Tampermonkey inativo</div>
+    </div>`;
+  }
+
+  const list   = wrap.data.list || [];
+  const active = list.filter(a => (a.to_quantity||0) > 0);
+
+  // Build zones from staging data
   const zones = {};
   active.forEach(a => {
-    const z = (a.staging_group_name || 'OUTRAS').trim();
-    zones[z] = (zones[z]||0) + a.to_quantity;
+    const z = (a.staging_group_name||'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { name:z, tos:0, areas:[], maxAging:0, totalAging:0, agingCount:0 };
+    const zd = zones[z];
+    zd.tos += a.to_quantity;
+    zd.areas.push(a);
+    if (a.staging_duration_time > zd.maxAging) zd.maxAging = a.staging_duration_time;
+    if (a.staging_duration_time > 0) { zd.totalAging += a.staging_duration_time; zd.agingCount++; }
   });
-  const topZones = Object.entries(zones).sort((a,b) => b[1]-a[1]);
-  setBadge('stage_in', totalTO);
 
-  const zonePills = topZones.map(([z,c]) =>
-    `<span class="pill p-blue"><span class="pill-dot" style="background:var(--blue)"></span>${z.replace('ZONA ','').substring(0,14)}: ${n(c)}</span>`
-  ).join('');
+  // Enrich with report data (pacotes)
+  const byArea = reportData?.byArea || {};
+  Object.values(zones).forEach(z => {
+    z.pacotes = z.areas.reduce((s,a) => s + (byArea[a.area_name]?.pacotes||0), 0);
+    z.spp     = z.tos > 0 ? Math.round(z.pacotes / z.tos) : null;
+    z.minAging = z.areas.length
+      ? Math.min(...z.areas.filter(a=>a.staging_duration_time>0).map(a=>a.staging_duration_time))
+      : 0;
+    z.avgAging = z.agingCount > 0 ? z.totalAging / z.agingCount : 0;
+  });
 
-  return `<div class="module-card" onclick="navigate('stage_in')">
-    ${cardHeader(icon,'Stage IN','Staging inbound por zona','var(--blue)')}
-    <div class="card-body">
-      <div class="kpi-row k2">
-        <div class="kpi-block">
-          <span class="kpi-label">Total de TO's</span>
-          <span class="kpi-value" style="color:var(--blue)">${n(totalTO)}</span>
-          <span class="kpi-sub">${n(active.length)} ruas ativas</span>
+  // Sort by worst situation: crit aging first, then by pacotes
+  const zoneList = Object.values(zones).sort((a,b) => {
+    const scoreA = (a.maxAging > 86400 ? 3 : a.maxAging > 28800 ? 2 : a.maxAging > 7200 ? 1 : 0) * 1000 + (b.pacotes||b.tos) - (a.pacotes||a.tos);
+    const scoreB = (b.maxAging > 86400 ? 3 : b.maxAging > 28800 ? 2 : b.maxAging > 7200 ? 1 : 0) * 1000;
+    return scoreB - scoreA;
+  });
+
+  const totalTOs  = active.reduce((s,a) => s+a.to_quantity, 0);
+  const totalPkgs = Object.values(zones).reduce((s,z) => s+(z.pacotes||0), 0);
+  const maxAging  = Math.max(...active.map(a=>a.staging_duration_time||0), 0);
+  const sppGlobal = totalTOs > 0 && totalPkgs > 0 ? Math.round(totalPkgs / totalTOs) : null;
+  setBadge('stage_in', totalTOs);
+
+  function agingColor(sec) {
+    if (sec > 86400)  return 'var(--red)';
+    if (sec > 28800)  return 'var(--orange)';
+    if (sec > 7200)   return 'var(--amber)';
+    return 'var(--green)';
+  }
+  function agingClass(sec) {
+    if (sec > 86400)  return 'zone-crit';
+    if (sec > 28800)  return 'zone-warn';
+    return 'zone-ok';
+  }
+  function fmtAgingShort(sec) {
+    if (!sec || sec <= 0) return '—';
+    const d = Math.floor(sec/86400);
+    const h = Math.floor((sec%86400)/3600);
+    const m = Math.floor((sec%3600)/60);
+    if (d > 0) return `${d}d${h}h`;
+    if (h > 0) return `${h}h${String(m).padStart(2,'0')}m`;
+    return `${m}m`;
+  }
+  function sppColor(v) {
+    if (!v) return 'var(--muted)';
+    if (v > 150) return 'var(--red)';
+    if (v > 70)  return 'var(--amber)';
+    if (v > 30)  return 'var(--blue)';
+    return 'var(--green)';
+  }
+
+  const zoneCards = zoneList.map(z => {
+    const ac = agingColor(z.maxAging);
+    const cls = agingClass(z.maxAging);
+    const sc  = sppColor(z.spp);
+    const zoneName = z.name.replace('ZONA ','');
+    return `<div class="zone-subcard ${cls}">
+      <div class="zone-sub-header">
+        <span class="zone-sub-name" style="color:${ac}">${zoneName}</span>
+        <span class="zone-sub-pkgs" style="color:var(--text)">${z.pacotes > 0 ? n(z.pacotes)+' pcts' : n(z.tos)+' TOs'}</span>
+      </div>
+      <div class="zone-sub-grid">
+        <div class="zone-sub-metric">
+          <span class="zone-sub-lbl">TOs</span>
+          <span class="zone-sub-val">${n(z.tos)}</span>
         </div>
-        <div class="kpi-block">
-          <span class="kpi-label">Aging Mais Antigo</span>
-          <span class="kpi-value sm">${maxArea ? fmtDur(maxArea.staging_duration_time) : '—'}</span>
-          <span class="kpi-sub">${maxArea ? (maxArea.area_name||'—') : 'nenhuma rua'}</span>
+        ${z.spp !== null ? `<div class="zone-sub-metric">
+          <span class="zone-sub-lbl">SPP</span>
+          <span class="zone-sub-val" style="color:${sc}">${z.spp}</span>
+        </div>` : `<div class="zone-sub-metric"><span class="zone-sub-lbl">Ruas</span><span class="zone-sub-val">${z.areas.length}</span></div>`}
+        <div class="zone-sub-metric">
+          <span class="zone-sub-lbl">Avg</span>
+          <span class="zone-sub-val" style="color:${agingColor(z.avgAging)}">${fmtAgingShort(z.avgAging)}</span>
+        </div>
+        <div class="zone-sub-metric">
+          <span class="zone-sub-lbl">Pico</span>
+          <span class="zone-sub-val" style="color:${ac}">${fmtAgingShort(z.maxAging)}</span>
         </div>
       </div>
-      ${topZones.length ? `<div class="pill-row">${zonePills}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `<div class="priority-card" onclick="navigate('stage_in')">
+    <div class="card-hdr">
+      <div class="card-ico" style="background:rgba(59,130,246,.15)">${icon}</div>
+      <div class="card-meta">
+        <div class="card-title">Stage IN</div>
+        <div class="card-desc">Staging inbound por zona operacional</div>
+      </div>
+      <div class="card-arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
     </div>
-    ${cardFooter(wrap.updatedAt,'stage_in')}
+    <div class="stage-in-summary">
+      <div class="si-summary-item">
+        <div class="si-summary-lbl">Total TOs</div>
+        <div class="si-summary-val" style="color:var(--blue)">${n(totalTOs)}</div>
+        <div class="si-summary-sub">${active.length} ruas ativas</div>
+      </div>
+      <div class="si-summary-item">
+        <div class="si-summary-lbl">Total Pacotes</div>
+        <div class="si-summary-val">${totalPkgs > 0 ? n(totalPkgs) : '—'}</div>
+        <div class="si-summary-sub">${sppGlobal ? 'SPP médio: '+sppGlobal : 'sem dados de pacotes'}</div>
+      </div>
+      <div class="si-summary-item">
+        <div class="si-summary-lbl">Pior Aging</div>
+        <div class="si-summary-val" style="color:${agingColor(maxAging)}">${fmtAgingShort(maxAging)}</div>
+        <div class="si-summary-sub">${zoneList.length} zona${zoneList.length!==1?'s':''}</div>
+      </div>
+    </div>
+    <div class="zone-cards-wrap">${zoneCards || '<div style="padding:8px;font-size:11px;color:var(--muted)">Nenhuma zona ativa</div>'}</div>
+    <div class="card-ftr">
+      <span class="card-ftr-time">${wrap.updatedAt ? 'Atualizado ' + fmtTime(wrap.updatedAt) : 'Sem dados'}</span>
+      <span class="card-ftr-link">Ver detalhes <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+    </div>
   </div>`;
 }
 
 function buildHomeInbound(wrap) {
-  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`;
-  if (!wrap?.data) return `<div class="module-card" onclick="navigate('inbound')">${cardHeader(icon,'Fila Recebimento','Veículos na doca','var(--cyan)')}${noDataCard()}${cardFooter(null,'inbound')}</div>`;
-  const list     = wrap.data.list || [];
-  const pending  = list.filter(v => v.queue_status === 1).length;
-  const assigned = list.filter(v => v.queue_status === 2).length;
-  const docked   = list.filter(v => v.queue_status === 3).length;
-  const onHold   = list.filter(v => v.queue_status === 5).length;
+  const icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`;
+  if (!wrap?.data) return `<div class="sec-card" onclick="navigate('inbound')"><div class="sec-hdr"><div class="sec-ico" style="background:rgba(6,182,212,.15)">${icon}</div><span class="sec-title">Fila Recebimento</span></div><div class="no-data-inline" style="padding:14px">Sem dados</div></div>`;
+  const list=wrap.data.list||[];
+  const pending=list.filter(v=>v.queue_status===1).length, docked=list.filter(v=>v.queue_status===3).length;
   setBadge('inbound', list.length);
-  return `<div class="module-card" onclick="navigate('inbound')">
-    ${cardHeader(icon,'Fila Recebimento','Veículos na doca','var(--cyan)')}
-    <div class="card-body">
-      <div class="kpi-row k2">
-        <div class="kpi-block">
-          <span class="kpi-label">Total de Veículos</span>
-          <span class="kpi-value" style="color:var(--cyan)">${n(list.length)}</span>
-          <span class="kpi-sub">na fila agora</span>
-        </div>
-        <div class="kpi-block">
-          <span class="kpi-label">Pendentes</span>
-          <span class="kpi-value" style="color:${pending>0?'var(--amber)':'var(--text)'}">${n(pending)}</span>
-          <span class="kpi-sub">aguardando doca</span>
-        </div>
-      </div>
-      <div class="pill-row">
-        <span class="pill p-amber"><span class="pill-dot" style="background:var(--amber)"></span>Pendente: ${pending}</span>
-        <span class="pill p-cyan"><span class="pill-dot" style="background:var(--cyan)"></span>Atribuído: ${assigned}</span>
-        <span class="pill p-green"><span class="pill-dot" style="background:var(--green)"></span>Docado: ${docked}</span>
-        ${onHold ? `<span class="pill p-muted"><span class="pill-dot" style="background:var(--muted)"></span>Em Espera: ${onHold}</span>` : ''}
+  return `<div class="sec-card" onclick="navigate('inbound')">
+    <div class="sec-hdr"><div class="sec-ico" style="background:rgba(6,182,212,.15)">${icon}</div><span class="sec-title">Fila Recebimento</span><span class="badge b-cyan">${n(list.length)}</span></div>
+    <div class="sec-body">
+      <div class="sec-kpi-row">
+        <div><div class="sec-kpi-lbl">Veículos</div><div class="sec-kpi-val" style="color:var(--cyan)">${n(list.length)}</div><div class="sec-kpi-sub">na fila</div></div>
+        <div><div class="sec-kpi-lbl">Pendentes</div><div class="sec-kpi-val" style="color:${pending>0?'var(--amber)':'var(--muted)'}">${n(pending)}</div><div class="sec-kpi-sub">${n(docked)} docados</div></div>
       </div>
     </div>
-    ${cardFooter(wrap.updatedAt,'inbound')}
+    <div class="sec-ftr"><span>${wrap.updatedAt?'Atualizado '+fmtTime(wrap.updatedAt):'—'}</span><span>Ver →</span></div>
   </div>`;
 }
 
 function buildHomeTransbordo(wrap) {
-  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`;
-  if (!wrap?.data) return `<div class="module-card" onclick="navigate('transbordo')">${cardHeader(icon,'Transbordo','Operações de transshipment','var(--violet)')}${noDataCard()}${cardFooter(null,'transbordo')}</div>`;
-  const list     = wrap.data.list || [];
-  const live     = wrap.data.liveTrips || [];
-  const queue    = wrap.data.queue || [];
-  function destStation(t) { return (t.trip_station||[]).find(s => s.trip_station_status===50 || s.trip_station_status===60); }
-  const transit  = live.filter(t => destStation(t)?.trip_station_status === 50).length;
-  const unloading= live.filter(t => destStation(t)?.trip_station_status === 60).length;
-  const totalPkgs= live.reduce((s,t) => s + (t.order_quantity||0), 0);
-  setBadge('transbordo', live.length || list.length);
-  return `<div class="module-card" onclick="navigate('transbordo')">
-    ${cardHeader(icon,'Transbordo','Operações de transshipment','var(--violet)')}
-    <div class="card-body">
-      <div class="kpi-row k2">
-        <div class="kpi-block">
-          <span class="kpi-label">Viagens Ativas</span>
-          <span class="kpi-value" style="color:var(--violet)">${n(live.length)}</span>
-          <span class="kpi-sub">${n(transit)} em trânsito</span>
-        </div>
-        <div class="kpi-block">
-          <span class="kpi-label">Total de Pacotes</span>
-          <span class="kpi-value">${n(totalPkgs)}</span>
-          <span class="kpi-sub">histórico: ${n(list.length)} viagens</span>
-        </div>
-      </div>
-      <div class="pill-row">
-        <span class="pill p-amber"><span class="pill-dot" style="background:var(--amber)"></span>Em Trânsito: ${transit}</span>
-        <span class="pill p-violet"><span class="pill-dot" style="background:var(--violet)"></span>Descarregando: ${unloading}</span>
+  const icon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--violet)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`;
+  if (!wrap?.data) return `<div class="sec-card" onclick="navigate('transbordo')"><div class="sec-hdr"><div class="sec-ico" style="background:rgba(139,92,246,.15)">${icon}</div><span class="sec-title">Transbordo</span></div><div class="no-data-inline" style="padding:14px">Sem dados</div></div>`;
+  const live=wrap.data.liveTrips||[];
+  function destStation(t){return(t.trip_station||[]).find(s=>s.trip_station_status===50||s.trip_station_status===60);}
+  const transit=live.filter(t=>destStation(t)?.trip_station_status===50).length;
+  const totalPkgs=live.reduce((s,t)=>s+(t.order_quantity||0),0);
+  setBadge('transbordo', live.length);
+  return `<div class="sec-card" onclick="navigate('transbordo')">
+    <div class="sec-hdr"><div class="sec-ico" style="background:rgba(139,92,246,.15)">${icon}</div><span class="sec-title">Transbordo</span><span class="badge b-violet">${n(live.length)}</span></div>
+    <div class="sec-body">
+      <div class="sec-kpi-row">
+        <div><div class="sec-kpi-lbl">Viagens</div><div class="sec-kpi-val" style="color:var(--violet)">${n(live.length)}</div><div class="sec-kpi-sub">${n(transit)} em trânsito</div></div>
+        <div><div class="sec-kpi-lbl">Pacotes</div><div class="sec-kpi-val">${n(totalPkgs)}</div><div class="sec-kpi-sub">em rota</div></div>
       </div>
     </div>
-    ${cardFooter(wrap.updatedAt,'transbordo')}
+    <div class="sec-ftr"><span>${wrap.updatedAt?'Atualizado '+fmtTime(wrap.updatedAt):'—'}</span><span>Ver →</span></div>
   </div>`;
 }
 
