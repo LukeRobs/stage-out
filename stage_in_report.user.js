@@ -77,7 +77,7 @@
       totalTOs     += tos.length;
       totalPacotes += ruaPacotes;
       for (const to of tos) {
-        if (to.pacotes > 20) tosGt20++;
+        if (to.pacotes > 30) tosGt20++;
         totalAging += to.aging_h;
       }
       if (tos.length > 0) sppPerRua.push(ruaPacotes / tos.length);
@@ -97,7 +97,7 @@
       `Hora: ${hora}`,
       ``,
       `Total TO's: ${totalTOs}`,
-      `TO's > 20: ${tosGt20}`,
+      `TO's > 30: ${tosGt20}`,
       `Aging Médio: ${agingStr}`,
       `SPP: ${spp}`,
       `MAX SPP: ${maxSpp}`,
