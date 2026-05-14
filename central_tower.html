@@ -1322,12 +1322,12 @@ function buildHomeStageOut(wrap) {
   }
 
   const list     = wrap.data.list || [];
-  const active   = list.filter(a => (a.to_quantity||0) > 0);
-  const totalTO  = active.reduce((s,a) => s + a.to_quantity, 0);
+  const active   = list.filter(a => (a.transport_order_quantity||0) > 0);
+  const totalTO  = active.reduce((s,a) => s + a.transport_order_quantity, 0);
   const totalCap = list.reduce((s,a) => s + (a.capacity||0), 0);
   const totalRuas = list.length;
   const ruasOcup  = active.length;
-  const gaiolas   = totalCap || list.reduce((s,a) => s + (a.to_quantity||0), 0);
+  const gaiolas   = totalCap || list.reduce((s,a) => s + (a.transport_order_quantity||0), 0);
 
   const ruasPct  = totalRuas > 0 ? Math.round(ruasOcup / totalRuas * 100) : 0;
   const satPct   = totalCap  > 0 ? Math.round(totalTO  / totalCap  * 100) : Math.min(100, Math.round(totalTO / Math.max(gaiolas,1) * 100));
@@ -1342,14 +1342,14 @@ function buildHomeStageOut(wrap) {
   setBadge('stage_out', totalRuas);
 
   // Top 5 destinations by TOs
-  const topDests = [...active].sort((a,b) => (b.to_quantity||0)-(a.to_quantity||0)).slice(0,5);
-  const maxTO    = topDests[0]?.to_quantity || 1;
+  const topDests = [...active].sort((a,b) => (b.transport_order_quantity||0)-(a.transport_order_quantity||0)).slice(0,5);
+  const maxTO    = topDests[0]?.transport_order_quantity || 1;
   const destRows = topDests.map(a => {
-    const barW = Math.round((a.to_quantity / maxTO) * 100);
+    const barW = Math.round((a.transport_order_quantity / maxTO) * 100);
     return `<div class="dest-mini-row">
-      <span class="dest-mini-name">${a.area_name||'—'}</span>
+      <span class="dest-mini-name">${soDestNameOf(a)||a.staging_area_name||'—'}</span>
       <div class="dest-mini-bar-wrap"><div class="dest-mini-bar" style="width:${barW}%;background:var(--orange)"></div></div>
-      <span class="dest-mini-val" style="color:var(--orange)">${a.to_quantity}</span>
+      <span class="dest-mini-val" style="color:var(--orange)">${a.transport_order_quantity}</span>
     </div>`;
   }).join('');
 
@@ -1642,6 +1642,17 @@ function soDestType(name) {
   if (u.startsWith('HUB')) return 'hub';
   return 'outros';
 }
+// Extract clean destination name from Stage OUT item
+// API fields: to_destination_list[0].station_name  OR  to_destination "[ID]Name"
+function soDestNameOf(a) {
+  if (a.to_destination_list?.length > 0 && a.to_destination_list[0].station_name) {
+    return a.to_destination_list[0].station_name.trim();
+  }
+  if (a.to_destination) {
+    return a.to_destination.replace(/^\[\d+\]\s*/, '').trim() || '—';
+  }
+  return '—';
+}
 function soTypeLbl(k)  { return {lm:'LM',xpt:'XPT',soc:'SOC',fbs:'FBS',hub:'HUB',outros:'OUT'}[k]||'OUT'; }
 function soTypeCss(k)  { return {lm:'so-tb-lm',xpt:'so-tb-xpt',soc:'so-tb-soc',fbs:'so-tb-fbs',hub:'so-tb-hub',outros:'so-tb-outros'}[k]||'so-tb-outros'; }
 function soAgingColor(s) {
@@ -1684,16 +1695,15 @@ function renderStageOut(data) {
   // ── Group by destination ──────────────────────────────────────────
   const groups = {};
   rawList.forEach(a => {
-    // staging_group_name = destination hub name in Stage OUT (e.g. "LM Hub_PE_Garanhuns")
-    // area_name = individual lane/rua identifier within that destination
-    const key = a.staging_group_name || a.dest_station_name || a.area_name || '—';
+    // Destination name from to_destination_list[0].station_name or to_destination field
+    const key = soDestNameOf(a);
     if (!groups[key]) {
       groups[key] = { name:key, typeKey:soDestType(key), ruas:[], tos:0, capacity:0,
                       agingMax:0, agingSum:0, agingCnt:0 };
     }
     const g = groups[key];
     g.ruas.push(a);
-    g.tos      += (a.to_quantity||0);
+    g.tos      += (a.transport_order_quantity||0);
     g.capacity += (a.capacity||0);
     const dur = a.staging_duration_time||0;
     if (dur > g.agingMax) g.agingMax = dur;
@@ -1706,16 +1716,10 @@ function renderStageOut(data) {
     return { ...g, ocp, agingAvg, status: soStatus(ocp, g.agingMax) };
   });
 
-  // ── DEBUG: log first item to identify field names ────────────────
-  if (rawList.length > 0) {
-    console.log('[StageOut DEBUG] first item fields:', Object.keys(rawList[0]));
-    console.log('[StageOut DEBUG] first item:', JSON.stringify(rawList[0]));
-  }
-
   // ── Global totals ────────────────────────────────────────────────
   const totalRuas   = rawList.length;
   const totalGaiols = rawList.reduce((s,a)=>s+(a.capacity||0), 0);
-  const totalTOs    = rawList.reduce((s,a)=>s+(a.to_quantity||0), 0);
+  const totalTOs    = rawList.reduce((s,a)=>s+(a.transport_order_quantity||0), 0);
   const avgOcp      = totalGaiols>0 ? Math.round(totalTOs/totalGaiols*100) : 0;
   const critCount   = allDests.filter(d=>d.status==='crit').length;
   const warnCount   = allDests.filter(d=>d.status==='warn').length;
@@ -1807,10 +1811,6 @@ function renderStageOut(data) {
       <span style="font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap">${dests.length} destino${dests.length!==1?'s':''}</span>
     </div>
     ${alertHtml}
-    ${rawList.length > 0 ? `<details style="margin-bottom:10px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px">
-      <summary style="cursor:pointer;color:var(--muted);font-weight:600">🔍 Debug: campos da API (1º item)</summary>
-      <pre style="margin-top:8px;font-size:10px;color:var(--amber);overflow:auto;max-height:200px">${JSON.stringify(rawList[0], null, 2)}</pre>
-    </details>` : ''}
     <div>${dests.length ? dests.map(d=>soDestCard(d)).join('') : '<div class="empty-state">Nenhum destino encontrado</div>'}</div>`;
   window._stageOutData = data;
 }
@@ -1829,12 +1829,12 @@ function soDestCard(d) {
 
   const hasMultiple = d.ruas.length > 1;
   const ruaRows = d.ruas.map(a => {
-    const ro  = a.capacity>0 ? Math.round((a.to_quantity||0)/a.capacity*100) : (a.to_quantity>0?100:0);
+    const ro  = a.capacity>0 ? Math.round((a.transport_order_quantity||0)/a.capacity*100) : (a.transport_order_quantity>0?100:0);
     const roc = ro>=90?'var(--red)':ro>=75?'var(--amber)':'var(--muted)';
     const dur = a.staging_duration_time||0;
     return `<tr>
-      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${a.area_name||'—'}</td>
-      <td style="text-align:center;font-weight:700;font-family:monospace;color:${(a.to_quantity||0)>0?'var(--orange)':'var(--muted)'}">${a.to_quantity||'—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${a.staging_area_name||'—'}</td>
+      <td style="text-align:center;font-weight:700;font-family:monospace;color:${(a.transport_order_quantity||0)>0?'var(--orange)':'var(--muted)'}">${a.transport_order_quantity||'—'}</td>
       <td style="text-align:center;font-family:monospace;color:var(--muted)">${a.capacity||'—'}</td>
       <td style="text-align:center">
         <span style="font-size:11px;font-family:monospace;font-weight:700;color:${roc}">${a.capacity>0?ro+'%':'—'}</span>
