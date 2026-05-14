@@ -1087,9 +1087,10 @@ function filteredAreas() {
         if (pac == null || tos === 0) return false;
         const spp = Math.round(pac / tos);
         const { key } = activeVolFilter.value;
-        return key === 'lt' ? spp < PCT_THRESHOLD :
-               key === 'eq' ? spp === PCT_THRESHOLD :
-                               spp > PCT_THRESHOLD;
+        return key === 'b1' ? spp <= 30
+             : key === 'b2' ? spp > 30 && spp <= 70
+             : key === 'b3' ? spp > 70 && spp <= 150
+             :                spp > 150;
       });
     }
   } else if (activeVolFilter.type) {
@@ -1546,15 +1547,16 @@ function buildSPPView() {
   }).filter(a => a.spp !== null);
 
   const bands = [
-    { label: `< ${T}`, key: 'lt', color: 'var(--green)'  },
-    { label: `= ${T}`, key: 'eq', color: 'var(--blue)'   },
-    { label: `> ${T}`, key: 'gt', color: 'var(--red)'    },
+    { label: `≤ 30`,          key: 'b1', color: 'var(--green)',  min: 0,   max: 30  },
+    { label: `> 30 e ≤ 70`,   key: 'b2', color: 'var(--blue)',   min: 31,  max: 70  },
+    { label: `> 70 e ≤ 150`,  key: 'b3', color: 'var(--yellow)', min: 71,  max: 150 },
+    { label: `> 150`,         key: 'b4', color: 'var(--red)',    min: 151, max: Infinity },
   ];
 
   const bandData = bands.map(b => {
     const matched = areasSpp.filter(a => {
       const s = Math.round(a.spp);
-      return b.key === 'lt' ? s < T : b.key === 'eq' ? s === T : s > T;
+      return s >= b.min && s <= b.max;
     });
     return {
       ...b,
@@ -1599,9 +1601,12 @@ function buildSPPView() {
       .map(([z, v], i, arr) => {
         const sppZ    = v.tos > 0 ? v.pac / v.tos : 0;
         const sppR    = Math.round(sppZ);
-        const color   = sppR < T ? 'var(--green)' : sppR === T ? 'var(--blue)' : 'var(--red)';
+        const color   = sppR <= 30  ? 'var(--green)'
+                       : sppR <= 70  ? 'var(--blue)'
+                       : sppR <= 150 ? 'var(--yellow)'
+                       :               'var(--red)';
         const rgb     = ZONE_RGBA[zoneKey(z)] || [139, 92, 246];
-        const barPct  = Math.min(sppZ / (T * 2) * 100, 100).toFixed(1);
+        const barPct  = Math.min(sppZ / 200 * 100, 100).toFixed(1);
         const border  = i < arr.length - 1 ? 'border-bottom:1px solid rgba(42,45,62,.35);' : '';
         return `<div style="display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:10px;padding:7px 0;${border}">
           <span style="font-size:11px;font-weight:700;color:rgb(${rgb.join(',')});letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneShort(z)}</span>
