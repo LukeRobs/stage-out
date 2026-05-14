@@ -1633,7 +1633,7 @@ function buildHomeTransbordo(wrap) {
 // ═════════════════════════════════════════════════
 
 function soDestType(name) {
-  if (!name) return 'outros';
+  if (!name || name === '—') return 'outros';
   const u = name.toUpperCase();
   if (u.startsWith('LM HUB') || u.startsWith('LM_HUB') || u.startsWith('LM ') || u.startsWith('LM_')) return 'lm';
   if (u.startsWith('XPT')) return 'xpt';
@@ -1684,7 +1684,9 @@ function renderStageOut(data) {
   // ── Group by destination ──────────────────────────────────────────
   const groups = {};
   rawList.forEach(a => {
-    const key = a.dest_station_name || a.group_name || a.area_name || '—';
+    // staging_group_name = destination hub name in Stage OUT (e.g. "LM Hub_PE_Garanhuns")
+    // area_name = individual lane/rua identifier within that destination
+    const key = a.staging_group_name || a.dest_station_name || a.area_name || '—';
     if (!groups[key]) {
       groups[key] = { name:key, typeKey:soDestType(key), ruas:[], tos:0, capacity:0,
                       agingMax:0, agingSum:0, agingCnt:0 };
@@ -1808,8 +1810,12 @@ function soDestCard(d) {
   const statusLbl = {crit:'CRÍTICO',warn:'ATENÇÃO',ok:'NORMAL',empty:'VAZIO'}[d.status]||'—';
   const typeLabel = soTypeLbl(d.typeKey);
   const typeCss   = soTypeCss(d.typeKey);
-  let dispName    = d.name;
-  if (d.typeKey==='lm') dispName = d.name.replace(/^LM[\s_]HUB[\s_]/i,'').replace(/^LM[\s_]/i,'');
+  // Clean display name: strip the type prefix shown in the badge
+  let dispName = d.name;
+  if (d.typeKey==='lm')  dispName = d.name.replace(/^LM[\s_]HUB[\s_]?/i,'').replace(/^LM[\s_]/i,'');
+  if (d.typeKey==='xpt') dispName = d.name.replace(/^XPT[\s_]/i,'');
+  if (d.typeKey==='soc') dispName = d.name.replace(/^SoC[\s_]/i,'').replace(/^SOC[\s_]/i,'');
+  if (d.typeKey==='fbs') dispName = d.name.replace(/^FBS[\s_]/i,'');
 
   const hasMultiple = d.ruas.length > 1;
   const ruaRows = d.ruas.map(a => {
