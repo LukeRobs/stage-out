@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stage IN - SeaTalk Hourly Report
 // @namespace    spx-express
-// @version      1.7
+// @version      1.8
 // @description  Captura screenshot do dashboard Stage IN e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/stage_in.html
@@ -66,22 +66,26 @@
 
   /* ── Helper: agrega métricas por conjunto de ruas ───────────────── */
   function calcStats(ruas, rd) {
-    let totalTOs = 0, totalAging = 0, totalPacotes = 0, tosGt30 = 0;
+    let totalTOs = 0, agingEntries = 0, totalAging = 0, totalPacotes = 0, tosGt30 = 0;
     const sppPerRua = [];
     for (const rua of ruas) {
+      const areaData   = rd.byArea?.[rua];
+      const ruaTOs     = areaData?.to_quantity || 0; // nº real de TOs (campo correto)
+      if (ruaTOs === 0) continue;
       const tos        = rd.byAreaTOs?.[rua] || [];
       const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
-      totalTOs     += tos.length;
+      totalTOs     += ruaTOs;
       totalPacotes += ruaPacotes;
       for (const to of tos) {
         if (to.pacotes > 30) tosGt30++;
         totalAging += to.aging_h;
+        agingEntries++;
       }
-      if (tos.length > 0) sppPerRua.push(ruaPacotes / tos.length);
+      if (ruaPacotes > 0) sppPerRua.push(ruaPacotes / ruaTOs);
     }
-    const avgH     = totalTOs > 0 ? totalAging / totalTOs : 0;
-    const hh       = Math.floor(avgH);
-    const mm       = Math.round((avgH - hh) * 60);
+    const avgH = agingEntries > 0 ? totalAging / agingEntries : 0;
+    const hh   = Math.floor(avgH);
+    const mm   = Math.round((avgH - hh) * 60);
     return {
       totalTOs, totalPacotes, tosGt30, sppPerRua,
       agingStr:  hh > 0 ? `${hh}h ${mm}min` : `${mm}min`,
@@ -143,17 +147,20 @@
     // Breakdown por zona
     const zoneMap = {};
     for (const [rua, areaData] of Object.entries(rd.byArea || {})) {
+      const ruaTOs = areaData?.to_quantity || 0;
+      if (ruaTOs === 0) continue;
       const zona = (areaData.zona || 'OUTRAS').replace('ZONA ', '');
-      if (!zoneMap[zona]) zoneMap[zona] = { tos: 0, pac: 0, agingSum: 0, agingMax: 0, sppVals: [] };
+      if (!zoneMap[zona]) zoneMap[zona] = { tos: 0, pac: 0, agingSum: 0, agingMax: 0, agingEntries: 0, sppVals: [] };
       const tos        = rd.byAreaTOs?.[rua] || [];
       const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
-      zoneMap[zona].tos    += tos.length;
-      zoneMap[zona].pac    += ruaPacotes;
+      zoneMap[zona].tos += ruaTOs;
+      zoneMap[zona].pac += ruaPacotes;
       for (const to of tos) {
         zoneMap[zona].agingSum += to.aging_h;
+        zoneMap[zona].agingEntries++;
         if (to.aging_h > zoneMap[zona].agingMax) zoneMap[zona].agingMax = to.aging_h;
       }
-      if (tos.length > 0) zoneMap[zona].sppVals.push(ruaPacotes / tos.length);
+      if (ruaPacotes > 0) zoneMap[zona].sppVals.push(ruaPacotes / ruaTOs);
     }
 
     const zoneLines = Object.entries(zoneMap)
@@ -163,7 +170,7 @@
         const sppZ = v.tos > 0 ? Math.round(v.pac / v.tos) : '—';
         const maxZ = v.sppVals.length ? Math.round(Math.max(...v.sppVals)) : '—';
         const minZ = v.sppVals.length ? Math.round(Math.min(...v.sppVals)) : '—';
-        const avg  = v.tos > 0 ? fmtAging(v.agingSum / v.tos) : '—';
+        const avg  = v.agingEntries > 0 ? fmtAging(v.agingSum / v.agingEntries) : '—';
         const pico = fmtAging(v.agingMax);
         const pac  = v.pac.toLocaleString('pt-BR');
         return `${zona}: ${v.tos} TO's | ${pac} Pacotes | SPP: ${sppZ} | Max: ${maxZ} | Min: ${minZ} | avg: ${avg} | Pico: ${pico}`;
@@ -283,5 +290,5 @@
     sendReport();
   });
 
-  console.log('[Stage IN Report] ✅ v1.7 — Bot API direto, a cada hora cheia (:00)');
+  console.log('[Stage IN Report] ✅ v1.8 — Bot API direto, a cada hora cheia (:00)');
 })();
