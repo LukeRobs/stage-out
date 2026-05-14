@@ -663,6 +663,117 @@ body {
   .kpi-trio { grid-template-columns: 1fr 1fr; }
   .zone-sub-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ══════════════════════════════════════════════════════
+   STAGE OUT — OPERATIONAL VIEW
+══════════════════════════════════════════════════════ */
+.so-exec-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.so-exec-kpi { padding: 12px 16px; border-right: 1px solid var(--border); }
+.so-exec-kpi:last-child { border-right: none; }
+.so-exec-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+.so-exec-val { font-size: 24px; font-weight: 800; font-family: 'Segoe UI', monospace; line-height: 1; }
+.so-exec-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+.so-alert-strip {
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+}
+.so-alert-strip.crit { background: rgba(239,68,68,.08); color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+.so-alert-strip.warn { background: rgba(245,158,11,.08); color: var(--amber); border: 1px solid rgba(245,158,11,.2); }
+
+.so-dest-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius);
+  margin-bottom: 5px;
+  overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
+}
+.so-dest-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.18); border-color: var(--border2); }
+.so-dest-card.crit  { border-left-color: var(--red);   background: rgba(239,68,68,.025); }
+.so-dest-card.warn  { border-left-color: var(--amber); background: rgba(245,158,11,.025); }
+.so-dest-card.ok    { border-left-color: var(--green); }
+.so-dest-card.empty { border-left-color: var(--border2); }
+
+.so-card-hdr {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 14px; cursor: pointer;
+  transition: background .1s;
+}
+.so-card-hdr:hover { background: var(--surface2); }
+
+.so-type-badge {
+  font-size: 9px; font-weight: 800;
+  padding: 2px 6px; border-radius: 4px;
+  letter-spacing: .06em; flex-shrink: 0;
+  font-family: monospace; text-transform: uppercase;
+}
+.so-tb-lm     { color: var(--blue);   background: rgba(59,130,246,.12);  }
+.so-tb-xpt    { color: var(--amber);  background: rgba(245,158,11,.12);  }
+.so-tb-soc    { color: var(--green);  background: rgba(34,197,94,.12);   }
+.so-tb-fbs    { color: var(--cyan);   background: rgba(6,182,212,.12);   }
+.so-tb-hub    { color: var(--violet); background: rgba(139,92,246,.12);  }
+.so-tb-outros { color: var(--muted);  background: var(--surface2);       }
+
+.so-card-name {
+  font-size: 12px; font-weight: 600;
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: 'Segoe UI', monospace;
+}
+.so-card-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.so-ocp-text   { font-size: 13px; font-weight: 800; font-family: monospace; min-width: 40px; text-align: right; }
+
+.so-status-badge {
+  font-size: 9px; font-weight: 800;
+  padding: 2px 7px; border-radius: 3px;
+  letter-spacing: .05em; font-family: monospace; white-space: nowrap;
+}
+.so-status-badge.crit  { background: rgba(239,68,68,.18);  color: var(--red);   }
+.so-status-badge.warn  { background: rgba(245,158,11,.18); color: var(--amber); }
+.so-status-badge.ok    { background: rgba(34,197,94,.12);  color: var(--green); }
+.so-status-badge.empty { background: var(--surface2); color: var(--muted2); }
+
+.so-expand { color: var(--muted2); flex-shrink: 0; transition: transform .2s; }
+.so-dest-card.open .so-expand { transform: rotate(90deg); }
+
+.so-card-metrics {
+  display: flex; align-items: center;
+  padding: 5px 14px 8px; gap: 0;
+  border-top: 1px solid var(--border);
+}
+.so-metric {
+  display: flex; flex-direction: column; gap: 0;
+  padding-right: 14px; margin-right: 14px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.so-metric:last-child { border-right: none; padding-right: 0; margin-right: 0; flex: 1; }
+.so-m-lbl { font-size: 8px; color: var(--muted2); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 2px; }
+.so-m-val { font-size: 13px; font-weight: 700; font-family: monospace; line-height: 1.3; }
+.so-ocp-bar-bg { height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.so-ocp-fill   { height: 100%; border-radius: 2px; transition: width .5s ease; }
+
+.so-detail { display: none; border-top: 1px solid var(--border); }
+.so-dest-card.open .so-detail { display: block; }
+
+@media (max-width: 1000px) {
+  .so-exec-bar { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .so-exec-bar { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 </head>
 <body>
@@ -869,6 +980,10 @@ let inboundFilter = 'all';
 
 // Transbordo filter
 let transbordoFilter = 'all';
+
+// Stage OUT operational view
+let soTypeFilter = 'all';
+let soSortKey    = 'crit';
 
 // search query per module
 const searchQ = { stage_out: '', packing: '', packed: '', stage_in: '', inbound: '', transbordo: '' };
@@ -1514,13 +1629,47 @@ function buildHomeTransbordo(wrap) {
 }
 
 // ═════════════════════════════════════════════════
-// STAGE OUT VIEW
+// STAGE OUT VIEW — OPERATIONAL
 // ═════════════════════════════════════════════════
+
+function soDestType(name) {
+  if (!name) return 'outros';
+  const u = name.toUpperCase();
+  if (u.startsWith('LM HUB') || u.startsWith('LM_HUB') || u.startsWith('LM ') || u.startsWith('LM_')) return 'lm';
+  if (u.startsWith('XPT')) return 'xpt';
+  if (u.startsWith('SOC') || u.startsWith('SOC_')) return 'soc';
+  if (u.startsWith('FBS')) return 'fbs';
+  if (u.startsWith('HUB')) return 'hub';
+  return 'outros';
+}
+function soTypeLbl(k)  { return {lm:'LM',xpt:'XPT',soc:'SOC',fbs:'FBS',hub:'HUB',outros:'OUT'}[k]||'OUT'; }
+function soTypeCss(k)  { return {lm:'so-tb-lm',xpt:'so-tb-xpt',soc:'so-tb-soc',fbs:'so-tb-fbs',hub:'so-tb-hub',outros:'so-tb-outros'}[k]||'so-tb-outros'; }
+function soAgingColor(s) {
+  if (!s||s<=0) return 'var(--muted)';
+  if (s>=14400) return 'var(--red)';
+  if (s>=7200)  return 'var(--orange)';
+  if (s>=3600)  return 'var(--amber)';
+  return 'var(--green)';
+}
+function soStatus(ocp, agingMax) {
+  if (ocp >= 90 || agingMax >= 14400) return 'crit';
+  if (ocp >= 75 || agingMax >= 7200)  return 'warn';
+  if (ocp < 1) return 'empty';
+  return 'ok';
+}
+function soCritScore(d) {
+  return (d.status==='crit'?1000:d.status==='warn'?500:d.status==='empty'?-1000:0)
+       + d.ocp + Math.min((d.agingMax||0)/360, 100);
+}
+
 async function loadStageOut() {
   const el = document.getElementById('view-stage_out');
-  el.innerHTML = skeletonStats(2) + skeletonRows(8);
+  el.innerHTML = `<div class="so-exec-bar">${Array(5).fill(`<div class="so-exec-kpi"><div class="skel" style="height:62px;border-radius:6px"></div></div>`).join('')}</div>
+    <div class="skeleton-wrap">${Array(10).fill('<div class="skel skel-row" style="margin-bottom:5px"></div>').join('')}</div>`;
   try {
     const data = await apiFetch('/api/stage-out');
+    window._stageOutData = data;
+    soTypeFilter = 'all'; soSortKey = 'crit';
     renderStageOut(data);
     setLastUpdate(data.fetchedAt);
   } catch (e) {
@@ -1529,64 +1678,211 @@ async function loadStageOut() {
 }
 
 function renderStageOut(data) {
-  const allList = data.list || [];
-  const q       = searchQ.stage_out.toLowerCase();
-  const list    = q ? allList.filter(a => (a.area_name||'').toLowerCase().includes(q) || String(a.to_quantity).includes(q)) : allList;
-  const active  = list.filter(a => (a.to_quantity||0) > 0);
-  const totalTO = allList.filter(a=>(a.to_quantity||0)>0).reduce((s,a)=>s+a.to_quantity,0);
-  setBadge('stage_out', allList.length);
+  const rawList = data.list || [];
+  const q = searchQ.stage_out.toLowerCase();
 
-  const sorted = [...list].sort((a,b) => (b.to_quantity||0)-(a.to_quantity||0));
+  // ── Group by destination ──────────────────────────────────────────
+  const groups = {};
+  rawList.forEach(a => {
+    const key = a.dest_station_name || a.group_name || a.area_name || '—';
+    if (!groups[key]) {
+      groups[key] = { name:key, typeKey:soDestType(key), ruas:[], tos:0, capacity:0,
+                      agingMax:0, agingSum:0, agingCnt:0 };
+    }
+    const g = groups[key];
+    g.ruas.push(a);
+    g.tos      += (a.to_quantity||0);
+    g.capacity += (a.capacity||0);
+    const dur = a.staging_duration_time||0;
+    if (dur > g.agingMax) g.agingMax = dur;
+    if (dur > 0) { g.agingSum += dur; g.agingCnt++; }
+  });
 
-  const rows = sorted.map(a => {
-    const tos = a.to_quantity || 0;
-    const dur = a.staging_duration_time || 0;
-    return `<tr>
-      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${a.area_name||'—'}</td>
-      <td>${a.staging_group_name || '—'}</td>
-      <td style="text-align:center;font-weight:700;color:${tos>0?'var(--orange)':'var(--muted)'};font-family:monospace">${tos||'—'}</td>
-      <td><span class="dur ${durClass(dur)}">${fmtDur(dur)}</span></td>
-      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${n(a.capacity||0)}</td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="5" class="empty-state">Nenhum resultado</td></tr>`;
+  let allDests = Object.values(groups).map(g => {
+    const ocp      = g.capacity>0 ? Math.round(g.tos/g.capacity*100) : (g.tos>0?100:0);
+    const agingAvg = g.agingCnt>0 ? g.agingSum/g.agingCnt : 0;
+    return { ...g, ocp, agingAvg, status: soStatus(ocp, g.agingMax) };
+  });
 
+  // ── Global totals ────────────────────────────────────────────────
+  const totalRuas   = rawList.length;
+  const totalGaiols = rawList.reduce((s,a)=>s+(a.capacity||0), 0);
+  const totalTOs    = rawList.reduce((s,a)=>s+(a.to_quantity||0), 0);
+  const avgOcp      = totalGaiols>0 ? Math.round(totalTOs/totalGaiols*100) : 0;
+  const critCount   = allDests.filter(d=>d.status==='crit').length;
+  const warnCount   = allDests.filter(d=>d.status==='warn').length;
+  setBadge('stage_out', totalRuas);
+
+  // ── Type counts ──────────────────────────────────────────────────
+  const typeCnts = {};
+  allDests.forEach(d => { typeCnts[d.typeKey] = (typeCnts[d.typeKey]||0)+1; });
+
+  // ── Filter + sort ────────────────────────────────────────────────
+  let dests = allDests.slice();
+  if (soTypeFilter !== 'all') dests = dests.filter(d=>d.typeKey===soTypeFilter);
+  if (q) dests = dests.filter(d=>d.name.toLowerCase().includes(q));
+  const sortFns = {
+    crit:  (a,b)=>soCritScore(b)-soCritScore(a),
+    ocp:   (a,b)=>b.ocp-a.ocp,
+    aging: (a,b)=>b.agingMax-a.agingMax,
+    tos:   (a,b)=>b.tos-a.tos,
+    nome:  (a,b)=>a.name.localeCompare(b.name),
+  };
+  dests.sort(sortFns[soSortKey]||sortFns.crit);
+
+  // ── Type tabs ────────────────────────────────────────────────────
+  const typeList = [
+    {k:'all',l:'Todos'},{k:'lm',l:'LM'},{k:'xpt',l:'XPT'},
+    {k:'soc',l:'SOC'},{k:'fbs',l:'FBS'},{k:'hub',l:'HUB'},{k:'outros',l:'Outros'},
+  ].filter(t=>t.k==='all'||(typeCnts[t.k]||0)>0);
+
+  const tabsHtml = typeList.map(t =>
+    `<button class="ftab${soTypeFilter===t.k?' active':''}" onclick="soTypeFilter='${t.k}';renderStageOut(window._stageOutData)">${t.l}${t.k!=='all'?` <small style="opacity:.65">(${typeCnts[t.k]||0})</small>`:''}</button>`
+  ).join('');
+
+  const sortHtml = [
+    {k:'crit',l:'Criticidade'},{k:'ocp',l:'Ocupação'},
+    {k:'aging',l:'Aging'},{k:'tos',l:'TOs'},{k:'nome',l:'Nome'},
+  ].map(s=>
+    `<button class="ftab${soSortKey===s.k?' active':''}" onclick="soSortKey='${s.k}';renderStageOut(window._stageOutData)">${s.l}</button>`
+  ).join('');
+
+  // ── Alert strip ──────────────────────────────────────────────────
+  const alertHtml = critCount>0
+    ? `<div class="so-alert-strip crit"><div class="alert-dot" style="background:var(--red)"></div>${critCount} destino${critCount>1?'s':''} em estado CRÍTICO${warnCount>0?' · '+warnCount+' em ATENÇÃO':''}</div>`
+    : warnCount>0
+    ? `<div class="so-alert-strip warn"><div class="alert-dot" style="background:var(--amber)"></div>${warnCount} destino${warnCount>1?'s':''} requerem ATENÇÃO</div>`
+    : '';
+
+  // ── Render ───────────────────────────────────────────────────────
   document.getElementById('view-stage_out').innerHTML = `
-    <div class="view-title-row">
-      <div><div class="view-title">Stage OUT</div><div class="view-sub">Gaiolas endereçadas na área de staging outbound</div></div>
-    </div>
-    <div class="stat-row c2">
-      <div class="stat-card">
-        <div class="stat-label">Total de TO's</div>
-        <div class="stat-value" style="color:var(--orange)">${n(totalTO)}</div>
-        <div class="stat-sub">${n(active.length)} destinos com TO's</div>
+    <div class="so-exec-bar">
+      <div class="so-exec-kpi">
+        <div class="so-exec-lbl">Total de Ruas</div>
+        <div class="so-exec-val" style="color:var(--orange)">${n(totalRuas)}</div>
+        <div class="so-exec-sub">${n(allDests.filter(d=>d.tos>0).length)} destinos c/ TOs</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Gaiolas Endereçadas</div>
-        <div class="stat-value">${n(allList.length)}</div>
-        <div class="stat-sub">${n(allList.length-active.length)} sem TO's</div>
+      <div class="so-exec-kpi">
+        <div class="so-exec-lbl">Total Gaiolas</div>
+        <div class="so-exec-val">${n(totalGaiols)}</div>
+        <div class="so-exec-sub">${n(allDests.length)} destinos</div>
+      </div>
+      <div class="so-exec-kpi">
+        <div class="so-exec-lbl">TOs em Staging</div>
+        <div class="so-exec-val" style="color:${totalTOs>0?'var(--orange)':'var(--muted)'}">${n(totalTOs)}</div>
+        <div class="so-exec-sub">ordens de transporte</div>
+      </div>
+      <div class="so-exec-kpi">
+        <div class="so-exec-lbl">Ocupação Média</div>
+        <div class="so-exec-val" style="color:${avgOcp>=90?'var(--red)':avgOcp>=75?'var(--amber)':'var(--green)'}">${avgOcp}%</div>
+        <div class="so-exec-sub">TOs / capacidade total</div>
+      </div>
+      <div class="so-exec-kpi">
+        <div class="so-exec-lbl">Críticos</div>
+        <div class="so-exec-val" style="color:${critCount>0?'var(--red)':'var(--muted)'}">${n(critCount)}</div>
+        <div class="so-exec-sub">ocp ≥90% ou aging ≥4h</div>
       </div>
     </div>
-    <div class="toolbar">
+    <div class="toolbar" style="margin-bottom:6px">
       <div class="search-box">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input type="text" placeholder="Buscar destino..." oninput="searchQ.stage_out=this.value;renderStageOut(window._stageOutData||{})"
-               value="${searchQ.stage_out}">
+        <input type="text" placeholder="Buscar destino..." value="${searchQ.stage_out}"
+               oninput="searchQ.stage_out=this.value;renderStageOut(window._stageOutData)">
       </div>
-      <span style="font-size:11px;color:var(--muted)">${sorted.length} resultado${sorted.length!==1?'s':''}</span>
+      <div class="filter-tabs">${tabsHtml}</div>
     </div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr>
-          <th>Destino / Rua</th><th>Zona</th>
-          <th style="text-align:center">TO's</th>
-          <th>Aging</th><th>Capacidade</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
+    <div class="toolbar" style="margin-bottom:10px">
+      <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;flex-shrink:0">Ordenar:</span>
+      <div class="filter-tabs">${sortHtml}</div>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap">${dests.length} destino${dests.length!==1?'s':''}</span>
+    </div>
+    ${alertHtml}
+    <div>${dests.length ? dests.map(d=>soDestCard(d)).join('') : '<div class="empty-state">Nenhum destino encontrado</div>'}</div>`;
   window._stageOutData = data;
+}
+
+function soDestCard(d) {
+  const ocpClr    = d.status==='crit'?'var(--red)':d.status==='warn'?'var(--amber)':d.status==='ok'?'var(--green)':'var(--muted2)';
+  const statusLbl = {crit:'CRÍTICO',warn:'ATENÇÃO',ok:'NORMAL',empty:'VAZIO'}[d.status]||'—';
+  const typeLabel = soTypeLbl(d.typeKey);
+  const typeCss   = soTypeCss(d.typeKey);
+  let dispName    = d.name;
+  if (d.typeKey==='lm') dispName = d.name.replace(/^LM[\s_]HUB[\s_]/i,'').replace(/^LM[\s_]/i,'');
+
+  const hasMultiple = d.ruas.length > 1;
+  const ruaRows = d.ruas.map(a => {
+    const ro  = a.capacity>0 ? Math.round((a.to_quantity||0)/a.capacity*100) : (a.to_quantity>0?100:0);
+    const roc = ro>=90?'var(--red)':ro>=75?'var(--amber)':'var(--muted)';
+    const dur = a.staging_duration_time||0;
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${a.area_name||'—'}</td>
+      <td style="text-align:center;font-weight:700;font-family:monospace;color:${(a.to_quantity||0)>0?'var(--orange)':'var(--muted)'}">${a.to_quantity||'—'}</td>
+      <td style="text-align:center;font-family:monospace;color:var(--muted)">${a.capacity||'—'}</td>
+      <td style="text-align:center">
+        <span style="font-size:11px;font-family:monospace;font-weight:700;color:${roc}">${a.capacity>0?ro+'%':'—'}</span>
+        <div style="height:3px;background:var(--border2);border-radius:2px;width:50px;margin:3px auto 0;overflow:hidden">
+          <div style="height:100%;width:${Math.min(100,ro)}%;background:${roc};border-radius:2px"></div>
+        </div>
+      </td>
+      <td><span class="dur ${durClass(dur)}">${fmtDur(dur)}</span></td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="so-dest-card ${d.status}">
+    <div class="so-card-hdr" onclick="this.closest('.so-dest-card').classList.toggle('open')">
+      <span class="so-type-badge ${typeCss}">${typeLabel}</span>
+      <span class="so-card-name" title="${d.name}">${dispName}</span>
+      <div class="so-card-right">
+        <span class="so-ocp-text" style="color:${ocpClr}">${d.ocp}%</span>
+        <span class="so-status-badge ${d.status}">${statusLbl}</span>
+        <svg class="so-expand" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </div>
+    </div>
+    <div class="so-card-metrics">
+      <div class="so-metric">
+        <span class="so-m-lbl">Ruas</span>
+        <span class="so-m-val">${d.ruas.length}</span>
+      </div>
+      <div class="so-metric">
+        <span class="so-m-lbl">Gaiolas</span>
+        <span class="so-m-val">${n(d.capacity)}</span>
+      </div>
+      <div class="so-metric">
+        <span class="so-m-lbl">TOs</span>
+        <span class="so-m-val" style="color:${d.tos>0?'var(--orange)':'var(--muted)'}">${d.tos||'—'}</span>
+      </div>
+      <div class="so-metric">
+        <span class="so-m-lbl">Aging Max</span>
+        <span class="so-m-val" style="color:${soAgingColor(d.agingMax)}">${fmtDur(d.agingMax)}</span>
+      </div>
+      <div class="so-metric">
+        <span class="so-m-lbl">Aging Avg</span>
+        <span class="so-m-val" style="color:${soAgingColor(d.agingAvg)}">${fmtDur(d.agingAvg)}</span>
+      </div>
+      <div class="so-metric" style="flex:1;border-right:none;padding-right:0;margin-right:0">
+        <span class="so-m-lbl">Ocupação</span>
+        <div class="so-ocp-bar-bg">
+          <div class="so-ocp-fill" style="width:${Math.min(100,d.ocp)}%;background:${ocpClr}"></div>
+        </div>
+      </div>
+    </div>
+    ${hasMultiple ? `<div class="so-detail">
+      <table class="data-table" style="margin:0">
+        <thead><tr>
+          <th>Rua / Área</th>
+          <th style="text-align:center">TOs</th>
+          <th style="text-align:center">Gaiolas</th>
+          <th style="text-align:center">Ocup.</th>
+          <th>Aging</th>
+        </tr></thead>
+        <tbody>${ruaRows}</tbody>
+      </table>
+    </div>` : ''}
+  </div>`;
 }
 
 // ═════════════════════════════════════════════════
