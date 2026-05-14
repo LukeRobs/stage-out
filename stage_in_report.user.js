@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stage IN - SeaTalk Hourly Report
 // @namespace    spx-express
-// @version      1.5
+// @version      1.6
 // @description  Captura screenshot do dashboard Stage IN e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/stage_in.html
@@ -54,50 +54,87 @@
     return canvas.toDataURL('image/jpeg', 0.85);
   }
 
-  /* ── Stats Volumoso ─────────────────────────────────────────────── */
+  /* ── Busca dados da API (compartilhado) ─────────────────────────── */
+  let _rdCache = null;
+  async function fetchReportData() {
+    if (_rdCache) return _rdCache;
+    const resp = await fetch(`${SERVER}/api/report-data`);
+    if (!resp.ok) throw new Error(`report-data HTTP ${resp.status}`);
+    _rdCache = await resp.json();
+    return _rdCache;
+  }
+
+  /* ── Helper: agrega métricas por conjunto de ruas ───────────────── */
+  function calcStats(ruas, rd) {
+    let totalTOs = 0, totalAging = 0, totalPacotes = 0, tosGt30 = 0;
+    const sppPerRua = [];
+    for (const rua of ruas) {
+      const tos        = rd.byAreaTOs?.[rua] || [];
+      const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
+      totalTOs     += tos.length;
+      totalPacotes += ruaPacotes;
+      for (const to of tos) {
+        if (to.pacotes > 30) tosGt30++;
+        totalAging += to.aging_h;
+      }
+      if (tos.length > 0) sppPerRua.push(ruaPacotes / tos.length);
+    }
+    const avgH     = totalTOs > 0 ? totalAging / totalTOs : 0;
+    const hh       = Math.floor(avgH);
+    const mm       = Math.round((avgH - hh) * 60);
+    return {
+      totalTOs, totalPacotes, tosGt30, sppPerRua,
+      agingStr:  hh > 0 ? `${hh}h ${mm}min` : `${mm}min`,
+      spp:       totalTOs > 0 ? Math.round(totalPacotes / totalTOs) : '—',
+      maxSpp:    sppPerRua.length ? Math.round(Math.max(...sppPerRua)) : '—',
+      minSpp:    sppPerRua.length ? Math.round(Math.min(...sppPerRua)) : '—',
+    };
+  }
+
+  /* ── Stats Volumoso (formato simples) ───────────────────────────── */
   async function fetchVolumosoText() {
     const now  = new Date();
     const data = now.toLocaleDateString('pt-BR');
     const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    const resp = await fetch(`${SERVER}/api/report-data`);
-    if (!resp.ok) throw new Error(`report-data HTTP ${resp.status}`);
-    const rd = await resp.json();
-
-    const volRuas = Object.entries(rd.byArea || {})
-      .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
-      .map(([rua]) => rua);
-
-    let totalTOs = 0, totalAging = 0, totalPacotes = 0;
-    const sppPerRua = [];
-
-    for (const rua of volRuas) {
-      const tos        = rd.byAreaTOs?.[rua] || [];
-      const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
-      totalTOs     += tos.length;
-      totalPacotes += ruaPacotes;
-      for (const to of tos) totalAging += to.aging_h;
-      if (tos.length > 0) sppPerRua.push({ rua, spp: ruaPacotes / tos.length });
-    }
-
-    const avgH     = totalTOs > 0 ? totalAging / totalTOs : 0;
-    const hh       = Math.floor(avgH);
-    const mm       = Math.round((avgH - hh) * 60);
-    const agingStr = hh > 0 ? `${hh}h ${mm}min` : `${mm}min`;
-
-    const spp    = totalTOs > 0 ? Math.round(totalPacotes / totalTOs) : '—';
-    const maxSpp = sppPerRua.length ? Math.round(Math.max(...sppPerRua.map(r => r.spp))) : '—';
-    const minSpp = sppPerRua.length ? Math.round(Math.min(...sppPerRua.map(r => r.spp))) : '—';
-
-    // Distribuição de ruas por faixa de SPP
-    const b1 = sppPerRua.filter(r => r.spp <= 30).length;
-    const b2 = sppPerRua.filter(r => r.spp > 30 && r.spp <= 70).length;
-    const b3 = sppPerRua.filter(r => r.spp > 70 && r.spp <= 150).length;
-    const b4 = sppPerRua.filter(r => r.spp > 150).length;
-    const totalRuas = sppPerRua.length;
+    const rd   = await fetchReportData();
+    const ruas = Object.entries(rd.byArea || {})
+      .filter(([, d]) => d.zona === 'ZONA VOLUMOSO').map(([r]) => r);
+    const { totalTOs, tosGt30, agingStr, spp, maxSpp, minSpp } = calcStats(ruas, rd);
 
     return [
       `Report - SPP Volumoso (${data}):`,
+      `Hora: ${hora}`,
+      ``,
+      `Total TO's: ${totalTOs}`,
+      `TO's > 30: ${tosGt30}`,
+      `Aging Médio: ${agingStr}`,
+      `SPP: ${spp}`,
+      `MAX SPP: ${maxSpp}`,
+      `MIN SPP: ${minSpp}`,
+      ``,
+      `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
+    ].join('\n');
+  }
+
+  /* ── Stats Geral · TODAS as zonas (distribuição por faixa SPP) ─── */
+  async function fetchTodasText() {
+    const now  = new Date();
+    const data = now.toLocaleDateString('pt-BR');
+    const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const rd   = await fetchReportData();
+    const ruas = Object.keys(rd.byArea || {});
+    const { totalTOs, agingStr, spp, maxSpp, minSpp, sppPerRua } = calcStats(ruas, rd);
+
+    const totalRuas = sppPerRua.length;
+    const b1 = sppPerRua.filter(v => v <= 30).length;
+    const b2 = sppPerRua.filter(v => v > 30 && v <= 70).length;
+    const b3 = sppPerRua.filter(v => v > 70 && v <= 150).length;
+    const b4 = sppPerRua.filter(v => v > 150).length;
+
+    return [
+      `Report - SPP Geral Stage IN (${data}):`,
       `Hora: ${hora}`,
       ``,
       `Total TO's: ${totalTOs}`,
@@ -138,14 +175,19 @@
   /* ── Fluxo principal ─────────────────────────────────────────────── */
   async function sendReport() {
     const originalZone = document.querySelector('.zone-tab.active')?.dataset.zone || 'all';
+    _rdCache = null; // limpa cache a cada envio
 
     try {
       // ══ 1. TODAS ══════════════════════════════════════════════════
       setBadge('📸 Capturando Todas...', '#f59e0b');
       const imgTodas = await captureTab('all');
       if (imgTodas) {
+        setBadge('📊 Buscando stats gerais...', '#a855f7');
+        let todasText;
+        try   { todasText = await fetchTodasText(); }
+        catch (e) { console.warn('[Report] stats todas fallback:', e.message); todasText = 'Report Geral Stage IN'; }
         setBadge('📤 Enviando Todas...', '#3b82f6');
-        await postReport('todas', imgTodas);
+        await postReport('todas', imgTodas, todasText);
         setBadge('✅ Todas enviado!', '#22c55e');
       }
 
@@ -155,7 +197,7 @@
       setBadge('📸 Capturando Volumoso...', '#f59e0b');
       const imgVol = await captureTab('ZONA VOLUMOSO');
       if (imgVol) {
-        setBadge('📊 Buscando stats...', '#a855f7');
+        setBadge('📊 Buscando stats volumoso...', '#a855f7');
         let volText;
         try   { volText = await fetchVolumosoText(); }
         catch (e) { console.warn('[Report] stats fallback:', e.message); volText = 'Time segue Report SPP Volumoso'; }
@@ -197,5 +239,5 @@
     sendReport();
   });
 
-  console.log('[Stage IN Report] ✅ v1.5 — Bot API direto, a cada hora cheia (:00)');
+  console.log('[Stage IN Report] ✅ v1.6 — Bot API direto, a cada hora cheia (:00)');
 })();
