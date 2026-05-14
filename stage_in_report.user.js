@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stage IN - SeaTalk Hourly Report
 // @namespace    spx-express
-// @version      1.4
+// @version      1.5
 // @description  Captura screenshot do dashboard Stage IN e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/stage_in.html
@@ -68,7 +68,7 @@
       .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
       .map(([rua]) => rua);
 
-    let totalTOs = 0, tosGt20 = 0, totalAging = 0, totalPacotes = 0;
+    let totalTOs = 0, totalAging = 0, totalPacotes = 0;
     const sppPerRua = [];
 
     for (const rua of volRuas) {
@@ -76,11 +76,8 @@
       const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
       totalTOs     += tos.length;
       totalPacotes += ruaPacotes;
-      for (const to of tos) {
-        if (to.pacotes > 30) tosGt20++;
-        totalAging += to.aging_h;
-      }
-      if (tos.length > 0) sppPerRua.push(ruaPacotes / tos.length);
+      for (const to of tos) totalAging += to.aging_h;
+      if (tos.length > 0) sppPerRua.push({ rua, spp: ruaPacotes / tos.length });
     }
 
     const avgH     = totalTOs > 0 ? totalAging / totalTOs : 0;
@@ -89,21 +86,32 @@
     const agingStr = hh > 0 ? `${hh}h ${mm}min` : `${mm}min`;
 
     const spp    = totalTOs > 0 ? Math.round(totalPacotes / totalTOs) : '—';
-    const maxSpp = sppPerRua.length ? Math.round(Math.max(...sppPerRua)) : '—';
-    const minSpp = sppPerRua.length ? Math.round(Math.min(...sppPerRua)) : '—';
+    const maxSpp = sppPerRua.length ? Math.round(Math.max(...sppPerRua.map(r => r.spp))) : '—';
+    const minSpp = sppPerRua.length ? Math.round(Math.min(...sppPerRua.map(r => r.spp))) : '—';
+
+    // Distribuição de ruas por faixa de SPP
+    const b1 = sppPerRua.filter(r => r.spp <= 30).length;
+    const b2 = sppPerRua.filter(r => r.spp > 30 && r.spp <= 70).length;
+    const b3 = sppPerRua.filter(r => r.spp > 70 && r.spp <= 150).length;
+    const b4 = sppPerRua.filter(r => r.spp > 150).length;
+    const totalRuas = sppPerRua.length;
 
     return [
       `Report - SPP Volumoso (${data}):`,
       `Hora: ${hora}`,
       ``,
       `Total TO's: ${totalTOs}`,
-      `TO's > 30: ${tosGt20}`,
+      `Total Ruas: ${totalRuas}`,
       `Aging Médio: ${agingStr}`,
-      `SPP: ${spp}`,
-      `MAX SPP: ${maxSpp}`,
-      `MIN SPP: ${minSpp}`,
+      `SPP Médio: ${spp}  |  MAX: ${maxSpp}  |  MIN: ${minSpp}`,
       ``,
-      `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
+      `Distribuição SPP por Rua:`,
+      `  ≤ 30       → ${b1} ruas`,
+      `  >30 e ≤70  → ${b2} ruas`,
+      `  >70 e ≤150 → ${b3} ruas`,
+      `  >150       → ${b4} ruas`,
+      ``,
+      `Link: https://stage-out.onrender.com/stage_in.html`,
     ].join('\n');
   }
 
@@ -189,5 +197,5 @@
     sendReport();
   });
 
-  console.log('[Stage IN Report] ✅ v1.4 — Bot API direto, a cada hora cheia (:00)');
+  console.log('[Stage IN Report] ✅ v1.5 — Bot API direto, a cada hora cheia (:00)');
 })();
