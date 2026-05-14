@@ -900,12 +900,12 @@ function buildZonaSection(areas) {
     counts[idx][z] = (counts[idx][z] || 0) + a.to_quantity;
   });
 
-  // SPP por faixa de aging: Sacas Por Prateleira = pacotes / ruas (áreas de staging)
-  // Denominador correto = nº de RUAS no bin (não nº de TOs individuais)
+  // SPP por faixa de aging: Sacas Por Prateleira = pacotes / TOs
+  // Denominador correto = soma de to_quantity das áreas no bin
   const hasTOData = !!(reportData?.byAreaTOs && Object.keys(reportData.byAreaTOs).length > 0);
-  const tosBins   = BINS.map(() => 0); // conta ruas por bin (1 por área)
+  const tosBins   = BINS.map(() => 0); // soma de to_quantity por bin
   if (reportData?.byArea) {
-    Object.entries(reportData.byArea).forEach(([rua]) => {
+    Object.entries(reportData.byArea).forEach(([rua, areaData]) => {
       const staging = stagingMap[rua];
       let duration  = staging?.staging_duration_time || 0;
       if (!duration && hasTOData) {
@@ -914,7 +914,7 @@ function buildZonaSection(areas) {
       }
       const idx = BINS.findIndex(b => duration >= b.min && duration < b.max);
       if (idx < 0) return;
-      tosBins[idx]++; // +1 por rua, não pela qtd de TOs da rua
+      tosBins[idx] += (staging?.to_quantity || areaData?.to_quantity || 0); // soma TOs da área
     });
   }
 
