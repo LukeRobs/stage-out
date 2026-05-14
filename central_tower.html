@@ -1706,6 +1706,12 @@ function renderStageOut(data) {
     return { ...g, ocp, agingAvg, status: soStatus(ocp, g.agingMax) };
   });
 
+  // ── DEBUG: log first item to identify field names ────────────────
+  if (rawList.length > 0) {
+    console.log('[StageOut DEBUG] first item fields:', Object.keys(rawList[0]));
+    console.log('[StageOut DEBUG] first item:', JSON.stringify(rawList[0]));
+  }
+
   // ── Global totals ────────────────────────────────────────────────
   const totalRuas   = rawList.length;
   const totalGaiols = rawList.reduce((s,a)=>s+(a.capacity||0), 0);
@@ -1801,6 +1807,10 @@ function renderStageOut(data) {
       <span style="font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap">${dests.length} destino${dests.length!==1?'s':''}</span>
     </div>
     ${alertHtml}
+    ${rawList.length > 0 ? `<details style="margin-bottom:10px;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px">
+      <summary style="cursor:pointer;color:var(--muted);font-weight:600">🔍 Debug: campos da API (1º item)</summary>
+      <pre style="margin-top:8px;font-size:10px;color:var(--amber);overflow:auto;max-height:200px">${JSON.stringify(rawList[0], null, 2)}</pre>
+    </details>` : ''}
     <div>${dests.length ? dests.map(d=>soDestCard(d)).join('') : '<div class="empty-state">Nenhum destino encontrado</div>'}</div>`;
   window._stageOutData = data;
 }
