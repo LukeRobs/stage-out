@@ -1321,13 +1321,14 @@ function buildHomeStageOut(wrap) {
     </div>`;
   }
 
-  const list     = wrap.data.list || [];
-  const active   = list.filter(a => (a.transport_order_quantity||0) > 0);
-  const totalTO  = active.reduce((s,a) => s + a.transport_order_quantity, 0);
-  const totalCap = list.reduce((s,a) => s + (a.capacity||0), 0);
-  const totalRuas = list.length;
-  const ruasOcup  = active.length;
-  const gaiolas   = totalCap || list.reduce((s,a) => s + (a.transport_order_quantity||0), 0);
+  const list        = wrap.data.list || [];
+  const active      = list.filter(a => (a.transport_order_quantity||0) > 0);
+  const totalTO     = active.reduce((s,a) => s + a.transport_order_quantity, 0);
+  const totalCap    = list.reduce((s,a) => s + (a.capacity||0), 0);
+  const totalGaiols = list.reduce((s,a) => s + (a.cage_quantity||0), 0);
+  const totalRuas   = list.length;
+  const ruasOcup    = active.length;
+  const gaiolas     = totalGaiols || totalCap;
 
   const ruasPct  = totalRuas > 0 ? Math.round(ruasOcup / totalRuas * 100) : 0;
   const satPct   = totalCap  > 0 ? Math.round(totalTO  / totalCap  * 100) : Math.min(100, Math.round(totalTO / Math.max(gaiolas,1) * 100));
@@ -1698,12 +1699,13 @@ function renderStageOut(data) {
     // Destination name from to_destination_list[0].station_name or to_destination field
     const key = soDestNameOf(a);
     if (!groups[key]) {
-      groups[key] = { name:key, typeKey:soDestType(key), ruas:[], tos:0, capacity:0,
+      groups[key] = { name:key, typeKey:soDestType(key), ruas:[], tos:0, gaiolas:0, capacity:0,
                       agingMax:0, agingSum:0, agingCnt:0 };
     }
     const g = groups[key];
     g.ruas.push(a);
     g.tos      += (a.transport_order_quantity||0);
+    g.gaiolas  += (a.cage_quantity||0);
     g.capacity += (a.capacity||0);
     const dur = a.staging_duration_time||0;
     if (dur > g.agingMax) g.agingMax = dur;
@@ -1711,14 +1713,17 @@ function renderStageOut(data) {
   });
 
   let allDests = Object.values(groups).map(g => {
-    const ocp      = g.capacity>0 ? Math.round(g.tos/g.capacity*100) : (g.tos>0?100:0);
+    // Occupancy: weighted average of occupancy_percentage by capacity per lane
+    const ocp = g.capacity > 0
+      ? Math.round(g.ruas.reduce((s,a) => s + parseFloat(a.occupancy_percentage||'0') * (a.capacity||0), 0) / g.capacity)
+      : (g.tos > 0 ? 100 : 0);
     const agingAvg = g.agingCnt>0 ? g.agingSum/g.agingCnt : 0;
     return { ...g, ocp, agingAvg, status: soStatus(ocp, g.agingMax) };
   });
 
   // ── Global totals ────────────────────────────────────────────────
   const totalRuas   = rawList.length;
-  const totalGaiols = rawList.reduce((s,a)=>s+(a.capacity||0), 0);
+  const totalGaiols = rawList.reduce((s,a)=>s+(a.cage_quantity||0), 0);
   const totalTOs    = rawList.reduce((s,a)=>s+(a.transport_order_quantity||0), 0);
   const avgOcp      = totalGaiols>0 ? Math.round(totalTOs/totalGaiols*100) : 0;
   const critCount   = allDests.filter(d=>d.status==='crit').length;
@@ -1829,15 +1834,16 @@ function soDestCard(d) {
 
   const hasMultiple = d.ruas.length > 1;
   const ruaRows = d.ruas.map(a => {
-    const ro  = a.capacity>0 ? Math.round((a.transport_order_quantity||0)/a.capacity*100) : (a.transport_order_quantity>0?100:0);
+    const ro  = parseFloat(a.occupancy_percentage||'0');
     const roc = ro>=90?'var(--red)':ro>=75?'var(--amber)':'var(--muted)';
     const dur = a.staging_duration_time||0;
+    const cages = a.cage_quantity||0;
     return `<tr>
       <td style="font-family:monospace;font-size:11px;color:var(--muted)">${a.staging_area_name||'—'}</td>
       <td style="text-align:center;font-weight:700;font-family:monospace;color:${(a.transport_order_quantity||0)>0?'var(--orange)':'var(--muted)'}">${a.transport_order_quantity||'—'}</td>
-      <td style="text-align:center;font-family:monospace;color:var(--muted)">${a.capacity||'—'}</td>
+      <td style="text-align:center;font-family:monospace;color:var(--muted)">${cages||'—'}</td>
       <td style="text-align:center">
-        <span style="font-size:11px;font-family:monospace;font-weight:700;color:${roc}">${a.capacity>0?ro+'%':'—'}</span>
+        <span style="font-size:11px;font-family:monospace;font-weight:700;color:${roc}">${cages>0?Math.round(ro)+'%':'—'}</span>
         <div style="height:3px;background:var(--border2);border-radius:2px;width:50px;margin:3px auto 0;overflow:hidden">
           <div style="height:100%;width:${Math.min(100,ro)}%;background:${roc};border-radius:2px"></div>
         </div>
@@ -1865,7 +1871,7 @@ function soDestCard(d) {
       </div>
       <div class="so-metric">
         <span class="so-m-lbl">Gaiolas</span>
-        <span class="so-m-val">${n(d.capacity)}</span>
+        <span class="so-m-val">${n(d.gaiolas)}</span>
       </div>
       <div class="so-metric">
         <span class="so-m-lbl">TOs</span>
