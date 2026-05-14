@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Stage IN - SeaTalk Hourly Report
 // @namespace    spx-express
-// @version      1.6
+// @version      1.7
 // @description  Captura screenshot do dashboard Stage IN e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/stage_in.html
@@ -117,7 +117,20 @@
     ].join('\n');
   }
 
-  /* ── Stats Geral · TODAS as zonas (distribuição por faixa SPP) ─── */
+  /* ── Helper: formata aging em horas → "2h07m" / "1d16h" ─────────── */
+  function fmtAging(h) {
+    if (h <= 0) return '—';
+    if (h >= 24) {
+      const d  = Math.floor(h / 24);
+      const hh = Math.floor(h % 24);
+      return hh > 0 ? `${d}d${hh}h` : `${d}d`;
+    }
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60).toString().padStart(2, '0');
+    return hh > 0 ? `${hh}h${mm}m` : `${mm}min`;
+  }
+
+  /* ── Stats Geral · TODAS as zonas com breakdown por zona ────────── */
   async function fetchTodasText() {
     const now  = new Date();
     const data = now.toLocaleDateString('pt-BR');
@@ -127,6 +140,36 @@
     const ruas = Object.keys(rd.byArea || {});
     const { totalTOs, agingStr, spp, maxSpp, minSpp, sppPerRua } = calcStats(ruas, rd);
 
+    // Breakdown por zona
+    const zoneMap = {};
+    for (const [rua, areaData] of Object.entries(rd.byArea || {})) {
+      const zona = (areaData.zona || 'OUTRAS').replace('ZONA ', '');
+      if (!zoneMap[zona]) zoneMap[zona] = { tos: 0, pac: 0, agingSum: 0, agingMax: 0, sppVals: [] };
+      const tos        = rd.byAreaTOs?.[rua] || [];
+      const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
+      zoneMap[zona].tos    += tos.length;
+      zoneMap[zona].pac    += ruaPacotes;
+      for (const to of tos) {
+        zoneMap[zona].agingSum += to.aging_h;
+        if (to.aging_h > zoneMap[zona].agingMax) zoneMap[zona].agingMax = to.aging_h;
+      }
+      if (tos.length > 0) zoneMap[zona].sppVals.push(ruaPacotes / tos.length);
+    }
+
+    const zoneLines = Object.entries(zoneMap)
+      .filter(([, v]) => v.pac > 0)
+      .sort((a, b) => b[1].pac - a[1].pac)
+      .map(([zona, v]) => {
+        const sppZ = v.tos > 0 ? Math.round(v.pac / v.tos) : '—';
+        const maxZ = v.sppVals.length ? Math.round(Math.max(...v.sppVals)) : '—';
+        const minZ = v.sppVals.length ? Math.round(Math.min(...v.sppVals)) : '—';
+        const avg  = v.tos > 0 ? fmtAging(v.agingSum / v.tos) : '—';
+        const pico = fmtAging(v.agingMax);
+        const pac  = v.pac.toLocaleString('pt-BR');
+        return `${zona}: ${v.tos} TO's | ${pac} Pacotes | SPP: ${sppZ} | Max: ${maxZ} | Min: ${minZ} | avg: ${avg} | Pico: ${pico}`;
+      });
+
+    // Distribuição SPP por rua (todas as zonas)
     const totalRuas = sppPerRua.length;
     const b1 = sppPerRua.filter(v => v <= 30).length;
     const b2 = sppPerRua.filter(v => v > 30 && v <= 70).length;
@@ -141,6 +184,7 @@
       `Total Ruas: ${totalRuas}`,
       `Aging Médio: ${agingStr}`,
       `SPP Médio: ${spp}  |  MAX: ${maxSpp}  |  MIN: ${minSpp}`,
+      ...zoneLines,
       ``,
       `Distribuição SPP por Rua:`,
       `  ≤ 30       → ${b1} ruas`,
@@ -239,5 +283,5 @@
     sendReport();
   });
 
-  console.log('[Stage IN Report] ✅ v1.6 — Bot API direto, a cada hora cheia (:00)');
+  console.log('[Stage IN Report] ✅ v1.7 — Bot API direto, a cada hora cheia (:00)');
 })();
