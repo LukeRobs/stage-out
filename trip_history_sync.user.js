@@ -2,6 +2,8 @@
 // @name         SPX Trip History → Transbordo Dashboard
 // @namespace    http://tampermonkey.net/
 // @version      1.1
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync.user.js
 // @description  Sincroniza histórico de Linehaul trips com o dashboard Transbordo
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest

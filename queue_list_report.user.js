@@ -2,6 +2,8 @@
 // @name         Queue List - SeaTalk Hourly Report
 // @namespace    spx-express
 // @version      1.0
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/queue_list_report.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/queue_list_report.user.js
 // @description  Captura screenshot do dashboard Queue List e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/queue_list.html

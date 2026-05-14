@@ -2,6 +2,8 @@
 // @name         SPX Trip List → Dashboard Sync
 // @namespace    http://tampermonkey.net/
 // @version      1.1
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync.user.js
 // @description  Sincroniza trip list (viagens em trânsito) com o dashboard local
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest

@@ -2,6 +2,8 @@
 // @name         Stage IN - SeaTalk Hourly Report
 // @namespace    spx-express
 // @version      1.8
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_in_report.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_in_report.user.js
 // @description  Captura screenshot do dashboard Stage IN e envia ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/stage_in.html

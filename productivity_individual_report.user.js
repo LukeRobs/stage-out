@@ -2,6 +2,8 @@
 // @name         Packing Productivity - SeaTalk Hourly Report
 // @namespace    spx-express
 // @version      1.0
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/productivity_individual_report.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/productivity_individual_report.user.js
 // @description  Envia report HxH de produtividade packing ao SeaTalk a cada hora cheia
 // @author       SPX Express
 // @match        https://stage-out.onrender.com/productivity_individual.html

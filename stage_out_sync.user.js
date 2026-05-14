@@ -2,6 +2,8 @@
 // @name         SPX Stage Out → Dashboard Sync
 // @namespace    http://tampermonkey.net/
 // @version      1.2
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_out_sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_out_sync.user.js
 // @description  Sincroniza posições do staging outbound com o dashboard local
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest

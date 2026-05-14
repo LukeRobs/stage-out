@@ -2,6 +2,8 @@
 // @name         SPX Productivity Individual → Dashboard Sync
 // @namespace    http://tampermonkey.net/
 // @version      1.3
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/productivity_individual_sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/productivity_individual_sync.user.js
 // @description  Sincroniza produtividade individual por hora com o dashboard
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest

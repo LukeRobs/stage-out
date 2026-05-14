@@ -2,6 +2,8 @@
 // @name         SPX Workstation Productivity → Dashboard Sync
 // @namespace    http://tampermonkey.net/
 // @version      1.1
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/workstation_sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/workstation_sync.user.js
 // @description  Sincroniza produtividade por workstation com o dashboard
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest

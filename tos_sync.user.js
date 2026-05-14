@@ -2,6 +2,8 @@
 // @name         SPX TO Management → Dashboard Sync
 // @namespace    http://tampermonkey.net/
 // @version      1.1
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
