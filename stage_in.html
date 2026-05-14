@@ -441,6 +441,21 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- Visão SPP · Todas as zonas (somente aba TODAS) -->
+<div id="sppView" style="display:none;padding:0 24px 14px">
+  <div class="section-label" style="margin-bottom:10px">📊 Distribuição por SPP · Todas as Zonas</div>
+  <div style="display:grid;grid-template-columns:290px 1fr;gap:10px;align-items:start">
+    <div class="panel">
+      <div class="panel-title">Faixas de SPP <span style="font-size:9px;color:var(--muted);font-weight:400">&nbsp;clique para filtrar</span></div>
+      <div id="sppDistrib"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">SPP Médio por Zona</div>
+      <div id="sppByZone"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Top 5 + Ocupação -->
 <div class="panel-row">
   <div class="panel">
@@ -493,9 +508,9 @@ table.main-table tr:last-child td { border-bottom: none; }
   <div class="stats" style="grid-template-columns:repeat(7,1fr)">
     <div class="stat"><div class="stat-label">Total TOs</div><div class="stat-value" id="vTOs" style="color:var(--accent)">—</div><div class="stat-sub">na VOLUMOSO</div></div>
     <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="vPacotes" style="color:var(--purple)">—</div><div class="stat-sub">soma geral</div></div>
-    <div class="stat clickable" id="statLt20"><div class="stat-label">TOs &lt; 20 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
-    <div class="stat clickable" id="statEq20"><div class="stat-label">TOs = 20 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
-    <div class="stat clickable" id="statGt20"><div class="stat-label">TOs &gt; 20 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
+    <div class="stat clickable" id="statLt20"><div class="stat-label">TOs &lt; 30 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
+    <div class="stat clickable" id="statEq20"><div class="stat-label">TOs = 30 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
+    <div class="stat clickable" id="statGt20"><div class="stat-label">TOs &gt; 30 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
     <div class="stat"><div class="stat-label">Média por TO</div><div class="stat-value" id="vMedia" style="color:var(--yellow)">—</div><div class="stat-sub">pacotes/TO</div></div>
     <div class="stat"><div class="stat-label">Maior TO</div><div class="stat-value" id="vMaior" style="color:var(--orange)">—</div><div class="stat-sub">pacotes</div></div>
   </div>
@@ -507,11 +522,11 @@ table.main-table tr:last-child td { border-bottom: none; }
       <div id="vDistrib"></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Turno Ofensor (TOs &gt; 20 pcts)</div>
+      <div class="panel-title">Turno Ofensor (TOs &gt; 30 pcts)</div>
       <div id="vTurnoOfensor"></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Top 5 TOs com Maior Volume (&gt; 20 pcts)</div>
+      <div class="panel-title">Top 5 TOs com Maior Volume (&gt; 30 pcts)</div>
       <div id="vTop5"></div>
     </div>
   </div>
@@ -527,8 +542,8 @@ table.main-table tr:last-child td { border-bottom: none; }
 <div id="pctFilterBanner" style="display:none" class="pct-filter-banner">
   <span>🔍 Filtro ativo:</span>
   <strong id="pctFilterLabel">—</strong>
-  <span style="color:var(--muted)">— mostrando ruas com TOs correspondentes</span>
-  <button class="pct-filter-clear" onclick="setPctFilter(null)">Limpar filtro</button>
+  <span id="pctFilterDesc" style="color:var(--muted)">— mostrando ruas com TOs correspondentes</span>
+  <button class="pct-filter-clear" onclick="clearFilter()">Limpar filtro</button>
 </div>
 <div class="section-header">
   <span class="section-title">Detalhamento por Rua</span>
@@ -722,9 +737,23 @@ function buildZoneTabs() {
     </button>`).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
     btn.addEventListener('click', () => {
+      const prevZone = activeZone;
       activeZone = btn.dataset.zone;
       currentPage = 1;
       if (!btn.dataset.zone.toLowerCase().includes('volumoso')) expandedAreas.clear();
+      // Limpa filtro sppband ao sair da aba TODAS, e filtros volumoso ao sair de volumoso
+      if (prevZone !== activeZone) {
+        if (activeVolFilter.type === 'sppband' && activeZone !== 'all') {
+          activeVolFilter = { type: null, value: null };
+          document.getElementById('pctFilterBanner').style.display = 'none';
+        }
+        if (['pct','distrib','turno','aging'].includes(activeVolFilter.type) && !activeZone.toLowerCase().includes('volumoso')) {
+          activeVolFilter = { type: null, value: null };
+          document.getElementById('pctFilterBanner').style.display = 'none';
+          ['statLt20','statEq20','statGt20'].forEach(id =>
+            document.getElementById(id)?.classList.remove('pct-active'));
+        }
+      }
       render();
     });
   });
@@ -1044,8 +1073,23 @@ function buildOccByZone(areas) {
 function filteredAreas() {
   let base = activeZone === 'all' ? allAreas
     : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
-  // Filtro global: mantém só ruas com pelo menos 1 TO correspondente
-  if (activeVolFilter.type) {
+
+  if (activeVolFilter.type === 'sppband') {
+    // Filtro por faixa de SPP da rua (aba TODAS) — opera no nível de área
+    if (activeZone === 'all') {
+      base = base.filter(a => {
+        const pac = reportData?.byArea?.[a.area_name]?.pacotes;
+        const tos = a.to_quantity || 0;
+        if (pac == null || tos === 0) return false;
+        const spp = Math.round(pac / tos);
+        const { key } = activeVolFilter.value;
+        return key === 'lt' ? spp < PCT_THRESHOLD :
+               key === 'eq' ? spp === PCT_THRESHOLD :
+                               spp > PCT_THRESHOLD;
+      });
+    }
+  } else if (activeVolFilter.type) {
+    // Filtro global volumoso: mantém só ruas com pelo menos 1 TO correspondente
     base = base.filter(a => {
       const tos = reportData?.byAreaTOs?.[a.area_name];
       return tos?.some(t => matchesVolFilter(t));
@@ -1321,7 +1365,7 @@ function getVolumosoTOs() {
   return result;
 }
 
-const PCT_THRESHOLD = 20;
+const PCT_THRESHOLD = 30;
 
 // ── Filtro global único (single source of truth) ──────────────────────────
 // type: 'pct' | 'distrib' | 'turno' | 'aging' | null
@@ -1356,12 +1400,13 @@ function getFilteredVolumosoTOs() {
 
 function filterLabel() {
   const { type, value } = activeVolFilter;
-  if (type === 'pct')    return value === 'lt' ? `TOs < ${PCT_THRESHOLD} pacotes` :
-                                value === 'eq' ? `TOs = ${PCT_THRESHOLD} pacotes` :
-                                                 `TOs > ${PCT_THRESHOLD} pacotes`;
+  if (type === 'pct')     return value === 'lt' ? `TOs < ${PCT_THRESHOLD} pacotes` :
+                                 value === 'eq' ? `TOs = ${PCT_THRESHOLD} pacotes` :
+                                                  `TOs > ${PCT_THRESHOLD} pacotes`;
   if (type === 'distrib') return `Faixa ${value.label} pacotes`;
   if (type === 'turno')   return `Turno ${value}`;
   if (type === 'aging')   return `Aging ${value.label}`;
+  if (type === 'sppband') return `SPP ${value.label} pacotes/TO`;
   return '';
 }
 
@@ -1380,10 +1425,14 @@ function setVolFilter(type, value) {
   }
 
   // Banner
-  const banner = document.getElementById('pctFilterBanner');
-  const label  = document.getElementById('pctFilterLabel');
+  const banner  = document.getElementById('pctFilterBanner');
+  const label   = document.getElementById('pctFilterLabel');
+  const descEl  = document.getElementById('pctFilterDesc');
   if (activeVolFilter.type) {
     label.textContent = filterLabel();
+    if (descEl) descEl.textContent = activeVolFilter.type === 'sppband'
+      ? '— mostrando ruas por faixa de SPP'
+      : '— mostrando ruas com TOs correspondentes';
     banner.style.display = '';
   } else {
     banner.style.display = 'none';
@@ -1392,12 +1441,26 @@ function setVolFilter(type, value) {
   // Reconstrói tudo
   expandedAreas.clear();
   currentPage = 1;
-  buildVolumoso();
+  if (isVolumoso()) buildVolumoso();
+  buildSPPView();
   buildMainTable(filteredAreas());
 }
 
-// Alias para o onclick inline dos cards PCT e botão limpar
+// Alias para o onclick inline dos cards PCT
 function setPctFilter(v) { setVolFilter('pct', v); }
+
+// Limpa qualquer filtro ativo (botão do banner)
+function clearFilter() {
+  activeVolFilter = { type: null, value: null };
+  ['statLt20','statEq20','statGt20'].forEach(id =>
+    document.getElementById(id)?.classList.remove('pct-active'));
+  document.getElementById('pctFilterBanner').style.display = 'none';
+  expandedAreas.clear();
+  currentPage = 1;
+  if (isVolumoso()) buildVolumoso();
+  buildSPPView();
+  buildMainTable(filteredAreas());
+}
 
 // ── Copiar report Volumoso para SeaTalk ─────────────────────────────────────
 function copyVolReport() {
@@ -1412,7 +1475,7 @@ function copyVolReport() {
   const text = [
     `Report SPP Volumoso:`,
     `Total TO's: ${total}`,
-    `TO's > 20: ${gt20}`,
+    `TO's > ${PCT_THRESHOLD}: ${gt20}`,
     `Aging Médio: ${agingStr}`,
     ``,
     `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
@@ -1451,6 +1514,102 @@ function copyVolReport() {
   }
 }
 
+// ── Visão SPP · Aba TODAS ──────────────────────────────────────────────
+function buildSPPView() {
+  const el = document.getElementById('sppView');
+  if (!el) return;
+  if (activeZone !== 'all') { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const distribEl = document.getElementById('sppDistrib');
+  const zoneEl    = document.getElementById('sppByZone');
+
+  if (!reportData?.byArea) {
+    if (distribEl) distribEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">Aguardando dados do report...</div>';
+    if (zoneEl)    zoneEl.innerHTML    = '';
+    return;
+  }
+
+  const T      = PCT_THRESHOLD;
+  const areas  = allAreas.filter(a => a.to_quantity > 0);
+
+  // Calcula SPP por rua
+  const areasSpp = areas.map(a => {
+    const pac = reportData.byArea[a.area_name]?.pacotes;
+    const tos = a.to_quantity || 0;
+    const spp = (pac != null && tos > 0) ? pac / tos : null;
+    return { ...a, spp, pac: pac ?? 0 };
+  }).filter(a => a.spp !== null);
+
+  const bands = [
+    { label: `< ${T}`, key: 'lt', color: 'var(--green)'  },
+    { label: `= ${T}`, key: 'eq', color: 'var(--blue)'   },
+    { label: `> ${T}`, key: 'gt', color: 'var(--red)'    },
+  ];
+
+  const bandData = bands.map(b => {
+    const matched = areasSpp.filter(a => {
+      const s = Math.round(a.spp);
+      return b.key === 'lt' ? s < T : b.key === 'eq' ? s === T : s > T;
+    });
+    return {
+      ...b,
+      count:    matched.length,
+      totalPac: matched.reduce((s, a) => s + a.pac, 0),
+      areas:    matched,
+    };
+  });
+
+  const maxCount   = Math.max(...bandData.map(b => b.count), 1);
+  const totalAreas = areasSpp.length;
+
+  // Barras de distribuição clicáveis
+  if (distribEl) {
+    distribEl.innerHTML = bandData.map(b => {
+      const pct      = totalAreas ? Math.round(b.count / totalAreas * 100) : 0;
+      const barW     = (b.count / maxCount * 100).toFixed(1);
+      const isActive = activeVolFilter.type === 'sppband' && activeVolFilter.value?.key === b.key;
+      const valStr   = JSON.stringify({ key: b.key, label: b.label }).replace(/"/g, '&quot;');
+      const pkgInfo  = b.totalPac > 0 ? `· ${b.totalPac.toLocaleString('pt-BR')} pcts` : '';
+      return `<div class="vol-row${isActive ? ' vol-active' : ''}" onclick="setVolFilter('sppband',${valStr})"
+        title="${b.count} ruas ${pkgInfo}">
+        <span class="vol-label" style="min-width:52px;color:${b.color};font-size:13px;font-weight:700">${b.label}</span>
+        <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${b.color}"></div></div>
+        <span class="vol-val">${b.count} ruas <span class="vol-pct">(${pct}%)</span></span>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);text-align:center;padding:12px;font-size:12px">Sem dados SPP</div>';
+  }
+
+  // SPP médio por zona
+  if (zoneEl) {
+    const zoneSpp = {};
+    areasSpp.forEach(a => {
+      const z = (a.staging_group_name || 'OUTRAS').trim();
+      if (!zoneSpp[z]) zoneSpp[z] = { tos: 0, pac: 0 };
+      zoneSpp[z].tos += a.to_quantity;
+      zoneSpp[z].pac += a.pac;
+    });
+
+    const zoneRows = Object.entries(zoneSpp)
+      .sort((a, b) => (b[1].pac / b[1].tos) - (a[1].pac / a[1].tos))
+      .map(([z, v]) => {
+        const sppZ   = v.tos > 0 ? v.pac / v.tos : 0;
+        const sppR   = Math.round(sppZ);
+        const color  = sppR < T ? 'var(--green)' : sppR === T ? 'var(--blue)' : 'var(--red)';
+        const rgb    = ZONE_RGBA[zoneKey(z)] || [139, 92, 246];
+        const barPct = Math.min(sppZ / (T * 2) * 100, 100).toFixed(1);
+        return `<div class="occ-row">
+          <span class="occ-label" style="color:rgb(${rgb.join(',')});min-width:90px">${zoneShort(z)}</span>
+          <div class="occ-track"><div class="occ-fill" style="background:${color};width:${barPct}%"></div></div>
+          <span class="occ-val" style="color:${color};font-family:monospace;font-weight:700">${sppR}</span>
+        </div>`;
+      }).join('');
+
+    zoneEl.innerHTML = zoneRows ||
+      '<div style="color:var(--muted);text-align:center;padding:12px;font-size:12px">—</div>';
+  }
+}
+
 function buildVolumoso() {
   // TOs filtrados = fonte de verdade para todos os componentes
   const tos    = getFilteredVolumosoTOs();
@@ -1475,9 +1634,10 @@ function buildVolumoso() {
   // ── Distribuição por faixa de pacotes (clicável → filtro real) ────────
   const distBands = [
     { label: '0–9',   min: 0,  max: 10,     color: 'var(--accent)' },
-    { label: '10–15', min: 10, max: 15,     color: 'var(--blue)'   },
-    { label: '15–20', min: 15, max: 20,     color: 'var(--yellow)' },
-    { label: '>20',   min: 20, max: 999999, color: 'var(--red)'    },
+    { label: '10–19', min: 10, max: 20,     color: 'var(--blue)'   },
+    { label: '20–29', min: 20, max: 30,     color: 'var(--yellow)' },
+    { label: '= 30',  min: 30, max: 31,     color: 'var(--purple)' },
+    { label: '> 30',  min: 31, max: 999999, color: 'var(--red)'    },
   ];
   // Conta nos TOs originais (sem filtro) para os totais das barras fazerem sentido
   const dCounts = distBands.map(b => allTos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
@@ -1582,6 +1742,7 @@ function render() {
   } else {
     updateStats(areas);
     buildZonaSection(areas);
+    buildSPPView();
     buildTop5(areas);
     buildOccByZone(areas);
     buildTurnoDonut();
