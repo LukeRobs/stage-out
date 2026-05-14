@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Trip History → Transbordo Dashboard
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Sincroniza histórico de Linehaul trips com o dashboard Transbordo
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
@@ -95,24 +95,64 @@
     }
   }
 
+  // ── Hub compartilhado ────────────────────────────────────────────────
+  function registerSyncDot(label, bgColor) {
+    let hub = document.getElementById('spx-sync-hub');
+    if (!hub) {
+      hub = document.createElement('div');
+      hub.id = 'spx-sync-hub';
+      hub.style.cssText = [
+        'position:fixed', 'bottom:16px', 'right:16px',
+        'z-index:2147483647', 'font-family:sans-serif',
+        'display:flex', 'flex-direction:column', 'align-items:flex-end',
+      ].join(';');
+      const panel = document.createElement('div');
+      panel.id = 'spx-hub-panel';
+      panel.style.cssText = [
+        'display:none', 'flex-direction:column', 'gap:5px',
+        'margin-bottom:8px', 'align-items:flex-end',
+      ].join(';');
+      const toggle = document.createElement('button');
+      toggle.id = 'spx-hub-toggle';
+      toggle.style.cssText = [
+        'background:#1a1a2e', 'color:#ccc', 'border:1px solid #334',
+        'padding:5px 14px', 'border-radius:20px', 'font-size:12px',
+        'cursor:pointer', 'box-shadow:0 2px 8px rgba(0,0,0,.4)',
+        'user-select:none', 'white-space:nowrap',
+      ].join(';');
+      toggle.textContent = '⚡ SPX Sync ▲';
+      toggle.addEventListener('click', () => {
+        const open = panel.style.display === 'flex';
+        panel.style.display = open ? 'none' : 'flex';
+        toggle.textContent  = `⚡ SPX Sync (${panel.children.length}) ${open ? '▲' : '▼'}`;
+      });
+      hub.appendChild(panel);
+      hub.appendChild(toggle);
+      document.body.appendChild(hub);
+    }
+    const panel  = document.getElementById('spx-hub-panel');
+    const toggle = document.getElementById('spx-hub-toggle');
+    const dot    = document.createElement('div');
+    dot.style.cssText = [
+      `background:${bgColor}`, 'color:#fff',
+      'padding:5px 12px', 'border-radius:16px', 'font-size:11px',
+      'cursor:pointer', 'box-shadow:0 1px 6px rgba(0,0,0,.3)',
+      'user-select:none', 'white-space:nowrap',
+    ].join(';');
+    dot.textContent = label;
+    panel.appendChild(dot);
+    const open = panel.style.display === 'flex';
+    toggle.textContent = `⚡ SPX Sync (${panel.children.length}) ${open ? '▼' : '▲'}`;
+    return dot;
+  }
+
   // ── Badge visual ─────────────────────────────────────────────────────
-  const dot = document.createElement('div');
-  dot.style.cssText = [
-    'position:fixed', 'bottom:120px', 'right:16px',
-    'background:#7c3aed', 'color:#fff',
-    'padding:6px 14px', 'border-radius:20px',
-    'font-size:12px', 'font-family:sans-serif',
-    'z-index:2147483647', 'cursor:pointer',
-    'box-shadow:0 2px 8px rgba(0,0,0,0.4)',
-    'user-select:none',
-  ].join(';');
-  dot.textContent = '📅 Trip History';
+  const dot = registerSyncDot('📅 Trip History', '#7c3aed');
   dot.title = 'Clique para sincronizar histórico agora';
   dot.addEventListener('click', () => {
     if (dot.textContent.includes('🔄')) return;
     sync();
   });
-  document.body.appendChild(dot);
 
   sync();
   setInterval(sync, INTERVAL);
