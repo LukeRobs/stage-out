@@ -443,10 +443,13 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <!-- Visão SPP · Todas as zonas (somente aba TODAS) -->
 <div id="sppView" style="display:none;padding:0 24px 14px">
-  <div class="section-label" style="margin-bottom:10px">📊 Distribuição por SPP · Todas as Zonas</div>
-  <div style="display:grid;grid-template-columns:290px 1fr;gap:10px;align-items:start">
+  <div class="section-label" style="margin-bottom:10px">Distribuição por SPP · Todas as Zonas</div>
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:10px;align-items:start">
     <div class="panel">
-      <div class="panel-title">Faixas de SPP <span style="font-size:9px;color:var(--muted);font-weight:400">&nbsp;clique para filtrar</span></div>
+      <div class="panel-title" style="display:flex;align-items:baseline;justify-content:space-between">
+        <span>Faixas de SPP</span>
+        <span style="font-size:10px;color:var(--muted);font-weight:400;letter-spacing:.3px">clique para filtrar</span>
+      </div>
       <div id="sppDistrib"></div>
     </div>
     <div class="panel">
@@ -1592,16 +1595,19 @@ function buildSPPView() {
 
     const zoneRows = Object.entries(zoneSpp)
       .sort((a, b) => (b[1].pac / b[1].tos) - (a[1].pac / a[1].tos))
-      .map(([z, v]) => {
-        const sppZ   = v.tos > 0 ? v.pac / v.tos : 0;
-        const sppR   = Math.round(sppZ);
-        const color  = sppR < T ? 'var(--green)' : sppR === T ? 'var(--blue)' : 'var(--red)';
-        const rgb    = ZONE_RGBA[zoneKey(z)] || [139, 92, 246];
-        const barPct = Math.min(sppZ / (T * 2) * 100, 100).toFixed(1);
-        return `<div class="occ-row">
-          <span class="occ-label" style="color:rgb(${rgb.join(',')});min-width:90px">${zoneShort(z)}</span>
-          <div class="occ-track"><div class="occ-fill" style="background:${color};width:${barPct}%"></div></div>
-          <span class="occ-val" style="color:${color};font-family:monospace;font-weight:700">${sppR}</span>
+      .map(([z, v], i, arr) => {
+        const sppZ    = v.tos > 0 ? v.pac / v.tos : 0;
+        const sppR    = Math.round(sppZ);
+        const color   = sppR < T ? 'var(--green)' : sppR === T ? 'var(--blue)' : 'var(--red)';
+        const rgb     = ZONE_RGBA[zoneKey(z)] || [139, 92, 246];
+        const barPct  = Math.min(sppZ / (T * 2) * 100, 100).toFixed(1);
+        const border  = i < arr.length - 1 ? 'border-bottom:1px solid rgba(42,45,62,.35);' : '';
+        return `<div style="display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:10px;padding:7px 0;${border}">
+          <span style="font-size:11px;font-weight:700;color:rgb(${rgb.join(',')});letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneShort(z)}</span>
+          <div style="background:var(--surface2);border-radius:3px;height:7px;overflow:hidden">
+            <div style="background:${color};width:${barPct}%;height:100%;border-radius:3px;transition:width .35s ease"></div>
+          </div>
+          <span style="font-size:13px;font-family:monospace;font-weight:700;color:${color};text-align:right;line-height:1">${sppR}</span>
         </div>`;
       }).join('');
 
