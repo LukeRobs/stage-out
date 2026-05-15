@@ -729,6 +729,9 @@ function cleanOp(s) {
 function getAreaLabel(a) {
   const name = (a.area_name || '').trim();
   const zone = (a.staging_group_name || '').toLowerCase();
+  // COP → mostra a própria zona como área
+  if (zone.includes('cop')) return { label: 'COP', color: '#f59e0b', bg: 'rgba(245,158,11,.15)' };
+
   if (!zone.includes('volumoso')) return null;
   // Ruas com V no final: IN-01V … IN-35V
   const m = name.match(/^IN-(\d+)V$/i);
