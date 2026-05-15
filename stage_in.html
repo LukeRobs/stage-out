@@ -643,6 +643,7 @@ table.main-table tr:last-child td { border-bottom: none; }
       <tr>
         <th data-col="area_name">Rua <span class="sa"></span></th>
         <th data-col="staging_group_name">Zona <span class="sa"></span></th>
+        <th data-col="area_label">Área <span class="sa"></span></th>
         <th data-col="to_quantity" style="text-align:center">TOs <span class="sa"></span></th>
         <th data-col="pacotes" style="text-align:center">Pacotes <span class="sa"></span></th>
         <th data-col="spp" style="text-align:center">SPP <span class="sa"></span></th>
@@ -722,6 +723,22 @@ function zonePillClass(name) { return 'zone-' + zoneKey(name); }
 function zoneShort(name)     { return (name || '').replace('ZONA ', '').trim() || '—'; }
 function cleanOp(s) {
   return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
+}
+
+// ── Area label (sub-classification within zone) ────────────────────────
+function getAreaLabel(a) {
+  const name = (a.area_name || '').trim();
+  const zone = (a.staging_group_name || '').toLowerCase();
+  if (!zone.includes('volumoso')) return null;
+  // Ruas com V no final: IN-01V … IN-35V
+  const m = name.match(/^IN-(\d+)V$/i);
+  if (m) {
+    const n = parseInt(m[1]);
+    if (n >= 1  && n <= 16) return { label: 'Buffer VOLUMOSO', color: '#22c55e',  bg: 'rgba(34,197,94,.15)'  };
+    if (n >= 17 && n <= 35) return { label: 'HS VOLUMOSO',     color: '#3b82f6',  bg: 'rgba(59,130,246,.15)' };
+  }
+  // VOLUMOSO sem V → Buffer LMH
+  return { label: 'Buffer LMH', color: '#8b5cf6', bg: 'rgba(139,92,246,.15)' };
 }
 
 // Lookup report zone: exact match only (trimmed).
@@ -1312,6 +1329,8 @@ function buildMainTable(areas) {
   // Apply table-level filters
   const q = tableSearch.toLowerCase();
   let vis = sortedAreas(areas);
+  // Apenas ruas com status Available (status=1) — se o campo existir
+  if (vis.some(a => 'status' in a)) vis = vis.filter(a => a.status === 1);
   if (q)             vis = vis.filter(a => a.area_name.toLowerCase().includes(q) || (a.staging_group_name||'').toLowerCase().includes(q) || cleanOp(a.operator).toLowerCase().includes(q));
   if (tableZoneFilter) vis = vis.filter(a => (a.staging_group_name||'').trim() === tableZoneFilter);
 
@@ -1332,10 +1351,15 @@ function buildMainTable(areas) {
     const tos = a.to_quantity || 0;
     const spp = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
     const isExp = expandedAreas.has(a.area_name);
-    const expandRow = isExp ? `<tr class="expand-row"><td colspan="9">${renderTosSub(a.area_name)}</td></tr>` : '';
+    const areaInfo  = getAreaLabel(a);
+    const areaCell  = areaInfo
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;color:${areaInfo.color};background:${areaInfo.bg};border:1px solid ${areaInfo.color}33;white-space:nowrap">${areaInfo.label}</span>`
+      : `<span style="color:var(--muted);font-size:11px">—</span>`;
+    const expandRow = isExp ? `<tr class="expand-row"><td colspan="10">${renderTosSub(a.area_name)}</td></tr>` : '';
     return `<tr class="area-row" data-area="${a.area_name}">
       <td class="area-name"><span class="expand-chevron${isExp?' open':''}">▶</span>${a.area_name}</td>
       <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+      <td>${areaCell}</td>
       <td style="font-family:monospace;text-align:center;font-weight:${tos>0?'700':'400'}">${tos}</td>
       <td style="font-family:monospace;text-align:center;font-weight:600;color:${pac>0?'var(--text)':'var(--muted)'}">${pac!=null?pac.toLocaleString('pt-BR'):'—'}</td>
       <td style="font-family:monospace;text-align:center;color:${spp!=null?'var(--text)':'var(--muted)'}">${spp!=null?spp:'—'}</td>
