@@ -1849,22 +1849,22 @@ function buildAgingCrit() {
     const count = tos.length;
 
     // Severity: 0-1d is always ok; older bands escalate by % threshold
-    let sev, label;
+    let sev, statusLabel;
     if (b.key === 'b1') {
-      sev = 'ok'; label = 'Saudável';
+      sev = 'ok'; statusLabel = 'Saudável';
     } else if (b.key === 'b2') {
-      sev   = pct <= 1 ? 'ok' : pct <= 3 ? 'warn' : 'crit';
-      label = pct <= 3 ? 'Atenção' : 'Atenção';
+      sev         = pct <= 1 ? 'ok' : pct <= 3 ? 'warn' : 'crit';
+      statusLabel = pct <= 3 ? 'Atenção' : 'Atenção';
     } else if (b.key === 'b3') {
-      sev   = pct <= 1 ? 'warn' : pct <= 3 ? 'crit' : 'danger';
-      label = pct <= 1 ? 'Controlado' : pct <= 3 ? 'Crítico' : 'RISCO SLA';
+      sev         = pct <= 1 ? 'warn' : pct <= 3 ? 'crit' : 'danger';
+      statusLabel = pct <= 1 ? 'Controlado' : pct <= 3 ? 'Crítico' : 'RISCO SLA';
     } else {
-      sev   = pct <= 1 ? 'crit' : 'danger';
-      label = pct <= 1 ? 'Crítico' : 'PERIGO';
+      sev         = pct <= 1 ? 'crit' : 'danger';
+      statusLabel = pct <= 1 ? 'Crítico' : 'PERIGO';
     }
 
     const color = sev === 'ok' ? 'var(--green)' : sev === 'warn' ? 'var(--amber)' : 'var(--red)';
-    return { ...b, pkgs, pct, count, sev, label, color };
+    return { ...b, pkgs, pct, count, sev, statusLabel, color };
   });
 
   // Global alert: any band >= 2d with pct > 3%
@@ -1893,7 +1893,7 @@ function buildAgingCrit() {
         </div>
       </div>
       <span class="aging-pct" style="color:${b.color}">${b.pct.toFixed(1)}%</span>
-      <span class="aging-status-tag ast-${b.sev}">${b.label}</span>
+      <span class="aging-status-tag ast-${b.sev}">${b.statusLabel}</span>
     </div>`;
   }).join('');
 
