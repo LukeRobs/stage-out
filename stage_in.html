@@ -732,6 +732,9 @@ function getAreaLabel(a) {
   // COP → mostra a própria zona como área
   if (zone.includes('cop')) return { label: 'COP', color: '#f59e0b', bg: 'rgba(245,158,11,.15)' };
 
+  // LMH → mostra a própria zona como área
+  if (zone.includes('lmh')) return { label: 'LMH', color: '#8b5cf6', bg: 'rgba(139,92,246,.15)' };
+
   if (!zone.includes('volumoso')) return null;
   // Ruas com V no final: IN-01V … IN-35V
   const m = name.match(/^IN-(\d+)V$/i);
