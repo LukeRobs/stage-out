@@ -740,7 +740,7 @@ function getAreaLabel(a) {
   const m = name.match(/^IN-(\d+)V$/i);
   if (m) {
     const n = parseInt(m[1]);
-    if (n >= 1  && n <= 16) return { label: 'Buffer VOLUMOSO', color: '#22c55e',  bg: 'rgba(34,197,94,.15)'  };
+    if (n >= 1  && n <= 16) return { label: 'Buffer Termoplástica', color: '#22c55e',  bg: 'rgba(34,197,94,.15)'  };
     if (n >= 17 && n <= 35) return { label: 'HS VOLUMOSO',     color: '#3b82f6',  bg: 'rgba(59,130,246,.15)' };
   }
   // VOLUMOSO sem V → Buffer LMH
