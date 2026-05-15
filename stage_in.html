@@ -439,6 +439,7 @@ table.main-table tr:last-child td { border-bottom: none; }
 .ast-warn   { background:rgba(245,158,11,.12); color:var(--amber); border:1px solid rgba(245,158,11,.22); }
 .ast-crit   { background:rgba(239,68,68,.12);  color:var(--red);   border:1px solid rgba(239,68,68,.22); }
 .ast-danger { background:rgba(239,68,68,.22);  color:var(--red);   border:1px solid rgba(239,68,68,.45); animation:blink-pill 1.8s infinite; }
+.abr-active { box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); filter: brightness(1.12); }
 </style>
 </head>
 <body>
@@ -1515,6 +1516,7 @@ function setVolFilter(type, value) {
   currentPage = 1;
   if (isVolumoso()) buildVolumoso();
   buildSPPView();
+  buildAgingCrit();
   buildMainTable(filteredAreas());
 }
 
@@ -1531,6 +1533,7 @@ function clearFilter() {
   currentPage = 1;
   if (isVolumoso()) buildVolumoso();
   buildSPPView();
+  buildAgingCrit();
   buildMainTable(filteredAreas());
 }
 
@@ -1848,13 +1851,13 @@ function buildAgingCrit() {
     const pct   = totalPkgs > 0 ? pkgs / totalPkgs * 100 : 0;
     const count = tos.length;
 
-    // Severity: 0-1d is always ok; older bands escalate by % threshold
+    // Severity: 0-1d is always ok; 1-2d always amber; older bands escalate by % threshold
     let sev, statusLabel;
     if (b.key === 'b1') {
       sev = 'ok'; statusLabel = 'Saudável';
     } else if (b.key === 'b2') {
-      sev         = pct <= 1 ? 'ok' : pct <= 3 ? 'warn' : 'crit';
-      statusLabel = pct <= 3 ? 'Atenção' : 'Atenção';
+      sev         = 'warn';            // always amber — condizente com Atenção
+      statusLabel = 'Atenção';
     } else if (b.key === 'b3') {
       sev         = pct <= 1 ? 'warn' : pct <= 3 ? 'crit' : 'danger';
       statusLabel = pct <= 1 ? 'Controlado' : pct <= 3 ? 'Crítico' : 'RISCO SLA';
@@ -1880,8 +1883,15 @@ function buildAgingCrit() {
   const maxPkgs = Math.max(...bands.map(b => b.pkgs), 1);
 
   const rowsHtml = bands.map(b => {
-    const barW = (b.pkgs / maxPkgs * 100).toFixed(1);
-    return `<div class="aging-band-row abr-${b.sev}" title="${b.tip}">
+    const barW    = (b.pkgs / maxPkgs * 100).toFixed(1);
+    const isActive = activeVolFilter.type === 'aging' && activeVolFilter.value?.label === b.label;
+    // Convert hours → seconds for the existing aging filter (uses t.aging_h * 3600)
+    const minSec  = b.min * 3600;
+    const maxSec  = b.max === Infinity ? 999999999 : b.max * 3600;
+    const fVal    = JSON.stringify({ min: minSec, max: maxSec, label: b.label }).replace(/"/g, '&quot;');
+    return `<div class="aging-band-row abr-${b.sev}${isActive ? ' abr-active' : ''}"
+      title="${b.tip}" style="cursor:pointer"
+      onclick="setVolFilter('aging',${fVal})">
       <span class="aging-band-lbl" style="color:${b.color}">${b.label}</span>
       <div>
         <div class="aging-band-pkgs" style="color:${b.color}">${b.pkgs.toLocaleString('pt-BR')}</div>
