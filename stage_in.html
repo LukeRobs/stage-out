@@ -375,6 +375,70 @@ table.main-table tr:last-child td { border-bottom: none; }
   .panel-row { grid-template-columns: 1fr; }
   .header-right .meta-tag { display: none; }
 }
+
+/* ── Aging Criticality Panel ──────────────────────────────────── */
+.aging-crit-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.aging-crit-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.aging-crit-hdr-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .7px; color: var(--muted);
+}
+.aging-alert-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 11px; border-radius: 20px; font-size: 10px;
+  font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  cursor: default; flex-shrink: 0;
+}
+.aging-alert-pill.red   { background:rgba(239,68,68,.18);  color:var(--red);   border:1px solid rgba(239,68,68,.35);  animation:blink-pill 1.8s infinite; }
+.aging-alert-pill.amber { background:rgba(245,158,11,.18); color:var(--amber); border:1px solid rgba(245,158,11,.35); animation:blink-pill 2.4s infinite; }
+@keyframes blink-pill { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+.aging-col-hdr {
+  display: grid; grid-template-columns: 100px 130px 1fr 64px 108px;
+  gap: 14px; padding: 6px 16px;
+  font-size: 9px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 600;
+  border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.aging-band-row {
+  display: grid; grid-template-columns: 100px 130px 1fr 64px 108px;
+  align-items: center; gap: 14px; padding: 11px 16px;
+  border-bottom: 1px solid rgba(42,45,62,.45);
+  border-left: 3px solid transparent; transition: filter .15s;
+}
+.aging-band-row:last-child { border-bottom: none; }
+.aging-band-row:hover { filter: brightness(1.07); cursor: default; }
+.abr-ok     { border-left-color: var(--green); }
+.abr-warn   { border-left-color: var(--amber); background: rgba(245,158,11,.035); }
+.abr-crit   { border-left-color: var(--red);   background: rgba(239,68,68,.04);  }
+.abr-danger { border-left-color: var(--red);   background: rgba(239,68,68,.09);  animation: row-flicker 2.5s infinite; }
+@keyframes row-flicker { 0%,100%{background:rgba(239,68,68,.09)} 50%{background:rgba(239,68,68,.17)} }
+[data-theme="light"] .abr-warn   { background: rgba(245,158,11,.07); }
+[data-theme="light"] .abr-crit   { background: rgba(239,68,68,.06); }
+[data-theme="light"] .abr-danger { background: rgba(239,68,68,.11); }
+
+.aging-band-lbl  { font-size: 12px; font-weight: 700; font-family: monospace; }
+.aging-band-pkgs { font-size: 16px; font-weight: 800; font-family: monospace; line-height: 1.1; }
+.aging-band-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.aging-bar-outer { background: var(--border2); border-radius: 4px; height: 8px; overflow: hidden; }
+.aging-bar-inner { height: 100%; border-radius: 4px; transition: width .45s ease; }
+.aging-pct { font-size: 14px; font-weight: 800; font-family: monospace; text-align: right; }
+.aging-status-tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+}
+.ast-ok     { background:rgba(34,197,94,.12);  color:var(--green); border:1px solid rgba(34,197,94,.22); }
+.ast-warn   { background:rgba(245,158,11,.12); color:var(--amber); border:1px solid rgba(245,158,11,.22); }
+.ast-crit   { background:rgba(239,68,68,.12);  color:var(--red);   border:1px solid rgba(239,68,68,.22); }
+.ast-danger { background:rgba(239,68,68,.22);  color:var(--red);   border:1px solid rgba(239,68,68,.45); animation:blink-pill 1.8s infinite; }
 </style>
 </head>
 <body>
@@ -540,6 +604,9 @@ table.main-table tr:last-child td { border-bottom: none; }
     <div id="vAgingHist" style="padding:8px 0"></div>
   </div>
 </div>
+
+<!-- Aging Criticality Panel -->
+<div id="agingCritSection" style="padding:0 24px 14px;display:none"></div>
 
 <!-- Detail table -->
 <div id="pctFilterBanner" style="display:none" class="pct-filter-banner">
@@ -1742,6 +1809,118 @@ function buildVolumoso() {
     }).join('') + `</div>`;
 }
 
+// ── Aging Criticality Panel ───────────────────────────────────────────
+function buildAgingCrit() {
+  const el = document.getElementById('agingCritSection');
+  if (!el) return;
+
+  if (isVolumoso() || !reportData?.byAreaTOs || !Object.keys(reportData.byAreaTOs).length) {
+    el.style.display = 'none'; return;
+  }
+
+  // Aggregate TOs — filter by active zone when not "all"
+  let areaKeys = Object.keys(reportData.byAreaTOs);
+  if (activeZone !== 'all') {
+    const zoneSet = new Set(
+      allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone)
+              .map(a => a.area_name)
+    );
+    areaKeys = areaKeys.filter(k => zoneSet.has(k));
+  }
+
+  const allTOs    = areaKeys.flatMap(k => reportData.byAreaTOs[k] || []);
+  const totalPkgs = allTOs.reduce((s, t) => s + t.pacotes, 0);
+  if (!allTOs.length || totalPkgs === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = '';
+
+  // Band definitions (aging_h thresholds)
+  const BANDS = [
+    { key:'b1', label:'0 – 1 dia',   min:0,  max:24,       tip:'Backlog dentro do SLA operacional. Faixa saudável.' },
+    { key:'b2', label:'1 – 2 dias',  min:24, max:48,       tip:'Pacotes com 1–2 dias de aging. Requer rotação ativa para evitar envelhecimento.' },
+    { key:'b3', label:'2 – 3 dias',  min:48, max:72,       tip:'Próximo ao limite de SLA. Escalar para supervisão imediatamente.' },
+    { key:'b4', label:'> 3 dias',    min:72, max:Infinity, tip:'⚠️ VIOLAÇÃO DE SLA. Pacotes com mais de 3 dias em staging. Ação imediata obrigatória.' },
+  ];
+
+  const bands = BANDS.map(b => {
+    const tos   = allTOs.filter(t => t.aging_h >= b.min && t.aging_h < b.max);
+    const pkgs  = tos.reduce((s, t) => s + t.pacotes, 0);
+    const pct   = totalPkgs > 0 ? pkgs / totalPkgs * 100 : 0;
+    const count = tos.length;
+
+    // Severity: 0-1d is always ok; older bands escalate by % threshold
+    let sev, label;
+    if (b.key === 'b1') {
+      sev = 'ok'; label = 'Saudável';
+    } else if (b.key === 'b2') {
+      sev   = pct <= 1 ? 'ok' : pct <= 3 ? 'warn' : 'crit';
+      label = pct <= 3 ? 'Atenção' : 'Atenção';
+    } else if (b.key === 'b3') {
+      sev   = pct <= 1 ? 'warn' : pct <= 3 ? 'crit' : 'danger';
+      label = pct <= 1 ? 'Controlado' : pct <= 3 ? 'Crítico' : 'RISCO SLA';
+    } else {
+      sev   = pct <= 1 ? 'crit' : 'danger';
+      label = pct <= 1 ? 'Crítico' : 'PERIGO';
+    }
+
+    const color = sev === 'ok' ? 'var(--green)' : sev === 'warn' ? 'var(--amber)' : 'var(--red)';
+    return { ...b, pkgs, pct, count, sev, label, color };
+  });
+
+  // Global alert: any band >= 2d with pct > 3%
+  const alertLevel = bands.some(b => b.key === 'b4' && b.pct > 3) ? 'red'
+                   : bands.some(b => b.key === 'b3' && b.pct > 3) ? 'amber'
+                   : null;
+  const alertText  = alertLevel === 'red'
+    ? '🚨 RISCO SLA — Backlog acima de 3 dias > 3% do total'
+    : alertLevel === 'amber'
+    ? '⚠️ AGING CRÍTICO — Acúmulo em 2–3 dias acima do limite'
+    : null;
+
+  const maxPkgs = Math.max(...bands.map(b => b.pkgs), 1);
+
+  const rowsHtml = bands.map(b => {
+    const barW = (b.pkgs / maxPkgs * 100).toFixed(1);
+    return `<div class="aging-band-row abr-${b.sev}" title="${b.tip}">
+      <span class="aging-band-lbl" style="color:${b.color}">${b.label}</span>
+      <div>
+        <div class="aging-band-pkgs" style="color:${b.color}">${b.pkgs.toLocaleString('pt-BR')}</div>
+        <div class="aging-band-sub">${b.count} TO${b.count !== 1 ? 's' : ''}</div>
+      </div>
+      <div>
+        <div class="aging-bar-outer">
+          <div class="aging-bar-inner" style="width:${barW}%;background:${b.color}"></div>
+        </div>
+      </div>
+      <span class="aging-pct" style="color:${b.color}">${b.pct.toFixed(1)}%</span>
+      <span class="aging-status-tag ast-${b.sev}">${b.label}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="aging-crit-panel">
+    <div class="aging-crit-hdr">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" style="flex-shrink:0">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span class="aging-crit-hdr-title">Criticidade de Aging · Backlog por Tempo em Staging</span>
+      <span style="margin-left:8px;font-size:13px;font-weight:700;color:var(--text)">
+        ${totalPkgs.toLocaleString('pt-BR')}
+        <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:2px">pacotes</span>
+      </span>
+      ${alertText
+        ? `<span class="aging-alert-pill ${alertLevel}" style="margin-left:auto">${alertText}</span>`
+        : `<span style="margin-left:auto;font-size:10px;color:var(--green)">✅ Aging dentro dos limites operacionais</span>`
+      }
+    </div>
+    <div class="aging-col-hdr">
+      <span>Faixa</span><span>Pacotes</span><span>Distribuição</span>
+      <span style="text-align:right">% Total</span><span style="text-align:center">Status</span>
+    </div>
+    ${rowsHtml}
+  </div>`;
+}
+
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
   const areas = filteredAreas();
@@ -1759,6 +1938,7 @@ function render() {
     buildOccByZone(areas);
     buildTurnoDonut();
   }
+  buildAgingCrit();
   buildTableZonePills();
   buildMainTable(areas);
 }
