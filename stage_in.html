@@ -440,6 +440,71 @@ table.main-table tr:last-child td { border-bottom: none; }
 .ast-crit   { background:rgba(239,68,68,.12);  color:var(--red);   border:1px solid rgba(239,68,68,.22); }
 .ast-danger { background:rgba(239,68,68,.22);  color:var(--red);   border:1px solid rgba(239,68,68,.45); animation:blink-pill 1.8s infinite; }
 .abr-active { box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); filter: brightness(1.12); }
+
+/* ── Aba Operacional ── */
+.op-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 20px 24px 40px;
+}
+.op-zone-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  border-top: 4px solid var(--accent);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: transform .2s, box-shadow .2s;
+}
+.op-zone-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.op-zone-card.op-crit { animation: op-crit-pulse 2.5s infinite; }
+@keyframes op-crit-pulse {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 0 3px rgba(239,68,68,.25), 0 0 30px rgba(239,68,68,.12); }
+}
+.op-zone-card.op-warn { border-color: rgba(245,158,11,.45); }
+.op-zone-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+}
+.op-zone-name { font-size: 20px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.op-zone-pill {
+  font-size: 10px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: .5px;
+}
+.op-kpis-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+.op-kpi {
+  padding: 14px 14px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.op-kpi:nth-child(3n) { border-right: none; }
+.op-kpi:nth-last-child(-n+3) { border-bottom: none; }
+.op-kpi-val { font-size: 26px; font-weight: 800; line-height: 1; font-family: monospace; }
+.op-kpi-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-top: 5px; font-weight: 600; }
+.op-occ-wrap { padding: 10px 18px 6px; }
+.op-occ-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.op-occ-fill  { height: 100%; border-radius: 3px; transition: width .5s ease; }
+.op-fifo {
+  padding: 12px 18px; border-top: 1px solid var(--border);
+  background: var(--surface2); margin-top: auto;
+}
+.op-fifo-label { font-size: 9px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+.op-fifo-val   { font-size: 15px; font-weight: 700; font-family: monospace; }
+.tab-op-btn    { border-left: 1px solid var(--border); margin-left: 8px; padding-left: 20px; }
+@media (min-width: 1600px) {
+  .op-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; padding: 24px 32px 48px; }
+  .op-zone-name { font-size: 26px; }
+  .op-kpi-val   { font-size: 34px; }
+  .op-fifo-val  { font-size: 18px; }
+}
+@media (max-width: 600px) {
+  .op-grid { grid-template-columns: 1fr; padding: 12px 16px 32px; }
+}
 </style>
 </head>
 <body>
@@ -461,6 +526,10 @@ table.main-table tr:last-child td { border-bottom: none; }
 </header>
 
 <div class="zone-tabs" id="zoneTabs"></div>
+
+<div id="operacionalView" style="display:none">
+  <div class="op-grid" id="opGrid"></div>
+</div>
 
 <div id="defaultView">
 <!-- KPIs -->
@@ -606,6 +675,7 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<div id="detailSection">
 <!-- Aging Criticality Panel -->
 <div id="agingCritSection" style="padding:0 24px 14px;display:none"></div>
 
@@ -668,6 +738,7 @@ table.main-table tr:last-child td { border-bottom: none; }
     </div>
   </div>
 </div>
+</div><!-- end #detailSection -->
 
 <script>
 // ── Theme ──────────────────────────────────────────────────────────────
@@ -823,12 +894,15 @@ function buildZoneTabs() {
     tabs.push({ key: z, label: zoneShort(z), count });
   });
   tabs.unshift({ key: 'all', label: 'Todas', count: totalCount });
+  tabs.push({ key: '__op__', label: '📺 Operacional', count: null });
 
   const container = document.getElementById('zoneTabs');
-  container.innerHTML = tabs.map(t => `
-    <button class="zone-tab${t.key === activeZone ? ' active' : ''}" data-zone="${t.key}">
-      ${t.label}<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>
-    </button>`).join('');
+  container.innerHTML = tabs.map(t => {
+    const isOp = t.key === '__op__';
+    return `<button class="zone-tab${t.key === activeZone ? ' active' : ''}${isOp ? ' tab-op-btn' : ''}" data-zone="${t.key}">
+      ${t.label}${!isOp ? `<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>` : ''}
+    </button>`;
+  }).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       const prevZone = activeZone;
@@ -1961,14 +2035,137 @@ function buildAgingCrit() {
   </div>`;
 }
 
+// ── Operacional View ─────────────────────────────────────────────────────
+const OP_ZONE_COLORS = {
+  linear:   { color: '#3b82f6', glow: 'rgba(59,130,246,',  bg: 'rgba(59,130,246,.08)' },
+  volumoso: { color: '#22c55e', glow: 'rgba(34,197,94,',   bg: 'rgba(34,197,94,.08)'  },
+  cop:      { color: '#f59e0b', glow: 'rgba(245,158,11,',  bg: 'rgba(245,158,11,.08)' },
+  lmh:      { color: '#8b5cf6', glow: 'rgba(139,92,246,',  bg: 'rgba(139,92,246,.08)' },
+  other:    { color: '#8b5cf6', glow: 'rgba(139,92,246,',  bg: 'rgba(139,92,246,.08)' },
+};
+
+function opZoneColor(name) {
+  const k = zoneKey(name);
+  const n = (name || '').toLowerCase();
+  if (n.includes('lmh')) return OP_ZONE_COLORS.lmh;
+  return OP_ZONE_COLORS[k] || OP_ZONE_COLORS.other;
+}
+
+function buildOperacional() {
+  const active = allAreas.filter(a => a.to_quantity > 0);
+  if (!active.length) {
+    document.getElementById('opGrid').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted);font-size:15px">Nenhuma zona ativa</div>';
+    return;
+  }
+
+  const zoneMap = {};
+  active.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zoneMap[z]) zoneMap[z] = { name: z, areas: [] };
+    zoneMap[z].areas.push(a);
+  });
+
+  const cards = Object.values(zoneMap)
+    .sort((a, b) => {
+      const mA = Math.max(...a.areas.map(x => x.staging_duration_time || 0));
+      const mB = Math.max(...b.areas.map(x => x.staging_duration_time || 0));
+      return mB - mA;
+    })
+    .map(z => {
+      const areas      = z.areas;
+      const col        = opZoneColor(z.name);
+      const totalTOs   = areas.reduce((s, a) => s + (a.to_quantity || 0), 0);
+      const totalCap   = areas.reduce((s, a) => s + (a.capacity    || 0), 0);
+      const ruasAtivas = areas.length;
+      const ocupPct    = totalCap > 0 ? (totalTOs / totalCap * 100) : 0;
+
+      const rz       = getReportZone(z.name);
+      const totalPac = rz ? rz.pacotes : areas.reduce((s, a) => {
+        const ad = reportData?.byArea?.[a.area_name];
+        return s + (ad ? ad.pacotes : 0);
+      }, 0);
+      const spp = (totalTOs > 0 && totalPac > 0) ? Math.round(totalPac / totalTOs) : null;
+
+      const agings   = areas.map(a => a.staging_duration_time || 0).filter(v => v > 0);
+      const avgAging = agings.length ? agings.reduce((s, v) => s + v, 0) / agings.length : 0;
+      const pico     = agings.length ? Math.max(...agings) : 0;
+      const fifo     = areas.reduce((b, a) => (a.staging_duration_time > (b?.staging_duration_time || 0)) ? a : b, null);
+
+      const isCrit = pico > 86400;
+      const isWarn = !isCrit && pico > 25200;
+
+      const occColor  = ocupPct >= 85 ? 'var(--red)' : ocupPct >= 60 ? 'var(--yellow)' : 'var(--green)';
+      const fifoClass = fifo ? agingClass(fifo.staging_duration_time) : '';
+      const fifoText  = fifo
+        ? `<span style="color:var(--text)">${fifo.area_name}</span> <span style="color:var(--muted);font-size:12px">→</span> <span class="aging-val ${fifoClass}" style="font-size:17px;font-weight:800">${fmtDur(fifo.staging_duration_time)}</span>`
+        : '—';
+
+      const glowStyle = isCrit
+        ? `box-shadow:0 0 0 1px ${col.color}66,0 0 24px ${col.glow}0.15);`
+        : isWarn ? `box-shadow:0 0 0 1px rgba(245,158,11,.3);` : '';
+
+      return `<div class="op-zone-card${isCrit ? ' op-crit' : isWarn ? ' op-warn' : ''}" style="border-top-color:${col.color};${glowStyle}">
+        <div class="op-zone-hdr" style="background:${col.bg};border-bottom:1px solid ${col.color}33">
+          <span class="op-zone-name" style="color:${col.color}">${zoneShort(z.name)}</span>
+          <span class="op-zone-pill" style="background:${col.glow}0.15);color:${col.color};border:1px solid ${col.color}33">
+            ${ruasAtivas} rua${ruasAtivas !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div class="op-kpis-grid">
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:${col.color}">${totalTOs.toLocaleString('pt-BR')}</div>
+            <div class="op-kpi-lbl">Total TOs</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:var(--purple)">${totalPac > 0 ? totalPac.toLocaleString('pt-BR') : '—'}</div>
+            <div class="op-kpi-lbl">Pacotes</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:var(--blue)">${spp != null ? spp : '—'}</div>
+            <div class="op-kpi-lbl">SPP</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val aging-val ${agingClass(Math.round(avgAging))}">${avgAging > 0 ? fmtDur(Math.round(avgAging)) : '—'}</div>
+            <div class="op-kpi-lbl">Aging Médio</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val aging-val ${agingClass(pico)}">${pico > 0 ? fmtDur(pico) : '—'}</div>
+            <div class="op-kpi-lbl">Pico Aging</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:${occColor}">${ocupPct.toFixed(0)}%</div>
+            <div class="op-kpi-lbl">Ocupação</div>
+          </div>
+        </div>
+        <div class="op-occ-wrap">
+          <div class="op-occ-track">
+            <div class="op-occ-fill" style="width:${Math.min(ocupPct,100).toFixed(1)}%;background:${occColor}"></div>
+          </div>
+        </div>
+        <div class="op-fifo">
+          <div class="op-fifo-label">⚡ Próxima Rua — FIFO</div>
+          <div class="op-fifo-val">${fifoText}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('opGrid').innerHTML = cards;
+}
+
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
   const areas = filteredAreas();
   buildZoneTabs();
   const vol = isVolumoso();
-  document.getElementById('defaultView').style.display  = vol ? 'none' : '';
-  document.getElementById('volumosoView').style.display = vol ? '' : 'none';
-  if (vol) {
+  const op  = activeZone === '__op__';
+  document.getElementById('defaultView').style.display     = (!op && !vol) ? '' : 'none';
+  document.getElementById('volumosoView').style.display    = vol ? '' : 'none';
+  document.getElementById('operacionalView').style.display = op ? '' : 'none';
+  document.getElementById('detailSection').style.display   = op ? 'none' : '';
+  if (op) {
+    buildOperacional();
+  } else if (vol) {
     buildVolumoso();
   } else {
     updateStats(areas);
@@ -1978,9 +2175,11 @@ function render() {
     buildOccByZone(areas);
     buildTurnoDonut();
   }
-  buildAgingCrit();
-  buildTableZonePills();
-  buildMainTable(areas);
+  if (!op) {
+    buildAgingCrit();
+    buildTableZonePills();
+    buildMainTable(areas);
+  }
 }
 
 // ── Load data ──────────────────────────────────────────────────────────
