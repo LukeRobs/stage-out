@@ -280,7 +280,7 @@ function buildGroups(list) {
     ...g,
     totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
     totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
-    maxDur:     Math.max(...g.tos.map(t => (t.complete_time || 0) - t.ctime), 0),
+    maxDur:     Math.max(...g.tos.map(t => t.complete_time ? Math.floor(Date.now()/1000) - t.complete_time : 0), 0),
   }));
 }
 
@@ -304,10 +304,11 @@ function sortedGroups(g) {
 
 // ── Render card ────────────────────────────────────────────────────────
 function renderCard(g, expanded) {
+  const now = Math.floor(Date.now() / 1000);
   const toRows = g.tos
-    .sort((a, b) => ((b.complete_time||0) - b.ctime) - ((a.complete_time||0) - a.ctime))
+    .sort((a, b) => (now - (b.complete_time||now)) - (now - (a.complete_time||now)))
     .map(to => {
-      const packSec = (to.complete_time || 0) - to.ctime;
+      const packSec = to.complete_time ? now - to.complete_time : 0;
       const dc = durClass(packSec);
       return `<tr>
         <td><span class="to-num" title="${to.to_number}">${to.to_number}</span></td>
@@ -337,7 +338,7 @@ function renderCard(g, expanded) {
           <thead>
             <tr>
               <th>TO Number</th><th>Operador</th><th>Tipo</th>
-              <th>Pacotes</th><th>Peso</th><th>Concluído</th><th>Tempo Pack</th>
+              <th>Pacotes</th><th>Peso</th><th>Concluído</th><th>Tempo de Processamento</th>
             </tr>
           </thead>
           <tbody>${toRows}</tbody>
