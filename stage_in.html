@@ -507,10 +507,14 @@ table.main-table tr:last-child td { border-bottom: none; }
   padding: 7px 14px; border-bottom: 1px solid rgba(42,45,62,.35);
 }
 .op-fifo-row:last-child { border-bottom: none; }
-.op-fifo-rank  { font-size: 10px; color: var(--muted); text-align: right; font-family: monospace; }
-.op-fifo-rua   { font-weight: 700; font-size: 13px; font-family: monospace; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.op-fifo-rank  { font-size: 10px; color: var(--muted); text-align: right; font-family: monospace; align-self: start; padding-top: 3px; }
+.op-fifo-info  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.op-fifo-rua   { font-weight: 700; font-size: 13px; font-family: monospace; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .op-fifo-area  { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 5px; white-space: nowrap; letter-spacing: .3px; flex-shrink: 0; }
-.op-fifo-aging { font-family: monospace; font-size: 13px; font-weight: 800; }
+.op-fifo-sub   { display: flex; gap: 8px; flex-wrap: wrap; }
+.op-fifo-sub span { font-size: 10px; color: var(--muted); font-family: monospace; white-space: nowrap; }
+.op-fifo-sub strong { color: var(--text); font-weight: 600; }
+.op-fifo-aging { font-family: monospace; font-size: 13px; font-weight: 800; align-self: start; padding-top: 3px; }
 .tab-op-btn    { border-left: 1px solid var(--border); margin-left: 8px; padding-left: 20px; }
 @media (min-width: 1600px) {
   .op-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; padding: 24px 32px 48px; }
@@ -2125,14 +2129,29 @@ function buildOperacional() {
         : isWarn ? `box-shadow:0 0 0 1px rgba(245,158,11,.3);` : '';
 
       const fifoRows = fifoList.map((a, i) => {
-        const ac       = agingClass(a.staging_duration_time);
-        const areaInfo = getAreaLabel(a);
+        const ac        = agingClass(a.staging_duration_time);
+        const areaInfo  = getAreaLabel(a);
         const areaBadge = areaInfo
           ? `<span class="op-fifo-area" style="background:${areaInfo.bg};color:${areaInfo.color};border:1px solid ${areaInfo.color}44">${areaInfo.label}</span>`
           : '';
+        const tos  = a.to_quantity || 0;
+        const cap  = a.capacity    || 0;
+        const pac  = reportData?.byArea?.[a.area_name]?.pacotes ?? null;
+        const spp  = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
+        const occ  = parseOcc(a.occupy_percentage);
+        const occColor = occ >= 85 ? 'var(--red)' : occ >= 60 ? 'var(--yellow)' : 'var(--green)';
         return `<div class="op-fifo-row">
           <span class="op-fifo-rank">${i + 1}</span>
-          <span class="op-fifo-rua">${a.area_name}${areaBadge}</span>
+          <div class="op-fifo-info">
+            <div class="op-fifo-rua">${a.area_name}${areaBadge}</div>
+            <div class="op-fifo-sub">
+              <span><strong>${tos}</strong> TOs</span>
+              <span><strong>${pac != null ? pac.toLocaleString('pt-BR') : '—'}</strong> pcts</span>
+              <span>SPP <strong>${spp != null ? spp : '—'}</strong></span>
+              <span>Cap <strong>${cap}</strong></span>
+              <span style="color:${occColor};font-weight:700">${occ.toFixed(0)}%</span>
+            </div>
+          </div>
           <span class="op-fifo-aging aging-val ${ac}">${fmtDur(a.staging_duration_time)}</span>
         </div>`;
       }).join('');
