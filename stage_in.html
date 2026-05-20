@@ -447,6 +447,8 @@ table.main-table tr:last-child td { border-bottom: none; }
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
   padding: 20px 24px 40px;
+  min-height: calc(100vh - 128px);
+  align-items: start;
 }
 .op-zone-card {
   background: var(--surface);
@@ -489,12 +491,25 @@ table.main-table tr:last-child td { border-bottom: none; }
 .op-occ-wrap { padding: 10px 18px 6px; }
 .op-occ-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
 .op-occ-fill  { height: 100%; border-radius: 3px; transition: width .5s ease; }
-.op-fifo {
-  padding: 12px 18px; border-top: 1px solid var(--border);
-  background: var(--surface2); margin-top: auto;
+.op-fifo-list {
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
 }
-.op-fifo-label { font-size: 9px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
-.op-fifo-val   { font-size: 15px; font-weight: 700; font-family: monospace; }
+.op-fifo-list-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  font-size: 9px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--muted); font-weight: 700;
+}
+.op-fifo-row {
+  display: grid; grid-template-columns: 22px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 7px 14px; border-bottom: 1px solid rgba(42,45,62,.35);
+}
+.op-fifo-row:last-child { border-bottom: none; }
+.op-fifo-rank  { font-size: 10px; color: var(--muted); text-align: right; font-family: monospace; }
+.op-fifo-rua   { font-weight: 700; font-size: 13px; font-family: monospace; }
+.op-fifo-aging { font-family: monospace; font-size: 13px; font-weight: 800; }
 .tab-op-btn    { border-left: 1px solid var(--border); margin-left: 8px; padding-left: 20px; }
 @media (min-width: 1600px) {
   .op-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; padding: 24px 32px 48px; }
@@ -2076,9 +2091,11 @@ function buildOperacional() {
       const areas      = z.areas;
       const col        = opZoneColor(z.name);
       const totalTOs   = areas.reduce((s, a) => s + (a.to_quantity || 0), 0);
-      const totalCap   = areas.reduce((s, a) => s + (a.capacity    || 0), 0);
       const ruasAtivas = areas.length;
-      const ocupPct    = totalCap > 0 ? (totalTOs / totalCap * 100) : 0;
+      // Capacidade total = todas as ruas da zona (inclusive as vazias)
+      const allZoneAreas = allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === z.name);
+      const totalCap     = allZoneAreas.reduce((s, a) => s + (a.capacity || 0), 0);
+      const ocupPct      = totalCap > 0 ? (totalTOs / totalCap * 100) : 0;
 
       const rz       = getReportZone(z.name);
       const totalPac = rz ? rz.pacotes : areas.reduce((s, a) => {
@@ -2090,20 +2107,30 @@ function buildOperacional() {
       const agings   = areas.map(a => a.staging_duration_time || 0).filter(v => v > 0);
       const avgAging = agings.length ? agings.reduce((s, v) => s + v, 0) / agings.length : 0;
       const pico     = agings.length ? Math.max(...agings) : 0;
-      const fifo     = areas.reduce((b, a) => (a.staging_duration_time > (b?.staging_duration_time || 0)) ? a : b, null);
+
+      // Top 10 FIFO: ruas ordenadas por aging desc
+      const fifoList = [...areas]
+        .filter(a => a.staging_duration_time > 0)
+        .sort((a, b) => b.staging_duration_time - a.staging_duration_time)
+        .slice(0, 10);
 
       const isCrit = pico > 86400;
       const isWarn = !isCrit && pico > 25200;
 
-      const occColor  = ocupPct >= 85 ? 'var(--red)' : ocupPct >= 60 ? 'var(--yellow)' : 'var(--green)';
-      const fifoClass = fifo ? agingClass(fifo.staging_duration_time) : '';
-      const fifoText  = fifo
-        ? `<span style="color:var(--text)">${fifo.area_name}</span> <span style="color:var(--muted);font-size:12px">→</span> <span class="aging-val ${fifoClass}" style="font-size:17px;font-weight:800">${fmtDur(fifo.staging_duration_time)}</span>`
-        : '—';
+      const occColor = ocupPct >= 85 ? 'var(--red)' : ocupPct >= 60 ? 'var(--yellow)' : 'var(--green)';
 
       const glowStyle = isCrit
         ? `box-shadow:0 0 0 1px ${col.color}66,0 0 24px ${col.glow}0.15);`
         : isWarn ? `box-shadow:0 0 0 1px rgba(245,158,11,.3);` : '';
+
+      const fifoRows = fifoList.map((a, i) => {
+        const ac = agingClass(a.staging_duration_time);
+        return `<div class="op-fifo-row">
+          <span class="op-fifo-rank">${i + 1}</span>
+          <span class="op-fifo-rua">${a.area_name}</span>
+          <span class="op-fifo-aging aging-val ${ac}">${fmtDur(a.staging_duration_time)}</span>
+        </div>`;
+      }).join('');
 
       return `<div class="op-zone-card${isCrit ? ' op-crit' : isWarn ? ' op-warn' : ''}" style="border-top-color:${col.color};${glowStyle}">
         <div class="op-zone-hdr" style="background:${col.bg};border-bottom:1px solid ${col.color}33">
@@ -2143,9 +2170,9 @@ function buildOperacional() {
             <div class="op-occ-fill" style="width:${Math.min(ocupPct,100).toFixed(1)}%;background:${occColor}"></div>
           </div>
         </div>
-        <div class="op-fifo">
-          <div class="op-fifo-label">⚡ Próxima Rua — FIFO</div>
-          <div class="op-fifo-val">${fifoText}</div>
+        <div class="op-fifo-list">
+          <div class="op-fifo-list-hdr">⚡ FIFO — Próximas Ruas</div>
+          ${fifoRows || '<div style="padding:10px 14px;color:var(--muted);font-size:12px">Nenhuma rua ativa</div>'}
         </div>
       </div>`;
     }).join('');
