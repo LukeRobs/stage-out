@@ -2091,9 +2091,11 @@ function buildOperacional() {
       const areas      = z.areas;
       const col        = opZoneColor(z.name);
       const totalTOs   = areas.reduce((s, a) => s + (a.to_quantity || 0), 0);
-      const totalCap   = areas.reduce((s, a) => s + (a.capacity    || 0), 0);
       const ruasAtivas = areas.length;
-      const ocupPct    = totalCap > 0 ? (totalTOs / totalCap * 100) : 0;
+      // Capacidade total = todas as ruas da zona (inclusive as vazias)
+      const allZoneAreas = allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === z.name);
+      const totalCap     = allZoneAreas.reduce((s, a) => s + (a.capacity || 0), 0);
+      const ocupPct      = totalCap > 0 ? (totalTOs / totalCap * 100) : 0;
 
       const rz       = getReportZone(z.name);
       const totalPac = rz ? rz.pacotes : areas.reduce((s, a) => {
