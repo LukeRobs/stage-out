@@ -167,13 +167,13 @@ body {
 <body>
 
 <header class="header">
-  <div class="header-icon">✅</div>
+  <div class="header-icon">&#x2705;</div>
   <div class="header-title">
     <h1>TO's Packed Dashboard</h1>
-    <p>SPX EXPRESS · ORDENS EMBALADAS SEM STAGING AREA</p>
+    <p>SPX EXPRESS &middot; ORDENS EMBALADAS SEM STAGING AREA</p>
   </div>
   <div class="header-right">
-    <span class="meta-tag" id="metaTag">—</span>
+    <span class="meta-tag" id="metaTag">&mdash;</span>
     <div class="live-badge">
       <div class="live-dot" id="liveDot"></div>
       <span id="lastUpdated">Aguardando...</span>
@@ -184,22 +184,22 @@ body {
 <div class="stats">
   <div class="stat">
     <div class="stat-label">Destinos</div>
-    <div class="stat-value" id="sDest" style="color:var(--accent)">—</div>
-    <div class="stat-sub">destinos únicos</div>
+    <div class="stat-value" id="sDest" style="color:var(--accent)">&mdash;</div>
+    <div class="stat-sub">destinos &uacute;nicos</div>
   </div>
   <div class="stat">
     <div class="stat-label">Total de TOs</div>
-    <div class="stat-value" id="sTOs" style="color:var(--blue)">—</div>
+    <div class="stat-value" id="sTOs" style="color:var(--blue)">&mdash;</div>
     <div class="stat-sub">sem staging area</div>
   </div>
   <div class="stat">
     <div class="stat-label">Pacotes</div>
-    <div class="stat-value" id="sPacotes" style="color:var(--purple)">—</div>
+    <div class="stat-value" id="sPacotes" style="color:var(--purple)">&mdash;</div>
     <div class="stat-sub">total de volumes</div>
   </div>
   <div class="stat">
     <div class="stat-label">Peso Total</div>
-    <div class="stat-value" id="sPeso" style="color:var(--yellow)">—</div>
+    <div class="stat-value" id="sPeso" style="color:var(--yellow)">&mdash;</div>
     <div class="stat-sub">kg processados</div>
   </div>
 </div>
@@ -210,22 +210,22 @@ body {
     <input type="text" id="search" placeholder="Buscar por destino ou TO...">
   </div>
   <div class="sort-btns">
-    <button class="sort-btn active" data-sort="duracao">Duração <span class="arrow">↓</span></button>
-    <button class="sort-btn" data-sort="tos">TOs <span class="arrow">↕</span></button>
-    <button class="sort-btn" data-sort="pacotes">Pacotes <span class="arrow">↕</span></button>
-    <button class="sort-btn" data-sort="peso">Peso <span class="arrow">↕</span></button>
+    <button class="sort-btn active" data-sort="duracao">Dura&ccedil;&atilde;o <span class="arrow">&#x2193;</span></button>
+    <button class="sort-btn" data-sort="tos">TOs <span class="arrow">&#x2195;</span></button>
+    <button class="sort-btn" data-sort="pacotes">Pacotes <span class="arrow">&#x2195;</span></button>
+    <button class="sort-btn" data-sort="peso">Peso <span class="arrow">&#x2195;</span></button>
   </div>
   <span class="count-info" id="countInfo"></span>
 </div>
 
 <div class="dest-list" id="destList">
   <div class="empty">
-    <h2>⏳ Aguardando sincronização</h2>
-    <p>O Tampermonkey ainda não enviou dados de Packed.</p>
+    <h2>&#x23F3; Aguardando sincroniza&ccedil;&atilde;o</h2>
+    <p>O Tampermonkey ainda n&atilde;o enviou dados de Packed.</p>
     <code>
       1. Instale o script <b>tos_sync.user.js</b> no Tampermonkey<br>
-      2. Acesse qualquer página do SPX<br>
-      3. Aguarde o badge <b>✅ TOs Sync</b> aparecer
+      2. Acesse qualquer p&aacute;gina do SPX<br>
+      3. Aguarde o badge <b>&#x2705; TOs Sync</b> aparecer
     </code>
   </div>
 </div>
@@ -308,8 +308,9 @@ function renderCard(g, expanded) {
   const toRows = g.tos
     .sort((a, b) => (now - (b.complete_time||now)) - (now - (a.complete_time||now)))
     .map(to => {
-      const packSec = to.complete_time ? now - to.complete_time : 0;
-      const dc = durClass(packSec);
+      const packSec = (to.complete_time || 0) - to.ctime;
+      const waitSec = to.complete_time ? now - to.complete_time : 0;
+      const dc = durClass(waitSec);
       return `<tr>
         <td><span class="to-num" title="${to.to_number}">${to.to_number}</span></td>
         <td><span class="op-name">${cleanOp(to.operator)}</span></td>
@@ -317,7 +318,8 @@ function renderCard(g, expanded) {
         <td style="text-align:center;font-family:monospace">${to.quantity || 0}</td>
         <td style="font-family:monospace;font-size:11px">${fmtWeight(to.weight || 0)}</td>
         <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(to.complete_time)}</td>
-        <td><span class="dur ${dc}">${fmtDur(packSec)}</span></td>
+        <td style="font-family:monospace;font-size:11px">${fmtDur(packSec)}</td>
+        <td><span class="dur ${dc}">${fmtDur(waitSec)}</span></td>
       </tr>`;
     }).join('');
 
@@ -331,14 +333,14 @@ function renderCard(g, expanded) {
           <span class="badge badge-purple">${g.totPacotes} pac.</span>
           <span class="badge badge-green">${fmtWeight(g.totPeso)}</span>
         </div>
-        <span class="chevron">▼</span>
+        <span class="chevron">&#x25BC;</span>
       </div>
       <div class="tos-wrap">
         <table class="tos-table">
           <thead>
             <tr>
               <th>TO Number</th><th>Operador</th><th>Tipo</th>
-              <th>Pacotes</th><th>Peso</th><th>Concluído</th><th>Tempo de Processamento</th>
+              <th>Pacotes</th><th>Peso</th><th>Conclu&iacute;do</th><th>Tempo de Processamento</th><th>Tempo Pack</th>
             </tr>
           </thead>
           <tbody>${toRows}</tbody>
@@ -400,7 +402,7 @@ async function loadData() {
     if (data.error) return;
     if (data.fetchedAt === lastAt) return;
     lastAt = data.fetchedAt;
-    // Só mostra TOs Packed que ainda NÃO têm Staging Area atribuída
+    // So mostra TOs Packed que ainda NAO tem Staging Area atribuida
     const filtered = (data.list || []).filter(to =>
       !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === ''
     );
