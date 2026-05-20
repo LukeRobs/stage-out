@@ -508,7 +508,8 @@ table.main-table tr:last-child td { border-bottom: none; }
 }
 .op-fifo-row:last-child { border-bottom: none; }
 .op-fifo-rank  { font-size: 10px; color: var(--muted); text-align: right; font-family: monospace; }
-.op-fifo-rua   { font-weight: 700; font-size: 13px; font-family: monospace; }
+.op-fifo-rua   { font-weight: 700; font-size: 13px; font-family: monospace; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.op-fifo-area  { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 5px; white-space: nowrap; letter-spacing: .3px; flex-shrink: 0; }
 .op-fifo-aging { font-family: monospace; font-size: 13px; font-weight: 800; }
 .tab-op-btn    { border-left: 1px solid var(--border); margin-left: 8px; padding-left: 20px; }
 @media (min-width: 1600px) {
@@ -2124,10 +2125,14 @@ function buildOperacional() {
         : isWarn ? `box-shadow:0 0 0 1px rgba(245,158,11,.3);` : '';
 
       const fifoRows = fifoList.map((a, i) => {
-        const ac = agingClass(a.staging_duration_time);
+        const ac       = agingClass(a.staging_duration_time);
+        const areaInfo = getAreaLabel(a);
+        const areaBadge = areaInfo
+          ? `<span class="op-fifo-area" style="background:${areaInfo.bg};color:${areaInfo.color};border:1px solid ${areaInfo.color}44">${areaInfo.label}</span>`
+          : '';
         return `<div class="op-fifo-row">
           <span class="op-fifo-rank">${i + 1}</span>
-          <span class="op-fifo-rua">${a.area_name}</span>
+          <span class="op-fifo-rua">${a.area_name}${areaBadge}</span>
           <span class="op-fifo-aging aging-val ${ac}">${fmtDur(a.staging_duration_time)}</span>
         </div>`;
       }).join('');
