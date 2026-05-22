@@ -304,6 +304,51 @@ body {
 .top10-rank.rank-2 { background: rgba(148,163,184,.1); color: #94a3b8; border-color: rgba(148,163,184,.25); }
 .top10-rank.rank-3 { background: rgba(180,120,60,.12); color: #cd853f; border-color: rgba(180,120,60,.25); }
 
+/* ── Turno cards ── */
+.turno-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.turno-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden;
+}
+.turno-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+}
+.turno-card.t1::before { background: #3b82f6; }
+.turno-card.t2::before { background: #f59e0b; }
+.turno-card.t3::before { background: #8b5cf6; }
+.turno-label { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.turno-label.t1 { color: #3b82f6; }
+.turno-label.t2 { color: #f59e0b; }
+.turno-label.t3 { color: #8b5cf6; }
+.turno-time { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+.turno-stat { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.turno-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.turno-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.turno-bar { height: 100%; border-radius: 2px; }
+.turno-bar.t1 { background: #3b82f6; }
+.turno-bar.t2 { background: #f59e0b; }
+.turno-bar.t3 { background: #8b5cf6; }
+.turno-pac { font-size: 11px; color: var(--muted); }
+
+/* ── Hourly chart ── */
+.hour-chart {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 12px 8px;
+  display: flex; align-items: flex-end; gap: 3px; height: 180px;
+  overflow: hidden;
+}
+.hour-col {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; min-width: 0;
+}
+.hour-bar-val { font-size: 9px; color: var(--muted); margin-bottom: 3px; text-align: center; }
+.hour-bar {
+  width: 100%; border-radius: 3px 3px 0 0;
+  min-height: 3px; background: rgba(59,130,246,.5);
+}
+.hour-bar.peak { background: #f59e0b; }
+.hour-lbl { font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center; }
+
 /* ── Print ── */
 @media print {
   .tab-bar, .toolbar, .header-right { display: none; }
@@ -665,6 +710,55 @@ function renderReport() {
     </tr>`;
   }).join('');
 
+  // Turno classification (complete_time hour)
+  const turnos = {
+    T1: { tos: 0, pac: 0, label: 'T1', time: '06:00 – 13:59', cls: 't1' },
+    T2: { tos: 0, pac: 0, label: 'T2', time: '14:00 – 21:59', cls: 't2' },
+    T3: { tos: 0, pac: 0, label: 'T3', time: '22:00 – 05:59', cls: 't3' },
+  };
+  allTOs.forEach(to => {
+    if (!to.complete_time) return;
+    const h = new Date(to.complete_time * 1000).getHours();
+    const key = (h >= 6 && h < 14) ? 'T1' : (h >= 14 && h < 22) ? 'T2' : 'T3';
+    turnos[key].tos++;
+    turnos[key].pac += (to.quantity || 0);
+  });
+  const turnoCards = ['T1', 'T2', 'T3'].map(k => {
+    const t = turnos[k];
+    const pct = totalTOs > 0 ? (t.tos / totalTOs * 100) : 0;
+    return `<div class="turno-card ${t.cls}">
+      <div class="turno-label ${t.cls}">${t.label}</div>
+      <div class="turno-time">${t.time}</div>
+      <div class="turno-stat">${t.tos}</div>
+      <div class="turno-meta">TOs &nbsp;&middot;&nbsp; ${pct.toFixed(1)}% do total</div>
+      <div class="turno-bar-wrap"><div class="turno-bar ${t.cls}" style="width:${pct.toFixed(1)}%"></div></div>
+      <div class="turno-pac">${t.pac.toLocaleString('pt-BR')} pacotes</div>
+    </div>`;
+  }).join('');
+
+  // Hourly curve
+  const hourCounts = Array(24).fill(0);
+  const hourPacs   = Array(24).fill(0);
+  allTOs.forEach(to => {
+    if (!to.complete_time) return;
+    const h = new Date(to.complete_time * 1000).getHours();
+    hourCounts[h]++;
+    hourPacs[h] += (to.quantity || 0);
+  });
+  const maxHourCount = Math.max(...hourCounts, 1);
+  const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+  const MAX_BAR_H = 120;
+  const hourBars = hourCounts.map((cnt, h) => {
+    const isPeak = h === peakHour && cnt > 0;
+    const barH   = Math.max(3, Math.round(cnt / maxHourCount * MAX_BAR_H));
+    const lbl    = String(h).padStart(2, '0');
+    return `<div class="hour-col">
+      <div class="hour-bar-val">${cnt > 0 ? cnt : ''}</div>
+      <div class="hour-bar${isPeak ? ' peak' : ''}" style="height:${barH}px"></div>
+      <div class="hour-lbl">${lbl}h</div>
+    </div>`;
+  }).join('');
+
   reportWrap.innerHTML = `
     <!-- Timestamp bar -->
     <div class="report-ts-bar">
@@ -733,6 +827,18 @@ function renderReport() {
           <tbody>${top10Rows}</tbody>
         </table>
       </div>
+    </div>
+
+    <!-- Turno section -->
+    <div class="report-section">
+      <div class="report-section-title">Responsabilidade por Turno</div>
+      <div class="turno-cards">${turnoCards}</div>
+    </div>
+
+    <!-- Hourly curve -->
+    <div class="report-section">
+      <div class="report-section-title">Curva de TO's Packed por Hora</div>
+      <div class="hour-chart">${hourBars}</div>
     </div>
   `;
 }
