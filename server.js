@@ -552,96 +552,8 @@
     }
     return result;
   }
-  // ── dbCage sheet — sacas por gaiola ────────────────────────────────────
-  const CAGE_SPREADSHEET_ID = '12JJaZI-VR7sp8w1M3cY5sLx4z0erIG35_T0AU9-t-kQ';
-  const CAGE_RANGE          = 'dbCage!A:F';
-  const CAGE_TTL            = 2 * 60 * 1000;
-  let   cageCache           = null;
-  let   cageFetchedAt       = 0;
-  let   cageMapCache        = null; // { cageMap: { 'CG001': 'OUT-185', ... }, fetchedAt }
-
-  async function getCageData() {
-    if (cageCache && Date.now() - cageFetchedAt < CAGE_TTL) return cageCache;
-    if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
-
-    const token = await getServiceAccountToken();
-    // UNFORMATTED_VALUE → datas saem como serial numérico do Google Sheets (confiável)
-    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CAGE_SPREADSHEET_ID}/values/${encodeURIComponent(CAGE_RANGE)}?valueRenderOption=UNFORMATTED_VALUE`;
-    const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
-
-    const raw = await resp.json();
-    const all = raw.values || [];
-    if (all.length < 2) {
-      const empty = { byGaiola: {}, total: 0, rows: 0, totalRows: 0, fetchedAt: Date.now() };
-      cageCache = empty; cageFetchedAt = Date.now();
-      return empty;
-    }
-
-    const hdrs = all[0].map(h => (h || '').toLowerCase().trim());
-    const iTO  = hdrs.indexOf('to');
-    const iGai = hdrs.indexOf('gaiola');
-    const iCT  = hdrs.indexOf('ctime');
-    const iMT  = hdrs.indexOf('mtime');
-
-    // Data de hoje em horário de Brasília (UTC-3)
-    const todayBR = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
-
-    // Converte qualquer formato de timestamp para 'YYYY-MM-DD' (horário BR)
-    function parseDateStr(val) {
-      if (val === undefined || val === null || val === '') return '';
-      const num = Number(val);
-      // Serial do Google Sheets: dias desde 1899-12-30 (range razoável: 36526–80000 = 2000–2119)
-      if (!isNaN(num) && num > 36526 && num < 80000) {
-        const ms = Math.round((num - 25569) * 86400 * 1000);
-        return new Date(ms - 3 * 3600 * 1000).toISOString().slice(0, 10);
-      }
-      // Unix ms (> 1e12) ou Unix s (> 1e9)
-      if (!isNaN(num) && num > 1e9) {
-        const ms = num > 1e12 ? num : num * 1000;
-        return new Date(ms - 3 * 3600 * 1000).toISOString().slice(0, 10);
-      }
-      const s = String(val).trim();
-      // Formato BR: DD/MM/YYYY ou DD/MM/YYYY HH:MM:SS
-      const brM = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-      if (brM) return `${brM[3]}-${brM[2]}-${brM[1]}`;
-      // ISO: YYYY-MM-DD...
-      if (s.length >= 10) return s.slice(0, 10).replace(/\//g, '-');
-      return '';
-    }
-
-    const byGaiola = {};
-    let total     = 0;
-    let rowsToday = 0;
-
-    all.slice(1).forEach(r => {
-      const gaiola = iGai >= 0 ? String(r[iGai] || '').trim() : '';
-      const to     = iTO  >= 0 ? String(r[iTO]  || '').trim() : '';
-      if (!gaiola) return;
-
-      // Filtro temporal: usa CTime (preferencial) ou MTime — descarta dias anteriores
-      const ctRaw  = iCT >= 0 ? r[iCT] : undefined;
-      const mtRaw  = iMT >= 0 ? r[iMT] : undefined;
-      const timeVal = (ctRaw !== undefined && ctRaw !== null && ctRaw !== '') ? ctRaw : mtRaw;
-      if (timeVal !== undefined && timeVal !== null && timeVal !== '') {
-        const rowDate = parseDateStr(timeVal);
-        if (rowDate && rowDate !== todayBR) return; // pula dados de outros dias
-      }
-
-      rowsToday++;
-      // Sacas = contagem de TOs (1 linha = 1 saca), não soma de Pacotes
-      if (!byGaiola[gaiola]) byGaiola[gaiola] = { sacas: 0, tos: [] };
-      byGaiola[gaiola].sacas += 1;
-      if (to && !byGaiola[gaiola].tos.includes(to)) byGaiola[gaiola].tos.push(to);
-      total++;
-    });
-
-    console.log(`[cage-data] ${all.length - 1} linhas totais · ${rowsToday} hoje (${todayBR}) · ${Object.keys(byGaiola).length} gaiolas · ${total} sacas`);
-    const result = { byGaiola, total, rows: rowsToday, totalRows: all.length - 1, fetchedAt: Date.now() };
-    cageCache = result; cageFetchedAt = Date.now();
-    return result;
-  }
-
+  // ── Cage map + sacas (calculados pelo Tampermonkey via SPX cage API) ───
+  let cageMapCache = null; // { cageMap: { CG001: OUT-185 }, byArea: { OUT-185: { sacas, cages } }, fetchedAt }
   async function forceSaveToSheets() {
   try {
     if (!workstationCache) {
@@ -1160,17 +1072,19 @@
       return;
     }
 
-    // POST /api/cage-map-data — recebe mapeamento gaiola→rua do Tampermonkey
+    // POST /api/cage-map-data — recebe mapeamento gaiola→rua + sacas do Tampermonkey
     if (urlPath === '/api/cage-map-data' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
           cageMapCache = JSON.parse(body);
-          const count = Object.keys(cageMapCache.cageMap || {}).length;
-          console.log(`[cage-map] Received ${count} gaiola→rua mappings`);
+          const cages = Object.keys(cageMapCache.cageMap  || {}).length;
+          const areas = Object.keys(cageMapCache.byArea   || {}).length;
+          const sacas = Object.values(cageMapCache.byArea || {}).reduce((s, a) => s + (a.sacas || 0), 0);
+          console.log(`[cage-map] ${cages} gaiolas · ${areas} ruas · ${sacas} sacas`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, count }));
+          res.end(JSON.stringify({ ok: true, cages, areas, sacas }));
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
@@ -1179,36 +1093,17 @@
       return;
     }
 
-    // GET /api/cage-data — sacas por gaiola + por rua (dbCage ✕ mapeamento do Tampermonkey)
+    // GET /api/cage-data — sacas por rua (calculado pelo Tampermonkey via SPX cage API)
     if (urlPath === '/api/cage-data') {
-      if (!SERVICE_ACCOUNT) {
+      if (!cageMapCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Service Account não configurado' }));
+        res.end(JSON.stringify({ error: 'Aguardando sync do Tampermonkey — abra o SPX e aguarde' }));
         return;
       }
-      getCageData()
-        .then(data => {
-          // Junta byGaiola com cageMap para produzir byArea
-          const cageMap = cageMapCache?.cageMap || {};
-          const byArea  = {};
-          Object.entries(data.byGaiola).forEach(([gaiola, d]) => {
-            const area = cageMap[gaiola];
-            if (!area) return;
-            if (!byArea[area]) byArea[area] = { sacas: 0, gaiolas: [] };
-            byArea[area].sacas += d.sacas; // 1 saca = 1 TO do dbCage de hoje
-            byArea[area].gaiolas.push(gaiola);
-          });
-          const areaCount = Object.keys(byArea).length;
-          if (areaCount > 0) console.log(`[cage-data] join → ${areaCount} ruas mapeadas`);
-          const result = { ...data, byArea, cageMapAt: cageMapCache?.fetchedAt || null };
-          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-          res.end(JSON.stringify(result));
-        })
-        .catch(err => {
-          console.error('[cage-data]', err.message);
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: err.message }));
-        });
+      const byArea = cageMapCache.byArea || {};
+      const total  = Object.values(byArea).reduce((s, a) => s + (a.sacas || 0), 0);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ byArea, total, fetchedAt: cageMapCache.fetchedAt }));
       return;
     }
 

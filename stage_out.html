@@ -347,9 +347,9 @@ body {
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">—</span>
-    <div class="sheet-badge" id="sheetBadge" title="Dados da planilha dbCage (sacas por gaiola)">
+    <div class="sheet-badge" id="sheetBadge" title="Sacas por rua (SPX API · sincronizado pelo Tampermonkey)">
       <div class="sheet-badge-dot"></div>
-      <span id="sheetBadgeText">dbCage...</span>
+      <span id="sheetBadgeText">SPX Sacas...</span>
     </div>
     <div class="live-badge">
       <div class="live-dot" id="liveDot"></div>
@@ -432,15 +432,12 @@ const CAGE_API_URL = '/api/cage-data';
 //  SHEET STATE  (dados de sacas por gaiola via /api/cage-data)
 // ═══════════════════════════════════════════════════════════════
 const sheet = {
-  byGaiola:  {},   // { 'CG001': { pacotes: N, tos: [...] } }
-  byArea:    {},   // { 'OUT-185': { sacas: N, gaiolas: [...] } }  ← join com cageMap
-  total:     0,
-  loaded:    false,
-  rows:      0,
-  cageMapAt: null,
+  byArea:  {},   // { 'OUT-185': { sacas: N, cages: [...] } }  — calculado via SPX cage API
+  total:   0,
+  loaded:  false,
 };
 
-// Retorna { sacas: N } para a rua ou null se ainda não houver mapeamento
+// Retorna { sacas: N } para a rua ou null se ainda não houver dados
 function sacasForRua(ruaName) {
   if (!sheet.loaded || !ruaName) return null;
   const d = sheet.byArea[ruaName];
@@ -450,36 +447,29 @@ function sacasForRua(ruaName) {
 async function loadSheetData() {
   const badge     = document.getElementById('sheetBadge');
   const badgeText = document.getElementById('sheetBadgeText');
-
   try {
     const res  = await fetch(CAGE_API_URL);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    sheet.byGaiola  = data.byGaiola  || {};
-    sheet.byArea    = data.byArea    || {};
-    sheet.total     = data.total     || 0;
-    sheet.loaded    = true;
-    sheet.rows      = data.rows      || 0;
-    sheet.cageMapAt = data.cageMapAt || null;
+    sheet.byArea = data.byArea || {};
+    sheet.total  = data.total  || 0;
+    sheet.loaded = true;
 
     badge.className = 'sheet-badge ok';
     const areaCount = Object.keys(sheet.byArea).length;
-    badgeText.textContent = sheet.rows + ' linhas'
-      + (areaCount > 0 ? ' · ' + areaCount + ' ruas' : '');
+    badgeText.textContent = sheet.total.toLocaleString('pt-BR') + ' sacas · ' + areaCount + ' ruas';
 
     updateSacasStat();
     if (groups.length > 0) render();
-
   } catch(e) {
     console.warn('[cage-data]', e.message);
     sheet.loaded          = false;
     badge.className       = 'sheet-badge err';
-    badgeText.textContent = 'dbCage indisponível';
-
+    badgeText.textContent = 'SPX offline';
     document.getElementById('sSacas').textContent    = '—';
-    document.getElementById('sSacasSub').textContent = 'planilha inacessível';
+    document.getElementById('sSacasSub').textContent = 'aguardando sync';
   }
 }
 
@@ -488,12 +478,11 @@ function updateSacasStat() {
   const sub = document.getElementById('sSacasSub');
   if (sheet.loaded) {
     el.classList.remove('loading');
-    el.textContent = sheet.total.toLocaleString('pt-BR');
-    const areaCount = Object.keys(sheet.byArea).length;
-    sub.textContent = sheet.rows + ' registros · '
-      + Object.keys(sheet.byGaiola).length + ' gaiolas'
-      + (areaCount > 0 ? ' · ' + areaCount + ' ruas mapeadas' : ' · aguardando mapa');
+    el.textContent  = sheet.total.toLocaleString('pt-BR');
+    sub.textContent = Object.keys(sheet.byArea).length + ' ruas mapeadas';
   }
+}
+
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -654,7 +643,7 @@ function renderCard(g, expanded) {
     : '';
 
   const tableHint = !sheet.loaded
-    ? `<p class="sheet-hint">Sacas indisponível — planilha ainda não carregada</p>`
+    ? `<p class="sheet-hint">Sacas indisponível — aguardando próximo sync do Tampermonkey</p>`
     : '';
 
   return `
