@@ -8,21 +8,22 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0d0f14;
+  --bg:      #0d0f14;
   --surface: #161920;
-  --surface2: #1e2130;
-  --border: #2a2d3e;
+  --surface2:#1e2130;
+  --border:  #2a2d3e;
   --border2: #353849;
-  --text: #e2e8f0;
-  --muted: #6b7280;
-  --orange: #ee4d2d;
+  --text:    #e2e8f0;
+  --muted:   #6b7280;
+  --orange:  #ee4d2d;
   --orange2: #ff6b4a;
-  --green: #22c55e;
-  --yellow: #f59e0b;
-  --red: #ef4444;
-  --blue: #3b82f6;
-  --purple: #8b5cf6;
-  --radius: 10px;
+  --green:   #22c55e;
+  --yellow:  #f59e0b;
+  --red:     #ef4444;
+  --blue:    #3b82f6;
+  --purple:  #8b5cf6;
+  --teal:    #14b8a6;
+  --radius:  10px;
 }
 
 body {
@@ -50,11 +51,12 @@ body {
   background: var(--orange);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; flex-shrink: 0;
+  flex-shrink: 0;
+  color: #fff;
 }
 .header-title h1 { font-size: 15px; font-weight: 700; }
 .header-title p  { font-size: 11px; color: var(--muted); }
-.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .live-badge {
   display: flex; align-items: center; gap: 6px;
   font-size: 11px; color: var(--muted);
@@ -62,21 +64,40 @@ body {
 .live-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--muted);
+  flex-shrink: 0;
 }
 .live-dot.on { background: var(--green); animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 .meta-tag {
   font-size: 11px; color: var(--muted);
-  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  background: var(--surface2); padding: 3px 9px; border-radius: 20px;
   border: 1px solid var(--border);
 }
+.sheet-badge {
+  font-size: 11px;
+  background: var(--surface2); padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  display: flex; align-items: center; gap: 5px;
+  transition: color .2s, border-color .2s;
+}
+.sheet-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background .2s;
+}
+.sheet-badge.ok .sheet-badge-dot   { background: var(--teal); }
+.sheet-badge.ok                    { color: var(--teal); border-color: rgba(20,184,166,.3); }
+.sheet-badge.err .sheet-badge-dot  { background: var(--red); }
+.sheet-badge.err                   { color: var(--red); border-color: rgba(239,68,68,.3); }
 
 /* ── Stats ── */
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
-  padding: 16px 24px;
+  padding: 16px 24px 12px;
 }
 .stat {
   background: var(--surface);
@@ -87,6 +108,7 @@ body {
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
 .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.stat-value.loading { opacity: .3; }
 
 /* ── Toolbar ── */
 .toolbar {
@@ -126,11 +148,7 @@ body {
   white-space: nowrap;
 }
 .sort-btn:hover { border-color: var(--border2); color: var(--text); }
-.sort-btn.active {
-  background: rgba(238,77,45,.12);
-  border-color: var(--orange);
-  color: var(--orange);
-}
+.sort-btn.active { background: rgba(238,77,45,.12); border-color: var(--orange); color: var(--orange); }
 .sort-btn .arrow { font-size: 9px; }
 .count-info { font-size: 11px; color: var(--muted); margin-left: auto; }
 
@@ -150,14 +168,14 @@ body {
   overflow: hidden;
   transition: border-color .15s;
 }
-.dest-card:hover { border-color: var(--border2); }
-.dest-card.expanded { border-color: var(--orange); }
+.dest-card:hover     { border-color: var(--border2); }
+.dest-card.expanded  { border-color: var(--orange); }
 
 .dest-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 11px 14px;
   cursor: pointer;
   user-select: none;
 }
@@ -184,8 +202,9 @@ body {
 .dest-badges {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 .badge {
   display: inline-flex;
@@ -197,21 +216,22 @@ body {
   font-weight: 600;
   white-space: nowrap;
 }
-.badge-blue   { background: rgba(59,130,246,.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,.2); }
-.badge-purple { background: rgba(139,92,246,.12); color: #a78bfa; border: 1px solid rgba(139,92,246,.2); }
-.badge-green  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
-.badge-orange { background: rgba(238,77,45,.12);  color: #fb923c; border: 1px solid rgba(238,77,45,.2); }
-.badge-red    { background: rgba(239,68,68,.12);  color: #f87171; border: 1px solid rgba(239,68,68,.2); }
-.badge-yellow { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+.badge-blue   { background: rgba(59,130,246,.12);  color: #60a5fa;  border: 1px solid rgba(59,130,246,.22); }
+.badge-purple { background: rgba(139,92,246,.12);  color: #a78bfa;  border: 1px solid rgba(139,92,246,.22); }
+.badge-green  { background: rgba(34,197,94,.12);   color: #4ade80;  border: 1px solid rgba(34,197,94,.22); }
+.badge-orange { background: rgba(238,77,45,.12);   color: #fb923c;  border: 1px solid rgba(238,77,45,.22); }
+.badge-red    { background: rgba(239,68,68,.12);   color: #f87171;  border: 1px solid rgba(239,68,68,.22); }
+.badge-yellow { background: rgba(245,158,11,.12);  color: #fbbf24;  border: 1px solid rgba(245,158,11,.22); }
+.badge-teal   { background: rgba(20,184,166,.12);  color: #2dd4bf;  border: 1px solid rgba(20,184,166,.22); }
 
-.occ-badge { min-width: 72px; justify-content: center; }
+.occ-badge { min-width: 68px; justify-content: center; }
 
 .chevron {
   color: var(--muted);
-  font-size: 14px;
+  display: flex; align-items: center;
   transition: transform .2s;
   flex-shrink: 0;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 .dest-card.expanded .chevron { transform: rotate(180deg); }
 
@@ -219,7 +239,7 @@ body {
 .ruas-wrap {
   display: none;
   border-top: 1px solid var(--border);
-  padding: 0 16px 12px;
+  padding: 0 14px 12px;
 }
 .dest-card.expanded .ruas-wrap { display: block; }
 
@@ -248,9 +268,17 @@ body {
 
 .rua-name { font-family: monospace; font-weight: 700; font-size: 12px; color: var(--text); }
 
+/* Sacas bar */
+.sacas-bar { display: flex; align-items: center; gap: 7px; }
+.sacas-bg  { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; min-width: 40px; }
+.sacas-fill{ height: 100%; border-radius: 3px; background: var(--teal); }
+.sacas-num { font-family: monospace; font-size: 11px; color: var(--teal); min-width: 28px; text-align: right; }
+.sacas-na  { font-size: 11px; color: var(--muted); }
+
+/* Occ mini-bar */
 .mini-bar { display: flex; align-items: center; gap: 7px; }
 .mini-bg  { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; min-width: 50px; }
-.mini-fill { height: 100%; border-radius: 3px; }
+.mini-fill{ height: 100%; border-radius: 3px; }
 .mini-pct { font-family: monospace; font-size: 11px; width: 42px; text-align: right; }
 
 .status-pill {
@@ -262,18 +290,22 @@ body {
 }
 .s1 { background: rgba(59,130,246,.12); color: #60a5fa; }
 .s3 { background: rgba(245,158,11,.12); color: #fbbf24; }
-.s2 { background: rgba(239,68,68,.12); color: #f87171; }
+.s2 { background: rgba(239,68,68,.12);  color: #f87171; }
 
 .dur { font-family: monospace; font-size: 11px; }
 .dur.warn { color: var(--yellow); }
 .dur.crit { color: var(--red); }
 
-/* ── Empty / No data ── */
-.empty {
-  text-align: center;
-  padding: 60px 20px;
+/* Sheet data unavailable hint */
+.sheet-hint {
+  font-size: 10px;
   color: var(--muted);
+  padding: 4px 0 2px 10px;
+  font-style: italic;
 }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
 .empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
 .empty code {
   display: inline-block;
@@ -287,10 +319,14 @@ body {
   line-height: 1.8;
 }
 
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 700px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
-  .dest-badges .badge:nth-child(n+3) { display: none; }
-  .header-right .meta-tag { display: none; }
+  .dest-badges .badge:nth-child(n+4) { display: none; }
+  .header-right .meta-tag,
+  .header-right .sheet-badge { display: none; }
 }
 </style>
 </head>
@@ -298,13 +334,23 @@ body {
 
 <!-- Header -->
 <header class="header">
-  <div class="header-icon">📦</div>
+  <div class="header-icon">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+      <polyline points="2 17 12 22 22 17"/>
+      <polyline points="2 12 12 17 22 12"/>
+    </svg>
+  </div>
   <div class="header-title">
     <h1>Staging Area Dashboard</h1>
     <p>SPX EXPRESS · ANÁLISE POR DESTINO</p>
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">—</span>
+    <div class="sheet-badge" id="sheetBadge" title="Dados da planilha dbCage (sacas por gaiola)">
+      <div class="sheet-badge-dot"></div>
+      <span id="sheetBadgeText">dbCage...</span>
+    </div>
     <div class="live-badge">
       <div class="live-dot" id="liveDot"></div>
       <span id="lastUpdated">Aguardando...</span>
@@ -330,23 +376,31 @@ body {
     <div class="stat-sub">cages alocadas</div>
   </div>
   <div class="stat">
-    <div class="stat-label">TOs</div>
+    <div class="stat-label">Scuttles</div>
     <div class="stat-value" id="sTOs" style="color:var(--green)">—</div>
-    <div class="stat-sub">ordens de transporte</div>
+    <div class="stat-sub">por staging lane</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Sacas</div>
+    <div class="stat-value loading" id="sSacas" style="color:var(--teal)">—</div>
+    <div class="stat-sub" id="sSacasSub">aguardando planilha</div>
   </div>
 </div>
 
 <!-- Toolbar -->
 <div class="toolbar">
   <div class="search-wrap">
-    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
     <input type="text" id="search" placeholder="Buscar por destino, ID ou rua...">
   </div>
   <div class="sort-btns">
     <button class="sort-btn active" data-sort="tempo">Tempo <span class="arrow">↓</span></button>
     <button class="sort-btn" data-sort="ruas">Ruas <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="gaiolas">Gaiolas <span class="arrow">↕</span></button>
-    <button class="sort-btn" data-sort="tos">TOs <span class="arrow">↕</span></button>
+    <button class="sort-btn" data-sort="scuttles">Scuttles <span class="arrow">↕</span></button>
+    <button class="sort-btn" data-sort="sacas">Sacas <span class="arrow">↕</span></button>
     <button class="sort-btn" data-sort="occ">Ocupação <span class="arrow">↕</span></button>
   </div>
   <span class="count-info" id="countInfo"></span>
@@ -355,19 +409,96 @@ body {
 <!-- List -->
 <div class="dest-list" id="destList">
   <div class="empty">
-    <h2>⏳ Aguardando sincronização</h2>
+    <h2>Aguardando sincronização</h2>
     <p>O Tampermonkey ainda não enviou dados.</p>
     <code>
       1. Instale o Tampermonkey no Chrome<br>
       2. Adicione o script <b>stage_out_sync.user.js</b><br>
       3. Abra a página SPX → Staging Area Outbound<br>
-      4. Aguarde o badge <b>✅ Sync</b> aparecer
+      4. Aguarde o badge <b>Sync</b> aparecer
     </code>
   </div>
 </div>
 
 <script>
-// ── Helpers ────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════════════
+const API_URL      = '/api/stage-out';
+const CAGE_API_URL = '/api/cage-data';
+
+
+// ═══════════════════════════════════════════════════════════════
+//  SHEET STATE  (dados de sacas por gaiola via /api/cage-data)
+// ═══════════════════════════════════════════════════════════════
+const sheet = {
+  byGaiola:  {},   // { 'CG001': { pacotes: N, tos: [...] } }
+  byArea:    {},   // { 'OUT-185': { sacas: N, gaiolas: [...] } }  ← join com cageMap
+  total:     0,
+  loaded:    false,
+  rows:      0,
+  cageMapAt: null,
+};
+
+// Retorna { sacas: N } para a rua ou null se ainda não houver mapeamento
+function sacasForRua(ruaName) {
+  if (!sheet.loaded || !ruaName) return null;
+  const d = sheet.byArea[ruaName];
+  return d ? { sacas: d.sacas } : null;
+}
+
+async function loadSheetData() {
+  const badge     = document.getElementById('sheetBadge');
+  const badgeText = document.getElementById('sheetBadgeText');
+
+  try {
+    const res  = await fetch(CAGE_API_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    sheet.byGaiola  = data.byGaiola  || {};
+    sheet.byArea    = data.byArea    || {};
+    sheet.total     = data.total     || 0;
+    sheet.loaded    = true;
+    sheet.rows      = data.rows      || 0;
+    sheet.cageMapAt = data.cageMapAt || null;
+
+    badge.className = 'sheet-badge ok';
+    const areaCount = Object.keys(sheet.byArea).length;
+    badgeText.textContent = sheet.rows + ' linhas'
+      + (areaCount > 0 ? ' · ' + areaCount + ' ruas' : '');
+
+    updateSacasStat();
+    if (groups.length > 0) render();
+
+  } catch(e) {
+    console.warn('[cage-data]', e.message);
+    sheet.loaded          = false;
+    badge.className       = 'sheet-badge err';
+    badgeText.textContent = 'dbCage indisponível';
+
+    document.getElementById('sSacas').textContent    = '—';
+    document.getElementById('sSacasSub').textContent = 'planilha inacessível';
+  }
+}
+
+function updateSacasStat() {
+  const el  = document.getElementById('sSacas');
+  const sub = document.getElementById('sSacasSub');
+  if (sheet.loaded) {
+    el.classList.remove('loading');
+    el.textContent = sheet.total.toLocaleString('pt-BR');
+    const areaCount = Object.keys(sheet.byArea).length;
+    sub.textContent = sheet.rows + ' registros · '
+      + Object.keys(sheet.byGaiola).length + ' gaiolas'
+      + (areaCount > 0 ? ' · ' + areaCount + ' ruas mapeadas' : ' · aguardando mapa');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
 const parsePct = s => parseFloat((s||'0').replace('%','').trim()) || 0;
 
 function occColor(p) {
@@ -379,7 +510,7 @@ function occColor(p) {
 
 function fmtDur(s) {
   if (!s) return '—';
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
 }
 
@@ -391,16 +522,20 @@ function durClass(s) {
 
 function parseDestId(to_destination) {
   const m = (to_destination||'').match(/^\[(\d+)\](.*)/);
-  return m ? { id: m[1], name: m[2].trim() } : { id: '?', name: to_destination||'—' };
+  return m ? { id: m[1], name: m[2].trim() } : { id: '?', name: to_destination || '—' };
 }
 
-// ── State ──────────────────────────────────────────────────────────────
-let groups    = [];   // [{id, name, ruas:[...], totRuas, totGaiolas, totTOs, avgOcc}]
-let sortKey   = 'tempo';
-let sortAsc   = false;
-let lastAt    = null;
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let groups  = [];
+let sortKey = 'tempo';
+let sortAsc = false;
+let lastAt  = null;
 
-// ── Group by destination ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  BUILD GROUPS
+// ═══════════════════════════════════════════════════════════════
 function buildGroups(list) {
   const map = {};
   list.forEach(r => {
@@ -410,34 +545,58 @@ function buildGroups(list) {
   });
 
   return Object.values(map).map(g => {
-    const totGaiolas = g.ruas.reduce((s,r) => s + (r.cage_quantity||0), 0);
-    const totTOs     = g.ruas.reduce((s,r) => s + (r.transport_order_quantity||0), 0);
-    const totCap     = g.ruas.reduce((s,r) => s + (r.capacity||0), 0);
-    const totUsed    = g.ruas.reduce((s,r) => s + Math.round(parsePct(r.occupancy_percentage)/100*(r.capacity||0)), 0);
-    const avgOcc     = totCap > 0 ? Math.round(totUsed/totCap*100) : 0;
-    const maxDur = Math.max(...g.ruas.map(r => r.staging_duration_time || 0), 0);
-    return { ...g, totGaiolas, totTOs, avgOcc, maxDur };
+    const totGaiolas  = g.ruas.reduce((s, r) => s + (r.cage_quantity || 0), 0);
+    const totScuttles = g.ruas.reduce((s, r) => s + (r.transport_order_quantity || 0), 0);
+    const totCap      = g.ruas.reduce((s, r) => s + (r.capacity || 0), 0);
+    const totUsed     = g.ruas.reduce((s, r) => s + Math.round(parsePct(r.occupancy_percentage) / 100 * (r.capacity || 0)), 0);
+    const avgOcc      = totCap > 0 ? Math.round(totUsed / totCap * 100) : 0;
+    const maxDur      = Math.max(...g.ruas.map(r => r.staging_duration_time || 0), 0);
+
+    // Soma Sacas de todas as ruas do grupo
+    const totSacas = g.ruas.reduce((s, r) => {
+      const d = sacasForRua(r.staging_area_name);
+      return s + (d ? d.sacas : 0);
+    }, 0);
+
+    return { ...g, totGaiolas, totScuttles, avgOcc, maxDur, totSacas };
   });
 }
 
-// ── Sort ───────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  SORT + FILTER
+// ═══════════════════════════════════════════════════════════════
 function sortedGroups(g) {
   const q = document.getElementById('search').value.trim().toLowerCase();
   let filtered = q
-    ? g.filter(d => d.name.toLowerCase().includes(q) || d.id.includes(q) ||
-                    d.ruas.some(r => r.staging_area_name.toLowerCase().includes(q)))
+    ? g.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.id.includes(q) ||
+        d.ruas.some(r => (r.staging_area_name||'').toLowerCase().includes(q))
+      )
     : g;
 
-  const key = { ruas:'ruas', gaiolas:'totGaiolas', tos:'totTOs', occ:'avgOcc', tempo:'maxDur' }[sortKey] || 'maxDur';
-  filtered.sort((a,b) => {
-    let av = key==='ruas' ? a.ruas.length : a[key];
-    let bv = key==='ruas' ? b.ruas.length : b[key];
-    return sortAsc ? av-bv : bv-av;
+  const keyMap = {
+    ruas:    'ruas',
+    gaiolas: 'totGaiolas',
+    scuttles:'totScuttles',
+    sacas:   'totSacas',
+    occ:     'avgOcc',
+    tempo:   'maxDur',
+  };
+  const key = keyMap[sortKey] || 'maxDur';
+
+  filtered.sort((a, b) => {
+    const av = key === 'ruas' ? a.ruas.length : a[key];
+    const bv = key === 'ruas' ? b.ruas.length : b[key];
+    return sortAsc ? av - bv : bv - av;
   });
+
   return filtered;
 }
 
-// ── Render summary row ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  RENDER CARD
+// ═══════════════════════════════════════════════════════════════
 function occBadgeClass(p) {
   if (p >= 100) return 'badge-red';
   if (p >= 80)  return 'badge-yellow';
@@ -445,24 +604,39 @@ function occBadgeClass(p) {
   return 'badge-green';
 }
 
+// Máximo de sacas entre as ruas do grupo (para a barra proporcional)
+let maxSacasGlobal = 1;
+
 function renderCard(g, expanded) {
   const oc = occBadgeClass(g.avgOcc);
-  const statusMap = {1:'s1',2:'s2',3:'s3'};
-  const statusLabel = {1:'Aberto',2:'Fechado',3:'Em Carregamento'};
+  const statusMap   = { 1:'s1', 2:'s2', 3:'s3' };
+  const statusLabel = { 1:'Aberto', 2:'Fechado', 3:'Em Carregamento' };
 
   const ruasRows = g.ruas
-    .sort((a,b) => (b.staging_duration_time||0) - (a.staging_duration_time||0))
+    .sort((a, b) => (b.staging_duration_time || 0) - (a.staging_duration_time || 0))
     .map(r => {
       const pct = parsePct(r.occupancy_percentage);
       const col = occColor(pct);
       const sc  = statusMap[r.staging_area_status] || '';
       const sl  = statusLabel[r.staging_area_status] || r.staging_area_status;
       const dc  = durClass(r.staging_duration_time);
+      const sd  = sacasForRua(r.staging_area_name);
+      const sacasNum   = sd ? sd.sacas : null;
+      const maxRuaSacas= Math.max(maxSacasGlobal, 1);
+
+      const sacasCell = sacasNum !== null
+        ? `<div class="sacas-bar">
+             <div class="sacas-bg"><div class="sacas-fill" style="width:${Math.min((sacasNum/maxRuaSacas)*100,100).toFixed(0)}%"></div></div>
+             <span class="sacas-num">${sacasNum}</span>
+           </div>`
+        : `<span class="sacas-na">—</span>`;
+
       return `<tr>
         <td><span class="rua-name">${r.staging_area_name}</span></td>
         <td><span class="status-pill ${sc}">${sl}</span></td>
-        <td style="text-align:center">${r.cage_quantity||0}</td>
-        <td style="text-align:center">${r.transport_order_quantity||0}</td>
+        <td style="text-align:center">${r.cage_quantity || 0}</td>
+        <td style="text-align:center">${r.transport_order_quantity || 0}</td>
+        <td>${sacasCell}</td>
         <td>
           <div class="mini-bar">
             <div class="mini-bg"><div class="mini-fill" style="width:${Math.min(pct,100)}%;background:${col}"></div></div>
@@ -470,29 +644,50 @@ function renderCard(g, expanded) {
           </div>
         </td>
         <td><span class="dur ${dc}">${fmtDur(r.staging_duration_time)}</span></td>
-        <td style="color:var(--muted);font-size:11px">${r.operator?.replace(/@shopee\.com/,'').replace(/\[.*?\]/,'').trim()||'—'}</td>
+        <td style="color:var(--muted);font-size:11px">${(r.operator||'').replace(/@shopee\.com/,'').replace(/\[.*?\]/,'').trim() || '—'}</td>
       </tr>`;
     }).join('');
 
+  // Badge de sacas no cabeçalho do card (oculto quando sem mapeamento por rua)
+  const sacasBadge = (sheet.loaded && g.totSacas > 0)
+    ? `<span class="badge badge-teal">${g.totSacas} sacas</span>`
+    : '';
+
+  const tableHint = !sheet.loaded
+    ? `<p class="sheet-hint">Sacas indisponível — planilha ainda não carregada</p>`
+    : '';
+
   return `
-    <div class="dest-card${expanded?' expanded':''}" data-id="${g.id}">
+    <div class="dest-card${expanded ? ' expanded' : ''}" data-id="${g.id}">
       <div class="dest-header">
         <span class="dest-id">${g.id}</span>
         <span class="dest-name" title="${g.name}">${g.name}</span>
         <div class="dest-badges">
-          <span class="badge badge-blue">${g.ruas.length} rua${g.ruas.length!==1?'s':''}</span>
-          <span class="badge badge-purple">${g.totGaiolas} gaiola${g.totGaiolas!==1?'s':''}</span>
-          <span class="badge badge-green">${g.totTOs} TO${g.totTOs!==1?'s':''}</span>
+          <span class="badge badge-blue">${g.ruas.length} rua${g.ruas.length !== 1 ? 's' : ''}</span>
+          <span class="badge badge-purple">${g.totGaiolas} gaiola${g.totGaiolas !== 1 ? 's' : ''}</span>
+          <span class="badge badge-green">${g.totScuttles} scuttle${g.totScuttles !== 1 ? 's' : ''}</span>
+          ${sacasBadge}
           <span class="badge ${oc} occ-badge">${g.avgOcc}% ocp</span>
         </div>
-        <span class="chevron">▼</span>
+        <span class="chevron">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
       </div>
       <div class="ruas-wrap">
+        ${tableHint}
         <table class="ruas-table">
           <thead>
             <tr>
-              <th>Rua</th><th>Status</th><th>Gaiolas</th><th>TOs</th>
-              <th>Ocupação</th><th>Tempo</th><th>Operador</th>
+              <th>Rua</th>
+              <th>Status</th>
+              <th>Gaiolas</th>
+              <th>Scuttles</th>
+              <th>Sacas</th>
+              <th>Ocupação</th>
+              <th>Tempo</th>
+              <th>Operador</th>
             </tr>
           </thead>
           <tbody>${ruasRows}</tbody>
@@ -501,17 +696,28 @@ function renderCard(g, expanded) {
     </div>`;
 }
 
-// ── Full render ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  RENDER ALL
+// ═══════════════════════════════════════════════════════════════
 const expandedIds = new Set();
 
 function render() {
-  const list   = sortedGroups(groups);
+  const list      = sortedGroups(groups);
   const container = document.getElementById('destList');
   document.getElementById('countInfo').textContent = `${list.length} destinos`;
 
   if (!list.length) {
     container.innerHTML = '<div class="empty"><p>Nenhum destino encontrado.</p></div>';
     return;
+  }
+
+  // Calcula máximo de sacas por rua para normalizar as barras
+  maxSacasGlobal = 1;
+  if (sheet.loaded) {
+    groups.forEach(g => g.ruas.forEach(r => {
+      const d = sacasForRua(r.staging_area_name);
+      if (d && d.sacas > maxSacasGlobal) maxSacasGlobal = d.sacas;
+    }));
   }
 
   container.innerHTML = list.map(g => renderCard(g, expandedIds.has(g.id))).join('');
@@ -527,44 +733,54 @@ function render() {
   });
 }
 
-// ── Update stats ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  UPDATE STATS
+// ═══════════════════════════════════════════════════════════════
 function updateStats(data) {
   const list = data.list || [];
   document.getElementById('sDest').textContent    = groups.length;
   document.getElementById('sRuas').textContent    = list.length;
-  document.getElementById('sGaiolas').textContent = list.reduce((s,r)=>s+(r.cage_quantity||0),0);
-  document.getElementById('sTOs').textContent     = list.reduce((s,r)=>s+(r.transport_order_quantity||0),0);
+  document.getElementById('sGaiolas').textContent = list.reduce((s, r) => s + (r.cage_quantity || 0), 0);
+  document.getElementById('sTOs').textContent     = list.reduce((s, r) => s + (r.transport_order_quantity || 0), 0);
 
-  const t = new Date(data.fetchedAt);
-  const ts = t.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const ds = t.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  // Sacas: recalcula do sheet se disponível
+  if (sheet.loaded) updateSacasStat();
+
+  const t  = new Date(data.fetchedAt);
+  const ts = t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const ds = t.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   document.getElementById('lastUpdated').textContent = ts;
   document.getElementById('liveDot').className = 'live-dot on';
   document.getElementById('metaTag').textContent =
-    `outbound_staging_area_${ds.replace(/\//g,'-')} · ${list.length} ruas · ${ts}`;
+    `outbound_${ds.replace(/\//g, '-')} · ${list.length} ruas · ${ts}`;
 }
 
-// ── Load data ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  LOAD STAGING DATA
+// ═══════════════════════════════════════════════════════════════
 async function loadData() {
   try {
-    const res = await fetch('/api/stage-out');
+    const res  = await fetch(API_URL);
     if (!res.ok) return;
     const data = await res.json();
     if (data.error) return;
-    if (data.fetchedAt === lastAt) return; // no change
+    if (data.fetchedAt === lastAt) return;
     lastAt = data.fetchedAt;
-    const allList = data.list || [];
-    // staging_area_status: 1=Aberto (Available), 2=Fechado, 3=Despacho
+
+    const allList   = data.list || [];
     const availList = allList.some(r => 'staging_area_status' in r)
       ? allList.filter(r => r.staging_area_status === 1 || r.staging_area_status === 3)
       : allList;
+
     groups = buildGroups(availList);
     updateStats({ ...data, list: availList });
     render();
   } catch(e) {}
 }
 
-// ── Sort buttons ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  SORT BUTTONS
+// ═══════════════════════════════════════════════════════════════
 document.querySelectorAll('.sort-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const s = btn.dataset.sort;
@@ -581,12 +797,16 @@ document.querySelectorAll('.sort-btn').forEach(btn => {
   });
 });
 
-// ── Search ─────────────────────────────────────────────────────────────
 document.getElementById('search').addEventListener('input', render);
 
-// ── Init ───────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════
 loadData();
-setInterval(loadData, 15000);
+loadSheetData();
+
+setInterval(loadData,       15000);          // Staging: a cada 15s
+setInterval(loadSheetData, 2 * 60 * 1000);  // dbCage: a cada 2min (servidor cacheia 2min)
 </script>
 </body>
 </html>

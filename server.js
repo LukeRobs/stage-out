@@ -552,6 +552,56 @@
     }
     return result;
   }
+  // ── dbCage sheet — sacas por gaiola ────────────────────────────────────
+  const CAGE_SPREADSHEET_ID = '12JJaZI-VR7sp8w1M3cY5sLx4z0erIG35_T0AU9-t-kQ';
+  const CAGE_RANGE          = 'dbCage!A:F';
+  const CAGE_TTL            = 2 * 60 * 1000;
+  let   cageCache           = null;
+  let   cageFetchedAt       = 0;
+  let   cageMapCache        = null; // { cageMap: { 'CG001': 'OUT-185', ... }, fetchedAt }
+
+  async function getCageData() {
+    if (cageCache && Date.now() - cageFetchedAt < CAGE_TTL) return cageCache;
+    if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+
+    const token = await getServiceAccountToken();
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CAGE_SPREADSHEET_ID}/values/${encodeURIComponent(CAGE_RANGE)}`;
+    const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
+
+    const raw = await resp.json();
+    const all = raw.values || [];
+    if (all.length < 2) {
+      const empty = { byGaiola: {}, total: 0, rows: 0, fetchedAt: Date.now() };
+      cageCache = empty; cageFetchedAt = Date.now();
+      return empty;
+    }
+
+    const hdrs = all[0].map(h => (h || '').toLowerCase().trim());
+    const iTO  = hdrs.indexOf('to');
+    const iPac = hdrs.indexOf('pacotes');
+    const iGai = hdrs.indexOf('gaiola');
+
+    const byGaiola = {};
+    let total = 0;
+
+    all.slice(1).forEach(r => {
+      const gaiola  = iGai >= 0 ? (r[iGai]  || '').trim() : '';
+      const pacotes = iPac >= 0 ? parseInt((r[iPac] || '0').replace(/\D/g, '')) || 0 : 0;
+      const to      = iTO  >= 0 ? (r[iTO]   || '').trim() : '';
+      if (!gaiola) return;
+      if (!byGaiola[gaiola]) byGaiola[gaiola] = { pacotes: 0, tos: [] };
+      byGaiola[gaiola].pacotes += pacotes;
+      if (to && !byGaiola[gaiola].tos.includes(to)) byGaiola[gaiola].tos.push(to);
+      total += pacotes;
+    });
+
+    console.log(`[cage-data] ${all.length - 1} linhas · ${Object.keys(byGaiola).length} gaiolas · ${total} pacotes`);
+    const result = { byGaiola, total, rows: all.length - 1, fetchedAt: Date.now() };
+    cageCache = result; cageFetchedAt = Date.now();
+    return result;
+  }
+
   async function forceSaveToSheets() {
   try {
     if (!workstationCache) {
@@ -1059,6 +1109,66 @@
       }
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify(workstationCache));
+      return;
+    }
+
+    // GET /api/debug/stage-sample — inspeciona estrutura de um item do stageCache
+    if (urlPath === '/api/debug/stage-sample') {
+      const sample = stageCache?.list?.[0] ?? null;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ keys: sample ? Object.keys(sample) : [], sample }, null, 2));
+      return;
+    }
+
+    // POST /api/cage-map-data — recebe mapeamento gaiola→rua do Tampermonkey
+    if (urlPath === '/api/cage-map-data' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          cageMapCache = JSON.parse(body);
+          const count = Object.keys(cageMapCache.cageMap || {}).length;
+          console.log(`[cage-map] Received ${count} gaiola→rua mappings`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, count }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/cage-data — sacas por gaiola + por rua (dbCage ✕ mapeamento do Tampermonkey)
+    if (urlPath === '/api/cage-data') {
+      if (!SERVICE_ACCOUNT) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Service Account não configurado' }));
+        return;
+      }
+      getCageData()
+        .then(data => {
+          // Junta byGaiola com cageMap para produzir byArea
+          const cageMap = cageMapCache?.cageMap || {};
+          const byArea  = {};
+          Object.entries(data.byGaiola).forEach(([gaiola, d]) => {
+            const area = cageMap[gaiola];
+            if (!area) return;
+            if (!byArea[area]) byArea[area] = { sacas: 0, gaiolas: [] };
+            byArea[area].sacas += d.pacotes;
+            byArea[area].gaiolas.push(gaiola);
+          });
+          const areaCount = Object.keys(byArea).length;
+          if (areaCount > 0) console.log(`[cage-data] join → ${areaCount} ruas mapeadas`);
+          const result = { ...data, byArea, cageMapAt: cageMapCache?.fetchedAt || null };
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+          res.end(JSON.stringify(result));
+        })
+        .catch(err => {
+          console.error('[cage-data]', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
       return;
     }
 
