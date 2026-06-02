@@ -565,39 +565,79 @@
     if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
 
     const token = await getServiceAccountToken();
-    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CAGE_SPREADSHEET_ID}/values/${encodeURIComponent(CAGE_RANGE)}`;
+    // UNFORMATTED_VALUE → datas saem como serial numérico do Google Sheets (confiável)
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CAGE_SPREADSHEET_ID}/values/${encodeURIComponent(CAGE_RANGE)}?valueRenderOption=UNFORMATTED_VALUE`;
     const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
 
     const raw = await resp.json();
     const all = raw.values || [];
     if (all.length < 2) {
-      const empty = { byGaiola: {}, total: 0, rows: 0, fetchedAt: Date.now() };
+      const empty = { byGaiola: {}, total: 0, rows: 0, totalRows: 0, fetchedAt: Date.now() };
       cageCache = empty; cageFetchedAt = Date.now();
       return empty;
     }
 
     const hdrs = all[0].map(h => (h || '').toLowerCase().trim());
     const iTO  = hdrs.indexOf('to');
-    const iPac = hdrs.indexOf('pacotes');
     const iGai = hdrs.indexOf('gaiola');
+    const iCT  = hdrs.indexOf('ctime');
+    const iMT  = hdrs.indexOf('mtime');
+
+    // Data de hoje em horário de Brasília (UTC-3)
+    const todayBR = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+
+    // Converte qualquer formato de timestamp para 'YYYY-MM-DD' (horário BR)
+    function parseDateStr(val) {
+      if (val === undefined || val === null || val === '') return '';
+      const num = Number(val);
+      // Serial do Google Sheets: dias desde 1899-12-30 (range razoável: 36526–80000 = 2000–2119)
+      if (!isNaN(num) && num > 36526 && num < 80000) {
+        const ms = Math.round((num - 25569) * 86400 * 1000);
+        return new Date(ms - 3 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      // Unix ms (> 1e12) ou Unix s (> 1e9)
+      if (!isNaN(num) && num > 1e9) {
+        const ms = num > 1e12 ? num : num * 1000;
+        return new Date(ms - 3 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      const s = String(val).trim();
+      // Formato BR: DD/MM/YYYY ou DD/MM/YYYY HH:MM:SS
+      const brM = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (brM) return `${brM[3]}-${brM[2]}-${brM[1]}`;
+      // ISO: YYYY-MM-DD...
+      if (s.length >= 10) return s.slice(0, 10).replace(/\//g, '-');
+      return '';
+    }
 
     const byGaiola = {};
-    let total = 0;
+    let total     = 0;
+    let rowsToday = 0;
 
     all.slice(1).forEach(r => {
-      const gaiola  = iGai >= 0 ? (r[iGai]  || '').trim() : '';
-      const pacotes = iPac >= 0 ? parseInt((r[iPac] || '0').replace(/\D/g, '')) || 0 : 0;
-      const to      = iTO  >= 0 ? (r[iTO]   || '').trim() : '';
+      const gaiola = iGai >= 0 ? String(r[iGai] || '').trim() : '';
+      const to     = iTO  >= 0 ? String(r[iTO]  || '').trim() : '';
       if (!gaiola) return;
-      if (!byGaiola[gaiola]) byGaiola[gaiola] = { pacotes: 0, tos: [] };
-      byGaiola[gaiola].pacotes += pacotes;
+
+      // Filtro temporal: usa CTime (preferencial) ou MTime — descarta dias anteriores
+      const ctRaw  = iCT >= 0 ? r[iCT] : undefined;
+      const mtRaw  = iMT >= 0 ? r[iMT] : undefined;
+      const timeVal = (ctRaw !== undefined && ctRaw !== null && ctRaw !== '') ? ctRaw : mtRaw;
+      if (timeVal !== undefined && timeVal !== null && timeVal !== '') {
+        const rowDate = parseDateStr(timeVal);
+        if (rowDate && rowDate !== todayBR) return; // pula dados de outros dias
+      }
+
+      rowsToday++;
+      // Sacas = contagem de TOs (1 linha = 1 saca), não soma de Pacotes
+      if (!byGaiola[gaiola]) byGaiola[gaiola] = { sacas: 0, tos: [] };
+      byGaiola[gaiola].sacas += 1;
       if (to && !byGaiola[gaiola].tos.includes(to)) byGaiola[gaiola].tos.push(to);
-      total += pacotes;
+      total++;
     });
 
-    console.log(`[cage-data] ${all.length - 1} linhas · ${Object.keys(byGaiola).length} gaiolas · ${total} pacotes`);
-    const result = { byGaiola, total, rows: all.length - 1, fetchedAt: Date.now() };
+    console.log(`[cage-data] ${all.length - 1} linhas totais · ${rowsToday} hoje (${todayBR}) · ${Object.keys(byGaiola).length} gaiolas · ${total} sacas`);
+    const result = { byGaiola, total, rows: rowsToday, totalRows: all.length - 1, fetchedAt: Date.now() };
     cageCache = result; cageFetchedAt = Date.now();
     return result;
   }
@@ -1155,7 +1195,7 @@
             const area = cageMap[gaiola];
             if (!area) return;
             if (!byArea[area]) byArea[area] = { sacas: 0, gaiolas: [] };
-            byArea[area].sacas += d.pacotes;
+            byArea[area].sacas += d.sacas; // 1 saca = 1 TO do dbCage de hoje
             byArea[area].gaiolas.push(gaiola);
           });
           const areaCount = Object.keys(byArea).length;
