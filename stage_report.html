@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stage Out · Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0d0f14;
+  --surface: #161920;
+  --surface2:#1e2130;
+  --border:  #2a2d3e;
+  --border2: #353849;
+  --text:    #e2e8f0;
+  --muted:   #6b7280;
+  --orange:  #ee4d2d;
+  --green:   #22c55e;
+  --yellow:  #f59e0b;
+  --red:     #ef4444;
+  --blue:    #3b82f6;
+  --purple:  #8b5cf6;
+  --teal:    #14b8a6;
+  --radius:  10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px; background: var(--orange);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 9px; border-radius: 20px;
+  border: 1px solid var(--border); text-decoration: none; display: inline-block;
+}
+
+/* ── Tab bar ── */
+.tab-bar {
+  display: flex; gap: 4px; padding: 12px 24px 0;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+  position: sticky; top: 65px; z-index: 90;
+}
+.tab-btn {
+  background: none; border: none; color: var(--muted);
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; transition: color .15s, border-color .15s;
+  white-space: nowrap; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
+
+/* ── Main wrap ── */
+.main-wrap { padding: 16px 24px 48px; }
+
+/* ── Timestamp bar ── */
+.report-ts-bar {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; color: var(--muted); margin-bottom: 20px;
+}
+.ts-label { font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.report-ts-badge {
+  background: rgba(238,77,45,.12); color: var(--orange);
+  padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  border: 1px solid rgba(238,77,45,.25);
+}
+.refresh-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.refresh-btn:hover { color: var(--text); border-color: var(--border2); }
+
+/* ── KPI Cards ── */
+.report-kpis {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; margin-bottom: 24px;
+}
+.kpi-card { border-radius: var(--radius); padding: 16px 18px; border: 1px solid var(--border); }
+.kpi-card.kpi-yellow { background: rgba(245,158,11,.07);  border-color: rgba(245,158,11,.2); }
+.kpi-card.kpi-purple { background: rgba(139,92,246,.07);  border-color: rgba(139,92,246,.2); }
+.kpi-card.kpi-teal   { background: rgba(20,184,166,.07);  border-color: rgba(20,184,166,.2); }
+.kpi-card.kpi-blue   { background: rgba(59,130,246,.07);  border-color: rgba(59,130,246,.2); }
+.kpi-card.kpi-orange { background: rgba(238,77,45,.07);   border-color: rgba(238,77,45,.2); }
+.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 6px; }
+.kpi-value { font-size: 30px; font-weight: 800; line-height: 1; }
+.kpi-card.kpi-yellow .kpi-value { color: #fbbf24; }
+.kpi-card.kpi-purple .kpi-value { color: #a78bfa; }
+.kpi-card.kpi-teal   .kpi-value { color: #2dd4bf; }
+.kpi-card.kpi-blue   .kpi-value { color: #60a5fa; }
+.kpi-card.kpi-orange .kpi-value { color: #ff7b5e; }
+.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+/* ── Report section ── */
+.report-section { margin-bottom: 28px; }
+.report-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Farol ── */
+.farol-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  transition: border-color .3s, box-shadow .3s;
+}
+.farol-wrap.has-crit {
+  border-color: rgba(239,68,68,.5);
+  animation: critPulse 2.5s ease-in-out infinite;
+}
+@keyframes critPulse {
+  0%,100% { box-shadow: 0 0 20px rgba(239,68,68,.15), 0 0 40px rgba(239,68,68,.06); }
+  50%      { box-shadow: 0 0 30px rgba(239,68,68,.3),  0 0 60px rgba(239,68,68,.12); }
+}
+.farol-table { width: 100%; border-collapse: collapse; }
+.farol-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); padding: 10px 16px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.farol-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.farol-table tr:last-child td { border-bottom: none; }
+.farol-crit-row td    { background: rgba(239,68,68,.06); }
+.farol-urgente-row td { background: rgba(245,158,11,.04); }
+.farol-level { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; }
+.farol-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.crit-dot    { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
+.urgente-dot { background: #f59e0b; }
+.atencao-dot { background: #eab308; }
+.ok-dot      { background: #22c55e; }
+.crit-label    { color: #f87171; }
+.urgente-label { color: #fbbf24; }
+.atencao-label { color: #fde047; }
+.ok-label      { color: #4ade80; }
+.farol-count { font-size: 20px; font-weight: 800; font-family: monospace; }
+.crit-val    { color: #f87171; }
+.urgente-val { color: #fbbf24; }
+.atencao-val { color: #fde047; }
+.ok-val      { color: #4ade80; }
+.farol-pct  { font-size: 13px; color: var(--muted); font-family: monospace; }
+.farol-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; min-width: 80px; }
+.farol-bar { height: 100%; border-radius: 3px; transition: width .4s; }
+.farol-bar.ok      { background: #22c55e; }
+.farol-bar.atencao { background: #eab308; }
+.farol-bar.urgente { background: #f59e0b; }
+.farol-bar.crit    { background: #ef4444; }
+
+/* ── Top 10 ── */
+.top10-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.top10-table { width: 100%; border-collapse: collapse; }
+.top10-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); padding: 10px 14px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.top10-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 12px; }
+.top10-table tr:last-child td { border-bottom: none; }
+.top10-table tr:hover td { background: rgba(255,255,255,.015); }
+.top10-table tr.row-warn td { background: rgba(245,158,11,.04); }
+.top10-table tr.row-crit td { background: rgba(239,68,68,.05); }
+.rank-circle {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+}
+.rank-1 { background: rgba(245,158,11,.15); color: #fbbf24; border-color: rgba(245,158,11,.3); }
+.rank-2 { background: rgba(148,163,184,.1);  color: #94a3b8; border-color: rgba(148,163,184,.25); }
+.rank-3 { background: rgba(180,120,60,.12);  color: #cd853f; border-color: rgba(180,120,60,.25); }
+.occ-wrap { display: flex; align-items: center; gap: 8px; }
+.occ-bar-bg { height: 5px; background: var(--border); border-radius: 3px; flex: 1; overflow: hidden; min-width: 60px; }
+.occ-bar-fill { height: 100%; border-radius: 3px; }
+.occ-val { font-family: monospace; font-weight: 700; font-size: 11px; min-width: 34px; }
+
+/* ── Turno cards ── */
+.turno-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.turno-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden;
+}
+.turno-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+}
+.turno-card.t1::before { background: #3b82f6; }
+.turno-card.t2::before { background: #f59e0b; }
+.turno-card.t3::before { background: #8b5cf6; }
+.turno-label { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.turno-label.t1 { color: #3b82f6; }
+.turno-label.t2 { color: #f59e0b; }
+.turno-label.t3 { color: #8b5cf6; }
+.turno-time { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+.turno-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.turno-metric-val { font-size: 22px; font-weight: 700; line-height: 1; }
+.turno-metric-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.turno-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 6px; }
+.turno-bar { height: 100%; border-radius: 2px; }
+.turno-bar.t1 { background: #3b82f6; }
+.turno-bar.t2 { background: #f59e0b; }
+.turno-bar.t3 { background: #8b5cf6; }
+
+/* ── Hourly chart ── */
+.hour-chart-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 12px 10px;
+}
+.hour-chart {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 140px; overflow: hidden; margin-bottom: 4px;
+}
+.hour-col {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; min-width: 0;
+}
+.hour-bar-val { font-size: 9px; color: var(--muted); margin-bottom: 2px; text-align: center; }
+.hour-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 3px; background: rgba(238,77,45,.45); }
+.hour-bar.peak { background: var(--orange); }
+.hour-lbl { font-size: 8px; color: var(--muted); margin-top: 3px; text-align: center; }
+.hour-legend {
+  display: flex; gap: 16px; padding-top: 8px;
+  border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);
+}
+.hour-legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-swatch { width: 10px; height: 4px; border-radius: 2px; }
+
+/* ── Filter bar ── */
+.filter-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap svg {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); pointer-events: none;
+}
+.search-wrap input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 12px 7px 34px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--orange); }
+.filter-group { display: flex; gap: 3px; }
+.filter-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.filter-btn:hover { color: var(--text); border-color: var(--border2); }
+.filter-btn.active { background: rgba(238,77,45,.12); border-color: var(--orange); color: var(--orange); }
+.filter-btn.ok-active      { background: rgba(34,197,94,.12);  border-color: #22c55e; color: #4ade80; }
+.filter-btn.atencao-active { background: rgba(234,179,8,.12);  border-color: #eab308; color: #fde047; }
+.filter-btn.urgente-active { background: rgba(245,158,11,.12); border-color: #f59e0b; color: #fbbf24; }
+.filter-btn.crit-active    { background: rgba(239,68,68,.12);  border-color: #ef4444; color: #f87171; }
+.sort-select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; outline: none;
+}
+.export-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.export-btn:hover { color: var(--text); border-color: var(--border2); }
+.count-info { font-size: 11px; color: var(--muted); white-space: nowrap; margin-left: auto; }
+
+/* ── Operational table ── */
+.tbl-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: auto; margin-bottom: 12px;
+}
+.op-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.op-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 10px 12px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap;
+}
+.op-table th:hover { color: var(--text); }
+.op-table th.th-sorted { color: var(--orange); }
+.op-table td { padding: 9px 12px; border-bottom: 1px solid rgba(42,45,62,.6); vertical-align: middle; font-size: 12px; }
+.op-table tr:last-child td { border-bottom: none; }
+.op-table tr:hover td { background: rgba(255,255,255,.02); }
+.op-table tr.row-crit    td { background: rgba(239,68,68,.05); }
+.op-table tr.row-urgente td { background: rgba(245,158,11,.03); }
+
+/* ── Badges ── */
+.farol-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700;
+}
+.farol-badge.ok      { background: rgba(34,197,94,.12);   color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+.farol-badge.atencao { background: rgba(234,179,8,.12);   color: #fde047; border: 1px solid rgba(234,179,8,.2); }
+.farol-badge.urgente { background: rgba(245,158,11,.12);  color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+.farol-badge.crit    { background: rgba(239,68,68,.12);   color: #f87171; border: 1px solid rgba(239,68,68,.2); }
+.farol-badge.empty   { background: rgba(107,114,128,.1);  color: var(--muted); border: 1px solid rgba(107,114,128,.2); }
+.turno-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700;
+  background: rgba(107,114,128,.1); color: var(--muted); border: 1px solid rgba(107,114,128,.2);
+}
+.turno-badge.t1 { background: rgba(59,130,246,.12);  color: #60a5fa; border-color: rgba(59,130,246,.2); }
+.turno-badge.t2 { background: rgba(245,158,11,.12);  color: #fbbf24; border-color: rgba(245,158,11,.2); }
+.turno-badge.t3 { background: rgba(139,92,246,.12);  color: #a78bfa; border-color: rgba(139,92,246,.2); }
+
+/* ── Duration ── */
+.dur { font-family: monospace; font-size: 11px; }
+.dur.warn { color: var(--yellow); }
+.dur.crit { color: var(--red); }
+
+/* ── Pagination ── */
+.pagination { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+.page-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  width: 30px; height: 30px; border-radius: 6px; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.page-btn:hover:not(:disabled) { color: var(--text); border-color: var(--border2); }
+.page-btn.active { background: rgba(238,77,45,.15); border-color: var(--orange); color: var(--orange); font-weight: 700; }
+.page-btn:disabled { opacity: .35; cursor: not-allowed; }
+.page-info { font-size: 11px; color: var(--muted); margin-right: 6px; }
+
+/* ── Empty ── */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty-state h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+.empty-state code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 12px 20px; border-radius: 8px; font-size: 12px; margin-top: 16px;
+  text-align: left; line-height: 2;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) { .report-kpis { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 750px)  { .report-kpis { grid-template-columns: repeat(2,1fr); } .turno-cards { grid-template-columns: 1fr; } }
+@media (max-width: 500px)  { .report-kpis { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-icon">📊</div>
+  <div class="header-title">
+    <h1>Stage Out · Report</h1>
+    <p>SPX EXPRESS &middot; ANÁLISE OPERACIONAL DE RUAS</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">&mdash;</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Tab bar ── -->
+<div class="tab-bar">
+  <button class="tab-btn" onclick="location.href='stage_out.html'">📦 Dashboard</button>
+  <button class="tab-btn active">📊 Report</button>
+</div>
+
+<!-- ── Loading ── -->
+<div class="empty-state" id="loadingState">
+  <h2>⏳ Carregando dados...</h2>
+  <p>Aguardando resposta do servidor.</p>
+  <code>
+    Verifique se o Tampermonkey está ativo<br>
+    e sincronizando dados do SPX.
+  </code>
+</div>
+
+<!-- ── Report content ── -->
+<div class="main-wrap" id="reportContent" style="display:none">
+
+  <!-- Timestamp bar -->
+  <div class="report-ts-bar">
+    <span class="ts-label">Atualizado:</span>
+    <span id="tsText">&mdash;</span>
+    <span class="report-ts-badge" id="tsBadge">&mdash; ruas</span>
+    <button class="refresh-btn" onclick="loadData()">↺ Atualizar</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="report-kpis">
+    <div class="kpi-card kpi-yellow">
+      <div class="kpi-label">Total Gaiolas</div>
+      <div class="kpi-value" id="kGaiolas">&mdash;</div>
+      <div class="kpi-sub">cages alocadas</div>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-label">Scuttles</div>
+      <div class="kpi-value" id="kScuttles">&mdash;</div>
+      <div class="kpi-sub">transport orders</div>
+    </div>
+    <div class="kpi-card kpi-teal">
+      <div class="kpi-label">Total Sacas</div>
+      <div class="kpi-value" id="kSacas">&mdash;</div>
+      <div class="kpi-sub" id="kSacasSub">via SPX API</div>
+    </div>
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-label">Ruas Ocupadas</div>
+      <div class="kpi-value" id="kRuasOcup">&mdash;</div>
+      <div class="kpi-sub" id="kRuasOcupSub">com gaiolas</div>
+    </div>
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-label">Ocupa&ccedil;&atilde;o M&eacute;dia</div>
+      <div class="kpi-value" id="kOcup">&mdash;</div>
+      <div class="kpi-sub">m&eacute;dia das ruas ativas</div>
+    </div>
+  </div>
+
+  <!-- Farol Operacional -->
+  <div class="report-section">
+    <div class="report-section-title">🚦 Farol Operacional &mdash; Sacas por Gaiola</div>
+    <div class="farol-wrap" id="farolWrap">
+      <table class="farol-table">
+        <thead>
+          <tr>
+            <th>N&iacute;vel</th>
+            <th>Crit&eacute;rio</th>
+            <th>Ruas</th>
+            <th>Gaiolas Afetadas</th>
+            <th>% Ruas</th>
+            <th>Distribui&ccedil;&atilde;o</th>
+          </tr>
+        </thead>
+        <tbody id="farolBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top 10 Destinos -->
+  <div class="report-section">
+    <div class="report-section-title">🏆 Top 10 Destinos &mdash; Maior Ocupa&ccedil;&atilde;o</div>
+    <div class="top10-wrap">
+      <table class="top10-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Destino</th>
+            <th>Ruas</th>
+            <th>Gaiolas</th>
+            <th>Sacas</th>
+            <th>Sacas/Gaiola</th>
+            <th>Ocupa&ccedil;&atilde;o M&eacute;dia</th>
+            <th>Farol</th>
+          </tr>
+        </thead>
+        <tbody id="top10Body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Responsabilidade por Turno -->
+  <div class="report-section">
+    <div class="report-section-title">⏰ Responsabilidade por Turno</div>
+    <div class="turno-cards" id="turnoCards"></div>
+  </div>
+
+  <!-- Curva de Endereçamento -->
+  <div class="report-section">
+    <div class="report-section-title">📈 Curva de Endere&ccedil;amento por Hora</div>
+    <div class="hour-chart-wrap">
+      <div class="hour-chart" id="hourChart"></div>
+      <div class="hour-legend">
+        <div class="hour-legend-item">
+          <div class="legend-swatch" style="background:rgba(238,77,45,.45)"></div>
+          Ruas endere&ccedil;adas (hora estimada de in&iacute;cio)
+        </div>
+        <div class="hour-legend-item">
+          <div class="legend-swatch" style="background:var(--orange)"></div>
+          Hora pico
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros + Tabela Operacional -->
+  <div class="report-section">
+    <div class="report-section-title">📋 Tabela Operacional</div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="filterSearch" placeholder="Buscar rua, destino ou operador...">
+      </div>
+
+      <!-- Turno filter -->
+      <div class="filter-group" id="turnoFilter">
+        <button class="filter-btn active" data-turno="">Todos Turnos</button>
+        <button class="filter-btn" data-turno="T1">T1</button>
+        <button class="filter-btn" data-turno="T2">T2</button>
+        <button class="filter-btn" data-turno="T3">T3</button>
+      </div>
+
+      <!-- Farol filter -->
+      <div class="filter-group" id="farolFilter">
+        <button class="filter-btn active" data-farol="">Todos Farol</button>
+        <button class="filter-btn" data-farol="ok">OK</button>
+        <button class="filter-btn" data-farol="atencao">ATEN&Ccedil;&Atilde;O</button>
+        <button class="filter-btn" data-farol="urgente">URGENTE</button>
+        <button class="filter-btn" data-farol="crit">CR&Iacute;TICO</button>
+      </div>
+
+      <span class="count-info" id="countInfo"></span>
+      <button class="export-btn" onclick="exportCSV()">&#x2B07; Export CSV</button>
+    </div>
+
+    <div class="tbl-wrap">
+      <table class="op-table">
+        <thead>
+          <tr>
+            <th onclick="setSort('destino')" id="th-destino">Destino &#x2195;</th>
+            <th onclick="setSort('rua')" id="th-rua">Rua &#x2195;</th>
+            <th onclick="setSort('gaiolas')" id="th-gaiolas" style="text-align:center">Gaiolas &#x2195;</th>
+            <th onclick="setSort('sacas')" id="th-sacas" style="text-align:center">Sacas &#x2195;</th>
+            <th onclick="setSort('ratio')" id="th-ratio" style="text-align:center">Sacas/Gaiola &#x2195;</th>
+            <th onclick="setSort('occ')" id="th-occ">Ocupa&ccedil;&atilde;o &#x2195;</th>
+            <th onclick="setSort('tempo')" id="th-tempo">Tempo &#x2195;</th>
+            <th>Turno</th>
+            <th>Farol</th>
+            <th>Operador</th>
+          </tr>
+        </thead>
+        <tbody id="opTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+</div><!-- /main-wrap -->
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   CONFIG
+═════════════════════════════════════════════════════════════════ */
+const API_STAGE  = '/api/stage-out';
+const API_CAGE   = '/api/cage-data';
+const REFRESH_MS = 30000;
+const PAGE_SZ    = 10;
+
+/* ════════════════════════════════════════════════════════════════
+   STATE
+═════════════════════════════════════════════════════════════════ */
+let allRuas     = [];
+let filterQ     = '';
+let filterTurno = '';
+let filterFarol = '';
+let sortKey     = 'occ';
+let sortAsc     = false;
+let curPage     = 1;
+
+/* ════════════════════════════════════════════════════════════════
+   HELPERS
+═════════════════════════════════════════════════════════════════ */
+const parsePct = s => parseFloat((s || '0').replace('%', '').trim()) || 0;
+
+function parseDestId(s) {
+  const m = (s || '').match(/^\[(\d+)\](.*)/);
+  return m ? { id: m[1], name: m[2].trim() } : { id: '?', name: s || '—' };
+}
+
+function getFarol(sacas, cages) {
+  if (!cages) return 'empty';
+  const r = sacas / cages;
+  if (r > 10)  return 'ok';
+  if (r >= 6)  return 'atencao';
+  if (r >= 3)  return 'urgente';
+  return 'crit';
+}
+
+function getTurno(dur) {
+  if (!dur) return '?';
+  const h = new Date(Date.now() - dur * 1000).getHours();
+  if (h >= 6  && h < 14) return 'T1';
+  if (h >= 14 && h < 22) return 'T2';
+  return 'T3';
+}
+
+function fmtDur(s) {
+  if (!s) return '—';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? h + 'h' + String(m).padStart(2, '0') + 'm' : m + 'm';
+}
+function durClass(s) {
+  if (s > 86400) return 'crit';
+  if (s > 43200) return 'warn';
+  return '';
+}
+function occColor(p) {
+  if (p >= 100) return 'var(--red)';
+  if (p >= 80)  return 'var(--yellow)';
+  if (p >= 40)  return 'var(--blue)';
+  return 'var(--green)';
+}
+function cleanOp(s) {
+  return (s || '—').replace(/\[Ops\d+\]/gi, '').replace(/@shopee\.com/gi, '').trim() || '—';
+}
+function farolLabel(f) {
+  return { ok: 'OK', atencao: 'ATENÇÃO', urgente: 'URGENTE', crit: 'CRÍTICO', empty: 'SEM CAGE', '?': '?' }[f] || f;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   BUILD RUA LIST
+═════════════════════════════════════════════════════════════════ */
+function buildRuaList(list, byArea) {
+  return list.map(r => {
+    const ruaName  = r.staging_area_name || '';
+    const { id: destId, name: destName } = parseDestId(r.to_destination);
+    const cageCount  = r.cage_quantity || 0;
+    const occ        = parsePct(r.occupancy_percentage);
+    const dur        = r.staging_duration_time || 0;
+    const areaInfo   = byArea[ruaName] || { sacas: 0, cages: [] };
+    const sacasTotal = areaInfo.sacas || 0;
+    const sacasRatio = cageCount > 0 ? sacasTotal / cageCount : 0;
+    const farol      = getFarol(sacasTotal, cageCount);
+    const turno      = dur > 0 ? getTurno(dur) : '?';
+    return {
+      ruaName, destId, destName, cageCount,
+      scuttles:  r.transport_order_quantity || 0,
+      capacity:  r.capacity || 0,
+      sacasTotal, sacasRatio, occ, dur,
+      farol, turno,
+      status:   r.staging_area_status || 0,
+      operator: r.operator || '',
+    };
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FILTER + SORT
+═════════════════════════════════════════════════════════════════ */
+function filteredRuas() {
+  const q = filterQ.toLowerCase();
+  let list = allRuas.filter(r => {
+    if (q && !r.ruaName.toLowerCase().includes(q) &&
+             !r.destName.toLowerCase().includes(q) &&
+             !r.destId.includes(q) &&
+             !r.operator.toLowerCase().includes(q)) return false;
+    if (filterTurno && r.turno !== filterTurno) return false;
+    if (filterFarol && r.farol !== filterFarol) return false;
+    return true;
+  });
+
+  const keyFn = {
+    destino: r => r.destName,
+    rua:     r => r.ruaName,
+    gaiolas: r => r.cageCount,
+    sacas:   r => r.sacasTotal,
+    ratio:   r => r.sacasRatio,
+    occ:     r => r.occ,
+    tempo:   r => r.dur,
+  };
+  const fn = keyFn[sortKey] || (r => r.occ);
+  list.sort((a, b) => {
+    const av = fn(a), bv = fn(b);
+    if (typeof av === 'string') return sortAsc ? av.localeCompare(bv, 'pt-BR') : bv.localeCompare(av, 'pt-BR');
+    return sortAsc ? av - bv : bv - av;
+  });
+  return list;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER KPIs
+═════════════════════════════════════════════════════════════════ */
+function renderKPIs() {
+  const active = allRuas.filter(r => r.cageCount > 0);
+  const totGaiolas  = allRuas.reduce((s, r) => s + r.cageCount, 0);
+  const totScuttles = allRuas.reduce((s, r) => s + r.scuttles, 0);
+  const totSacas    = active.reduce((s, r) => s + r.sacasTotal, 0);
+  const avgOcc      = active.length > 0 ? Math.round(active.reduce((s, r) => s + r.occ, 0) / active.length) : 0;
+
+  document.getElementById('kGaiolas').textContent   = totGaiolas.toLocaleString('pt-BR');
+  document.getElementById('kScuttles').textContent  = totScuttles.toLocaleString('pt-BR');
+  document.getElementById('kSacas').textContent     = totSacas.toLocaleString('pt-BR');
+  document.getElementById('kRuasOcup').textContent  = active.length;
+  document.getElementById('kRuasOcupSub').textContent = 'de ' + allRuas.length + ' ruas totais';
+  document.getElementById('kOcup').textContent      = avgOcc + '%';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER FAROL
+═════════════════════════════════════════════════════════════════ */
+function renderFarol() {
+  const levels = [
+    { key: 'crit',    label: 'CRÍTICO',  dotCls: 'crit-dot',    lblCls: 'crit-label',    valCls: 'crit-val',    rowCls: 'farol-crit-row',    desc: '< 3 sacas/gaiola' },
+    { key: 'urgente', label: 'URGENTE',  dotCls: 'urgente-dot', lblCls: 'urgente-label', valCls: 'urgente-val', rowCls: 'farol-urgente-row', desc: '3 – 5 sacas/gaiola' },
+    { key: 'atencao', label: 'ATENÇÃO',  dotCls: 'atencao-dot', lblCls: 'atencao-label', valCls: 'atencao-val', rowCls: '',                  desc: '6 – 10 sacas/gaiola' },
+    { key: 'ok',      label: 'OK',       dotCls: 'ok-dot',      lblCls: 'ok-label',      valCls: 'ok-val',      rowCls: '',                  desc: '> 10 sacas/gaiola' },
+  ];
+
+  const active = allRuas.filter(r => r.cageCount > 0);
+  const counts = {}, cages = {};
+  levels.forEach(l => { counts[l.key] = 0; cages[l.key] = 0; });
+  active.forEach(r => {
+    if (counts[r.farol] !== undefined) { counts[r.farol]++; cages[r.farol] += r.cageCount; }
+  });
+  const total = active.length;
+  document.getElementById('farolWrap').className = 'farol-wrap' + (counts.crit > 0 ? ' has-crit' : '');
+
+  document.getElementById('farolBody').innerHTML = levels.map(l => {
+    const cnt  = counts[l.key];
+    const gai  = cages[l.key];
+    const pct  = total > 0 ? (cnt / total * 100).toFixed(1) : '0.0';
+    const barW = total > 0 ? Math.max(0, Math.round(cnt / total * 100)) : 0;
+    return '<tr class="' + l.rowCls + '">' +
+      '<td><div class="farol-level ' + l.lblCls + '"><span class="farol-dot ' + l.dotCls + '"></span>' + l.label + '</div></td>' +
+      '<td style="color:var(--muted);font-size:12px">' + l.desc + '</td>' +
+      '<td><span class="farol-count ' + l.valCls + '">' + cnt + '</span></td>' +
+      '<td style="font-family:monospace;font-size:13px">' + gai + '</td>' +
+      '<td><span class="farol-pct">' + pct + '%</span></td>' +
+      '<td style="min-width:100px"><div class="farol-bar-wrap"><div class="farol-bar ' + l.key + '" style="width:' + barW + '%"></div></div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER TOP 10
+═════════════════════════════════════════════════════════════════ */
+function renderTop10() {
+  const map = {};
+  allRuas.forEach(r => {
+    if (!map[r.destId]) map[r.destId] = { id: r.destId, name: r.destName, ruas: [] };
+    map[r.destId].ruas.push(r);
+  });
+
+  const dests = Object.values(map).map(d => {
+    const totG   = d.ruas.reduce((s, r) => s + r.cageCount, 0);
+    const totS   = d.ruas.reduce((s, r) => s + r.sacasTotal, 0);
+    const avgOcc = d.ruas.length ? d.ruas.reduce((s, r) => s + r.occ, 0) / d.ruas.length : 0;
+    const ratio  = totG > 0 ? totS / totG : 0;
+    const worst  = ['crit','urgente','atencao','ok','empty'].find(f => d.ruas.some(r => r.farol === f)) || 'empty';
+    return { ...d, totG, totS, avgOcc, ratio, worst };
+  });
+  dests.sort((a, b) => b.avgOcc - a.avgOcc);
+
+  document.getElementById('top10Body').innerHTML = dests.slice(0, 10).map((d, i) => {
+    const rank    = i + 1;
+    const rankCls = rank <= 3 ? 'rank-' + rank : '';
+    const occ     = Math.round(d.avgOcc);
+    const oc      = occColor(occ);
+    const rowCls  = occ >= 90 ? 'row-crit' : occ >= 70 ? 'row-warn' : '';
+    return '<tr class="' + rowCls + '">' +
+      '<td><span class="rank-circle ' + rankCls + '">' + rank + '</span></td>' +
+      '<td style="font-weight:600">' + d.name + '</td>' +
+      '<td style="text-align:center;font-family:monospace;font-weight:700">' + d.ruas.length + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + d.totG + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + d.totS.toLocaleString('pt-BR') + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + d.ratio.toFixed(1) + '</td>' +
+      '<td><div class="occ-wrap"><div class="occ-bar-bg"><div class="occ-bar-fill" style="width:' + occ + '%;background:' + oc + '"></div></div>' +
+          '<span class="occ-val" style="color:' + oc + '">' + occ + '%</span></div></td>' +
+      '<td><span class="farol-badge ' + d.worst + '">' + farolLabel(d.worst) + '</span></td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Sem dados</td></tr>';
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER TURNO
+═════════════════════════════════════════════════════════════════ */
+function renderTurno() {
+  const t = {
+    T1: { ruas:0, gaiolas:0, sacas:0, scuttles:0, cls:'t1', time:'06:00 – 13:59' },
+    T2: { ruas:0, gaiolas:0, sacas:0, scuttles:0, cls:'t2', time:'14:00 – 21:59' },
+    T3: { ruas:0, gaiolas:0, sacas:0, scuttles:0, cls:'t3', time:'22:00 – 05:59' },
+  };
+  allRuas.forEach(r => {
+    if (!t[r.turno]) return;
+    t[r.turno].ruas++;
+    t[r.turno].gaiolas  += r.cageCount;
+    t[r.turno].sacas    += r.sacasTotal;
+    t[r.turno].scuttles += r.scuttles;
+  });
+  const total = allRuas.length;
+
+  document.getElementById('turnoCards').innerHTML = ['T1','T2','T3'].map(k => {
+    const d   = t[k];
+    const pct = total > 0 ? (d.ruas / total * 100).toFixed(1) : '0.0';
+    return '<div class="turno-card ' + d.cls + '">' +
+      '<div class="turno-label ' + d.cls + '">' + k + '</div>' +
+      '<div class="turno-time">' + d.time + '</div>' +
+      '<div class="turno-grid">' +
+        '<div><div class="turno-metric-val">' + d.ruas + '</div><div class="turno-metric-lbl">ruas</div></div>' +
+        '<div><div class="turno-metric-val">' + d.gaiolas + '</div><div class="turno-metric-lbl">gaiolas</div></div>' +
+        '<div><div class="turno-metric-val">' + d.sacas.toLocaleString('pt-BR') + '</div><div class="turno-metric-lbl">sacas</div></div>' +
+        '<div><div class="turno-metric-val">' + d.scuttles + '</div><div class="turno-metric-lbl">scuttles</div></div>' +
+      '</div>' +
+      '<div class="turno-bar-wrap"><div class="turno-bar ' + d.cls + '" style="width:' + pct + '%"></div></div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:5px">' + pct + '% das ruas</div>' +
+      '</div>';
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER CURVA
+═════════════════════════════════════════════════════════════════ */
+function renderCurva() {
+  const counts = Array(24).fill(0);
+  allRuas.forEach(r => {
+    if (!r.dur) return;
+    counts[new Date(Date.now() - r.dur * 1000).getHours()]++;
+  });
+  const maxC  = Math.max(...counts, 1);
+  const peakH = counts.indexOf(Math.max(...counts));
+  const MAX_H = 115;
+
+  document.getElementById('hourChart').innerHTML = counts.map((c, h) => {
+    const isPeak = h === peakH && c > 0;
+    const barH   = Math.max(2, Math.round(c / maxC * MAX_H));
+    return '<div class="hour-col">' +
+      '<div class="hour-bar-val">' + (c > 0 ? c : '') + '</div>' +
+      '<div class="hour-bar' + (isPeak ? ' peak' : '') + '" style="height:' + barH + 'px"></div>' +
+      '<div class="hour-lbl">' + String(h).padStart(2, '0') + 'h</div>' +
+      '</div>';
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RENDER TABELA
+═════════════════════════════════════════════════════════════════ */
+function renderTabela() {
+  const list       = filteredRuas();
+  const totalPages = Math.max(1, Math.ceil(list.length / PAGE_SZ));
+  if (curPage > totalPages) curPage = totalPages;
+
+  document.getElementById('countInfo').textContent = list.length + ' ruas';
+
+  const slice = list.slice((curPage - 1) * PAGE_SZ, curPage * PAGE_SZ);
+  document.getElementById('opTbody').innerHTML = slice.map(r => {
+    const oc     = occColor(r.occ);
+    const dc     = durClass(r.dur);
+    const rowCls = r.farol === 'crit' ? 'row-crit' : r.farol === 'urgente' ? 'row-urgente' : '';
+    const tc     = r.turno !== '?' ? r.turno.toLowerCase() : '';
+    return '<tr class="' + rowCls + '">' +
+      '<td style="font-weight:600">' + r.destName + '<br><span style="font-size:10px;color:var(--muted);font-weight:400">[' + r.destId + ']</span></td>' +
+      '<td style="font-family:monospace;font-weight:700">' + r.ruaName + '</td>' +
+      '<td style="text-align:center;font-family:monospace;font-weight:700">' + r.cageCount + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + r.sacasTotal.toLocaleString('pt-BR') + '</td>' +
+      '<td style="text-align:center;font-family:monospace">' + (r.cageCount > 0 ? r.sacasRatio.toFixed(1) : '—') + '</td>' +
+      '<td><div class="occ-wrap"><div class="occ-bar-bg"><div class="occ-bar-fill" style="width:' + r.occ + '%;background:' + oc + '"></div></div>' +
+          '<span class="occ-val" style="color:' + oc + '">' + r.occ.toFixed(0) + '%</span></div></td>' +
+      '<td><span class="dur ' + dc + '">' + fmtDur(r.dur) + '</span></td>' +
+      '<td><span class="turno-badge ' + tc + '">' + r.turno + '</span></td>' +
+      '<td><span class="farol-badge ' + r.farol + '">' + farolLabel(r.farol) + '</span></td>' +
+      '<td style="font-size:11px;color:var(--muted);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + cleanOp(r.operator) + '">' + cleanOp(r.operator) + '</td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--muted)">Nenhuma rua encontrada</td></tr>';
+
+  // Update sort headers
+  const labels = { destino:'Destino', rua:'Rua', gaiolas:'Gaiolas', sacas:'Sacas', ratio:'Sacas/Gaiola', occ:'Ocupação', tempo:'Tempo' };
+  Object.keys(labels).forEach(k => {
+    const th = document.getElementById('th-' + k);
+    if (!th) return;
+    const arrow = sortKey === k ? (sortAsc ? ' ↑' : ' ↓') : ' ↕';
+    th.textContent = labels[k] + arrow;
+    th.className   = sortKey === k ? 'th-sorted' : '';
+  });
+
+  renderPagination(totalPages, list.length);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PAGINATION
+═════════════════════════════════════════════════════════════════ */
+function renderPagination(totalPages, totalItems) {
+  const el = document.getElementById('pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  const from = (curPage - 1) * PAGE_SZ + 1;
+  const to   = Math.min(curPage * PAGE_SZ, totalItems);
+  let html = '<span class="page-info">' + from + '–' + to + ' de ' + totalItems + '</span>';
+
+  html += '<button class="page-btn" onclick="goPage(1)" ' + (curPage === 1 ? 'disabled' : '') + '>&#xAB;</button>';
+  html += '<button class="page-btn" onclick="goPage(' + (curPage - 1) + ')" ' + (curPage === 1 ? 'disabled' : '') + '>&#x2039;</button>';
+
+  const s = Math.max(1, curPage - 2), e = Math.min(totalPages, curPage + 2);
+  for (let p = s; p <= e; p++) {
+    html += '<button class="page-btn ' + (p === curPage ? 'active' : '') + '" onclick="goPage(' + p + ')">' + p + '</button>';
+  }
+  html += '<button class="page-btn" onclick="goPage(' + (curPage + 1) + ')" ' + (curPage === totalPages ? 'disabled' : '') + '>&#x203A;</button>';
+  html += '<button class="page-btn" onclick="goPage(' + totalPages + ')" ' + (curPage === totalPages ? 'disabled' : '') + '>&#xBB;</button>';
+
+  el.innerHTML = html;
+}
+
+function goPage(p) { curPage = p; renderTabela(); }
+
+/* ════════════════════════════════════════════════════════════════
+   SORT
+═════════════════════════════════════════════════════════════════ */
+function setSort(key) {
+  if (sortKey === key) sortAsc = !sortAsc;
+  else { sortKey = key; sortAsc = false; }
+  curPage = 1;
+  renderTabela();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   EXPORT CSV
+═════════════════════════════════════════════════════════════════ */
+function exportCSV() {
+  const list = filteredRuas();
+  const hdr  = ['Destino','DestID','Rua','Gaiolas','Sacas','Sacas_por_Gaiola','Ocupacao_Pct','Tempo_s','Turno','Farol','Operador'];
+  const rows = list.map(r => [
+    '"' + r.destName.replace(/"/g, '""') + '"',
+    r.destId, r.ruaName, r.cageCount, r.sacasTotal,
+    r.cageCount > 0 ? r.sacasRatio.toFixed(2) : '',
+    r.occ.toFixed(1), r.dur, r.turno, farolLabel(r.farol),
+    '"' + cleanOp(r.operator).replace(/"/g, '""') + '"',
+  ].join(','));
+  const csv  = [hdr.join(','), ...rows].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const ts   = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', 'h');
+  a.href = url; a.download = 'stage_out_report_' + ts + '.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LOAD DATA
+═════════════════════════════════════════════════════════════════ */
+async function loadData() {
+  try {
+    const [sRes, cRes] = await Promise.all([fetch(API_STAGE), fetch(API_CAGE)]);
+    if (!sRes.ok) throw new Error('Stage API: HTTP ' + sRes.status);
+    const stage = await sRes.json();
+    if (stage.error) throw new Error(stage.error);
+
+    let byArea = {};
+    if (cRes.ok) {
+      const cage = await cRes.json();
+      if (!cage.error) byArea = cage.byArea || {};
+    }
+
+    allRuas = buildRuaList(stage.list || [], byArea);
+
+    const ts = stage.fetchedAt
+      ? new Date(stage.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      : new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('tsText').textContent   = ts;
+    document.getElementById('tsBadge').textContent  = allRuas.length + ' ruas';
+    document.getElementById('lastUpdated').textContent = ts;
+    document.getElementById('liveDot').className    = 'live-dot on';
+    document.getElementById('metaTag').textContent  = 'stage-out · ' + allRuas.length + ' ruas';
+
+    document.getElementById('loadingState').style.display  = 'none';
+    document.getElementById('reportContent').style.display = '';
+
+    renderKPIs();
+    renderFarol();
+    renderTop10();
+    renderTurno();
+    renderCurva();
+    renderTabela();
+
+  } catch (e) {
+    console.error('[Stage Report]', e);
+    document.getElementById('loadingState').innerHTML =
+      '<h2>⚠️ Erro ao carregar dados</h2>' +
+      '<p style="margin-top:8px">' + e.message + '</p>' +
+      '<code>Verifique se o Tampermonkey está ativo e sincronizando dados do SPX.</code>';
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   FILTER EVENTS
+═════════════════════════════════════════════════════════════════ */
+document.getElementById('turnoFilter').addEventListener('click', e => {
+  const btn = e.target.closest('[data-turno]');
+  if (!btn) return;
+  filterTurno = btn.dataset.turno;
+  document.querySelectorAll('#turnoFilter .filter-btn').forEach(b => {
+    b.className = 'filter-btn' + (b === btn ? ' active' : '');
+  });
+  curPage = 1; renderTabela();
+});
+
+document.getElementById('farolFilter').addEventListener('click', e => {
+  const btn = e.target.closest('[data-farol]');
+  if (!btn) return;
+  filterFarol = btn.dataset.farol;
+  document.querySelectorAll('#farolFilter .filter-btn').forEach(b => {
+    const isSel = b === btn;
+    const fk    = b.dataset.farol;
+    if (isSel && fk) b.className = 'filter-btn ' + fk + '-active active';
+    else if (isSel) b.className  = 'filter-btn active';
+    else b.className = 'filter-btn';
+  });
+  curPage = 1; renderTabela();
+});
+
+document.getElementById('filterSearch').addEventListener('input', e => {
+  filterQ = e.target.value.trim();
+  curPage = 1; renderTabela();
+});
+
+/* ════════════════════════════════════════════════════════════════
+   INIT
+═════════════════════════════════════════════════════════════════ */
+loadData();
+setInterval(loadData, REFRESH_MS);
+</script>
+</body>
+</html>

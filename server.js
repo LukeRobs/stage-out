@@ -1101,9 +1101,10 @@
         return;
       }
       const byArea = cageMapCache.byArea || {};
+      const byCage = cageMapCache.byCage || {};
       const total  = Object.values(byArea).reduce((s, a) => s + (a.sacas || 0), 0);
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify({ byArea, total, fetchedAt: cageMapCache.fetchedAt }));
+      res.end(JSON.stringify({ byArea, byCage, total, fetchedAt: cageMapCache.fetchedAt }));
       return;
     }
 
