@@ -591,22 +591,46 @@ async function loadData() {
     if (!qRes.ok) return;
 
     const [qData, tData] = await Promise.all([qRes.json(), tRes.json()]);
-    // Trips são a fonte primária — usa fetchedAt deles
-    if (!tData.list || tData.fetchedAt === lastAt) return;
-    lastAt = tData.fetchedAt;
 
-    // Constrói mapa da queue (trip_number → queue_item) para enriquecimento
+    // Compara ambas as fontes para detectar mudança
+    const newAt = (tData.fetchedAt || 0) + '|' + (qData.fetchedAt || 0);
+    if (!tData.list || newAt === lastAt) return;
+    lastAt = newAt;
+
+    // Constrói mapa da queue (lh_trip_number → queue_item)
     buildQueueMap(qData.list || []);
 
-    // allItems = trips (fonte primária)
-    allItems = tData.list || [];
+    // Fonte primária: trips API
+    const tripNums = new Set((tData.list || []).map(t => t.trip_number));
+    allItems = [...(tData.list || [])];
 
-    const ts = new Date(tData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    // Adiciona itens que estão na queue mas NÃO vieram na trips API
+    // (ex: LTs recém-chegadas que ainda não aparecem no /api/trips)
+    (qData.list || []).forEach(q => {
+      const tn = q.route_info?.lh_trip_number;
+      if (!tn || tripNums.has(tn)) return;
+      allItems.push({
+        trip_number:       tn,
+        vehicle_number:    q.route_info?.vehicle_number    || q.vehicle_number    || '—',
+        driver_name:       q.route_info?.driver_name       || q.driver_name       || '—',
+        vehicle_type_name: q.route_info?.vehicle_type_name || q.vehicle_type_name || '—',
+        pre_station_name:  q.route_info?.pre_station_name  || q.pre_station_name  || '—',
+        agency_name:       q.route_info?.agency_name       || q.agency_name       || '',
+        trip_name:         q.route_info?.trip_name         || q.trip_name         || '',
+        trip_station:      null,   // sem dados de estação (somente queue)
+        _fromQueue:        true,
+      });
+    });
+
+    const qOnly = allItems.filter(t => t._fromQueue).length;
+    if (qOnly > 0) console.log(`[queue] +${qOnly} LTs somente na queue (não na trips API)`);
+
+    const ts = new Date(tData.fetchedAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
     document.getElementById('liveDot').className       = 'live-dot on';
     document.getElementById('metaTag').textContent     = `${allItems.length} viagens · ${ts}`;
     render();
-  } catch (e) {}
+  } catch (e) { console.error('[queue] loadData', e); }
 }
 
 loadData();
