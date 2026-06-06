@@ -143,8 +143,50 @@ table.main-table tr:last-child td { border-bottom: none; }
 .empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
 .empty code { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px; text-align: left; line-height: 1.8; }
 
+/* ── Trip Detail Modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
+.modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 720px; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 22px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
+.modal-lt { font-family: monospace; font-size: 18px; font-weight: 700; color: var(--teal); letter-spacing: .5px; }
+.modal-vtype { font-size: 11px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+.modal-driver { font-size: 12px; color: var(--text); margin-top: 4px; }
+.modal-agency { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.modal-close { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); width: 30px; height: 30px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+.modal-close:hover { color: var(--text); border-color: var(--border2); }
+.modal-body { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 18px; }
+/* Route */
+.modal-route { display: flex; align-items: stretch; gap: 0; }
+.route-station { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.route-station.origin { border-right: none; border-radius: 10px 0 0 10px; }
+.route-station.dest   { border-left: none;  border-radius: 0 10px 10px 0; border-left: 1px solid var(--border); }
+.route-arrow { display: flex; align-items: center; justify-content: center; padding: 0 2px; background: var(--surface2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 18px; }
+.rs-label { font-size: 9px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.rs-name  { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.rs-row   { display: flex; gap: 14px; flex-wrap: wrap; }
+.rs-item  { display: flex; flex-direction: column; gap: 1px; }
+.rs-item-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.rs-item-val   { font-size: 12px; font-weight: 600; font-family: monospace; }
+/* KPIs grid */
+.modal-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+.mkpi { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+.mkpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 3px; }
+.mkpi-val   { font-size: 20px; font-weight: 700; line-height: 1; }
+.mkpi-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
+/* Ops timeline */
+.modal-section-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 8px; }
+.ops-timeline { display: flex; gap: 0; }
+.ops-step { flex: 1; text-align: center; position: relative; }
+.ops-step:not(:last-child)::after { content:''; position: absolute; top: 14px; left: 50%; width: 100%; height: 1px; background: var(--border2); z-index: 0; }
+.ops-dot  { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 12px; margin: 0 auto 6px; position: relative; z-index: 1; }
+.ops-dot.done { background: rgba(34,197,94,.12); border-color: var(--green); }
+.ops-step-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.ops-step-time  { font-size: 11px; font-weight: 600; font-family: monospace; margin-top: 2px; }
+/* Clickable rows */
+table.main-table tbody tr { cursor: pointer; }
+table.main-table tbody tr:hover td { background: rgba(59,130,246,.06); }
+
 @media (max-width:1200px) { .stats { grid-template-columns: repeat(3,1fr); } }
-@media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } }
+@media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } .modal-kpis { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
@@ -240,6 +282,11 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- Trip Detail Modal -->
+<div class="modal-overlay" id="tripModal" style="display:none" onclick="if(event.target===this)closeTripModal()">
+  <div class="modal-box" id="tripModalBox"></div>
+</div>
+
 <script>
 // ── Theme ──────────────────────────────────────────────────────────────
 (function () {
@@ -303,6 +350,151 @@ function queueStatusPill(s) {
     default: return `<span class="st-pill" style="color:var(--muted)">—</span>`;
   }
 }
+
+// ── Modal ──────────────────────────────────────────────────────────────
+function fmtTs2(ts) {
+  if (!ts || ts === 0) return '—';
+  return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtKg(grams) {
+  if (!grams) return '—';
+  const kg = grams / 1000;
+  return kg >= 1000
+    ? (kg / 1000).toFixed(2).replace('.', ',') + ' t'
+    : kg.toFixed(1).replace('.', ',') + ' kg';
+}
+function stationStatusLabel(s) {
+  return { 10:'Planejado', 20:'Aguardando', 30:'Carregando', 40:'Em Trânsito', 50:'Chegando', 60:'Descarregando', 70:'Finalizado' }[s] || `Status ${s}`;
+}
+function stationStatusColor(s) {
+  return { 40:'var(--yellow)', 50:'var(--blue)', 60:'var(--green)', 70:'var(--muted)' }[s] || 'var(--muted)';
+}
+
+function openTripModal(tripNumber) {
+  const trip  = allItems.find(t => t.trip_number === tripNumber);
+  if (!trip) return;
+  const qi    = queueMap[tripNumber];
+  const det   = qi?._trip_detail || {};
+  const stations = (trip.trip_station?.length ? trip.trip_station : det.trip_station) || [];
+  const weight   = det.trip_weight_detail?.[0];
+
+  // Stations: origin = seq 1, dest = last
+  const origin = stations.find(s => s.sequence_number === 1) || stations[0];
+  const dest   = stations[stations.length - 1];
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const arrivedSec = dest?.ata ? nowSec - dest.ata : 0;
+
+  function stBlock(s, label) {
+    if (!s) return `<div class="route-station ${label}"><div class="rs-label">${label === 'origin' ? '📤 Origem' : '📥 Destino'}</div><div class="rs-name" style="color:var(--muted)">—</div></div>`;
+    const color = stationStatusColor(s.trip_station_status);
+    return `
+    <div class="route-station ${label}">
+      <div class="rs-label">${label === 'origin' ? '📤 Origem' : '📥 Destino (aqui)'}</div>
+      <div class="rs-name">${s.station_name || '—'}</div>
+      <div class="rs-row">
+        <div class="rs-item">
+          <span class="rs-item-label">ATA</span>
+          <span class="rs-item-val">${fmtTs2(s.ata)}</span>
+        </div>
+        <div class="rs-item">
+          <span class="rs-item-label">ATD</span>
+          <span class="rs-item-val">${fmtTs2(s.atd)}</span>
+        </div>
+        ${label === 'origin' ? `
+        <div class="rs-item">
+          <span class="rs-item-label">Carregado</span>
+          <span class="rs-item-val" style="color:var(--blue)">${(s.load_quantity||0).toLocaleString('pt-BR')}</span>
+        </div>` : `
+        <div class="rs-item">
+          <span class="rs-item-label">Descarg.</span>
+          <span class="rs-item-val" style="color:var(--green)">${(s.unload_quantity||0).toLocaleString('pt-BR')}</span>
+        </div>`}
+        <div class="rs-item">
+          <span class="rs-item-label">Status</span>
+          <span class="rs-item-val" style="color:${color};font-family:sans-serif;font-size:11px">${stationStatusLabel(s.trip_station_status)}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Ops timeline (origem)
+  function opsStep(label, emoji, ts, done) {
+    return `<div class="ops-step">
+      <div class="ops-dot${done?' done':''}">${emoji}</div>
+      <div class="ops-step-label">${label}</div>
+      <div class="ops-step-time">${fmtTs2(ts)}</div>
+    </div>`;
+  }
+  const opsHtml = origin ? `
+    <div>
+      <div class="modal-section-title">⏱ Operação na Origem</div>
+      <div class="ops-timeline">
+        ${opsStep('Início Carga',  '📦', origin.loading_time, !!origin.loading_time)}
+        ${opsStep('Fim Carga',     '✅', origin.loaded_time,  !!origin.loaded_time)}
+        ${opsStep('Lacrado',       '🔒', origin.seal_time,    !!origin.seal_time)}
+        ${opsStep('Partiu',        '🚛', origin.atd,          !!origin.atd)}
+        ${opsStep('Chegou aqui',   '📍', dest?.ata,           !!dest?.ata)}
+      </div>
+    </div>` : '';
+
+  // Doca info
+  const dockHtml = (qi?.assigned_dock_name || qi?.occupied_dock_name) ? `
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      ${qi?.assigned_dock_name ? `<div class="mkpi" style="flex:1"><div class="mkpi-label">Doca Atribuída</div><div class="mkpi-val" style="font-size:14px;color:var(--purple)">${qi.assigned_dock_name}</div></div>` : ''}
+      ${qi?.occupied_dock_name ? `<div class="mkpi" style="flex:1"><div class="mkpi-label">Doca Ocupada</div><div class="mkpi-val" style="font-size:14px;color:var(--green)">${qi.occupied_dock_name}</div></div>` : ''}
+    </div>` : '';
+
+  document.getElementById('tripModalBox').innerHTML = `
+    <div class="modal-header">
+      <div>
+        <div>
+          <span class="modal-lt">${trip.trip_number || '—'}</span>
+          <span class="modal-vtype">${trip.vehicle_type_name || det.vehicle_type_name || '—'}</span>
+        </div>
+        <div class="modal-driver">🧑 ${trip.driver_name || '—'} · 🚗 ${trip.vehicle_number || '—'}</div>
+        <div class="modal-agency">🏢 ${trip.agency_name || det.agency_name || '—'}</div>
+      </div>
+      <button class="modal-close" onclick="closeTripModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-route">
+        ${stBlock(origin, 'origin')}
+        <div class="route-arrow">→</div>
+        ${stBlock(dest, 'dest')}
+      </div>
+      <div class="modal-kpis">
+        <div class="mkpi">
+          <div class="mkpi-label">TOs Carregados</div>
+          <div class="mkpi-val" style="color:var(--blue)">${(origin?.load_quantity||qi?.order_quantity||0).toLocaleString('pt-BR')}</div>
+          <div class="mkpi-sub">na origem</div>
+        </div>
+        <div class="mkpi">
+          <div class="mkpi-label">TOs Descarg.</div>
+          <div class="mkpi-val" style="color:var(--green)">${(dest?.unload_quantity||0).toLocaleString('pt-BR')}</div>
+          <div class="mkpi-sub">até agora</div>
+        </div>
+        <div class="mkpi">
+          <div class="mkpi-label">Peso Total</div>
+          <div class="mkpi-val" style="font-size:16px;color:var(--yellow)">${fmtKg(weight?.actual_weight)}</div>
+          <div class="mkpi-sub">${weight ? weight.origin_station_name + ' → ' + weight.destination_station_name : '—'}</div>
+        </div>
+        <div class="mkpi">
+          <div class="mkpi-label">Tempo Aqui</div>
+          <div class="mkpi-val" style="font-size:16px;color:${arrivedSec>7200?'var(--red)':arrivedSec>3600?'var(--orange)':'var(--green)'}">${arrivedSec > 0 ? fmtWait(Math.floor(arrivedSec/60)) : '—'}</div>
+          <div class="mkpi-sub">desde chegada</div>
+        </div>
+      </div>
+      ${opsHtml}
+      ${dockHtml}
+    </div>`;
+  document.getElementById('tripModal').style.display = 'flex';
+}
+
+function closeTripModal() {
+  document.getElementById('tripModal').style.display = 'none';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTripModal(); });
 
 // ── Trip helpers (fonte primária) ──────────────────────────────────────
 function getDestStation(trip) {
@@ -486,7 +678,7 @@ function buildMainTable(items) {
     const arrivedMins = ata > 0 ? Math.floor((Date.now()/1000 - ata)/60) : null;
     const onHold      = qi.onHoldTime ? fmtTs(qi.onHoldTime) : '—';
 
-    return `<tr>
+    return `<tr onclick="openTripModal('${trip.trip_number}')" title="Ver detalhes da viagem">
       <td style="font-family:monospace;font-size:12px">${trip.vehicle_number || '—'}</td>
       <td style="font-size:11px;color:var(--muted)">${trip.vehicle_type_name || '—'}</td>
       <td style="font-family:monospace;font-size:11px;color:var(--teal)">${trip.trip_number || '—'}</td>

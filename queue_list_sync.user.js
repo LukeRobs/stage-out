@@ -49,10 +49,13 @@
           const d = await fetchTripDetail(q.route_info.lh_trip_id);
           if (d) {
             q._trip_detail = {
-              trip_station:      d.trip_station      || [],
-              trip_status:       d.trip_status,
-              vehicle_type_name: d.vehicle_type_name || '',
-              pre_station_name:  d.trip_station?.[0]?.station_name || '',
+              trip_number:        d.trip_number        || '',
+              trip_station:       d.trip_station       || [],
+              trip_status:        d.trip_status,
+              vehicle_type_name:  d.vehicle_type_name  || '',
+              agency_name:        d.agency_name        || '',
+              trip_weight_detail: d.trip_weight_detail || [],
+              pre_station_name:   d.trip_station?.[0]?.station_name || '',
             };
             enriched++;
           }
