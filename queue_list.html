@@ -611,15 +611,17 @@ async function loadData() {
         const tn = q.route_info?.lh_trip_number;
         if (!tn || tripNums.has(tn)) return;
         // LT está na queue mas não veio na trips API — adiciona como suplemento
+        // _trip_detail é injetado pelo queue_list_sync v1.2 via /api/admin/transportation/trip/detail
+        const det = q._trip_detail;
         allItems.push({
           trip_number:       tn,
           vehicle_number:    q.route_info?.vehicle_number    || q.vehicle_number    || '—',
           driver_name:       q.route_info?.driver_name       || q.driver_name       || '—',
-          vehicle_type_name: q.route_info?.vehicle_type_name || q.vehicle_type_name || '—',
-          pre_station_name:  q.route_info?.pre_station_name  || q.pre_station_name  || '—',
+          vehicle_type_name: det?.vehicle_type_name || q.route_info?.vehicle_type_name || q.vehicle_type_name || '—',
+          pre_station_name:  det?.pre_station_name  || q.route_info?.pre_station_name  || q.pre_station_name  || '—',
           agency_name:       q.route_info?.agency_name       || q.agency_name       || '',
           trip_name:         q.route_info?.trip_name         || q.trip_name         || '',
-          trip_station:      null,   // sem dados de estação
+          trip_station:      det?.trip_station || null,   // preenchido quando sync v1.2 está ativo
           _fromQueue:        true,
         });
       });
