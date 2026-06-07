@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Queue List → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/queue_list_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/queue_list_sync.user.js
 // @description  Sincroniza fila de veículos (Queue List) com o dashboard local
@@ -13,11 +13,12 @@
 (function () {
   'use strict';
 
-  const SERVER_URL  = 'https://stage-out.onrender.com/api/queue-data';
-  const API_URL     = '/api/in-station/dock_management/queue/list';
-  const DETAIL_URL  = '/api/admin/transportation/trip/detail';
+  const SERVER_URL   = 'https://stage-out.onrender.com/api/queue-data';
+  const API_URL      = '/api/in-station/dock_management/queue/list';
+  const DETAIL_URL   = '/api/admin/transportation/trip/detail';
+  const LOADING_URL  = '/api/admin/transportation/trip/loading/list';
   const DETAIL_BATCH = 10;   // chamadas paralelas ao endpoint de detalhe
-  const INTERVAL    = 60 * 1000; // 60s
+  const INTERVAL     = 60 * 1000; // 60s
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -39,6 +40,28 @@
     return json.data;
   }
 
+  // ── Lista de TOs carregados → breakdown por pack_type_name ────────────
+  async function fetchToBreakdown(tripId, destSeq) {
+    const params = new URLSearchParams({
+      trip_id: tripId, pageno: 1, count: 500,
+      actual_unloaded_sequence_number: destSeq,
+      type: 'inbound', unload_list_type: 1,
+    });
+    const res = await fetch(`${LOADING_URL}?${params}`, {
+      credentials: 'include',
+      headers: { 'x-csrftoken': getCsrf() },
+    });
+    const json = await res.json();
+    if (json.retcode !== 0) return null;
+    const list = json.data?.list || [];
+    const byType = {};
+    list.forEach(to => {
+      const t = to.pack_type_name || 'Outro';
+      byType[t] = (byType[t] || 0) + 1;
+    });
+    return { total: list.length, byType };
+  }
+
   async function enrichWithDetails(list) {
     const eligible = list.filter(q => q.route_info?.lh_trip_id);
     let enriched = 0;
@@ -47,24 +70,29 @@
       await Promise.all(batch.map(async q => {
         try {
           const d = await fetchTripDetail(q.route_info.lh_trip_id);
-          if (d) {
-            q._trip_detail = {
-              trip_number:        d.trip_number        || '',
-              trip_station:       d.trip_station       || [],
-              trip_status:        d.trip_status,
-              vehicle_type_name:  d.vehicle_type_name  || '',
-              agency_name:        d.agency_name        || '',
-              trip_weight_detail: d.trip_weight_detail || [],
-              pre_station_name:   d.trip_station?.[0]?.station_name || '',
-            };
-            enriched++;
-          }
+          if (!d) return;
+          // Número de sequência da estação destino (normalmente 2)
+          const destSeq = (d.trip_station || []).reduce(
+            (mx, s) => Math.max(mx, s.sequence_number || 0), 0) || 2;
+          // Busca breakdown de TOs em paralelo com os dados já obtidos
+          const breakdown = await fetchToBreakdown(q.route_info.lh_trip_id, destSeq);
+          q._trip_detail = {
+            trip_number:        d.trip_number        || '',
+            trip_station:       d.trip_station       || [],
+            trip_status:        d.trip_status,
+            vehicle_type_name:  d.vehicle_type_name  || '',
+            agency_name:        d.agency_name        || '',
+            trip_weight_detail: d.trip_weight_detail || [],
+            pre_station_name:   d.trip_station?.[0]?.station_name || '',
+            to_breakdown:       breakdown || { total: 0, byType: {} },
+          };
+          enriched++;
         } catch (e) {
           console.warn('[Queue] detail err', q.route_info.lh_trip_id, e);
         }
       }));
     }
-    console.log(`[Queue] enriched ${enriched}/${eligible.length} LTs com trip_station`);
+    console.log(`[Queue] enriched ${enriched}/${eligible.length} LTs com trip_station + breakdown`);
   }
 
   async function fetchQueue() {

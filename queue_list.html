@@ -438,6 +438,29 @@ function openTripModal(tripNumber) {
       </div>
     </div>` : '';
 
+  // TO breakdown por tipo
+  const breakdown = det?.to_breakdown || {};
+  const byType    = breakdown.byType  || {};
+  const typeOrder = ['Saca','Scuttle','Volumoso'];
+  const allTypes  = [...new Set([...typeOrder, ...Object.keys(byType)])].filter(t => byType[t]);
+  const typeEmoji = { Saca:'🛍', Scuttle:'📦', Volumoso:'🔷' };
+  const typeColor = { Saca:'var(--blue)', Scuttle:'var(--yellow)', Volumoso:'var(--purple)' };
+  const breakdownHtml = allTypes.length ? `
+    <div>
+      <div class="modal-section-title">📦 Composição da Carga — ${(breakdown.total||0).toLocaleString('pt-BR')} TOs</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${allTypes.map(type => {
+          const count = byType[type] || 0;
+          const pct   = breakdown.total ? Math.round(count / breakdown.total * 100) : 0;
+          return `<div class="mkpi" style="flex:1;min-width:110px">
+            <div class="mkpi-label">${typeEmoji[type]||'📫'} ${type}</div>
+            <div class="mkpi-val" style="color:${typeColor[type]||'var(--teal)'}">${count.toLocaleString('pt-BR')}</div>
+            <div class="mkpi-sub">${pct}% do total</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
   // Doca info
   const dockHtml = (qi?.assigned_dock_name || qi?.occupied_dock_name) ? `
     <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -485,6 +508,7 @@ function openTripModal(tripNumber) {
           <div class="mkpi-sub">desde chegada</div>
         </div>
       </div>
+      ${breakdownHtml}
       ${opsHtml}
       ${dockHtml}
     </div>`;
