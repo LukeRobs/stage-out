@@ -346,6 +346,21 @@ body {
   .dest-badges .badge:nth-child(n+3) { display: none; }
   .header-right .meta-tag { display: none; }
 }
+
+/* ── All TOs table ── */
+.tos-all-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tos-all-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-weight: 500; white-space: nowrap; position: sticky; top: 0; z-index: 1;
+}
+.tos-all-table td { padding: 6px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.tos-all-table tr:last-child td { border-bottom: none; }
+.tos-all-table tbody tr:hover td { background: rgba(255,255,255,.025); }
+.tos-all-table .row-idx { color: var(--muted); font-size: 11px; min-width: 28px; }
+.tos-all-table th[data-sk]:not([data-sk=""]) { cursor: pointer; user-select: none; }
+.tos-all-table th[data-sk]:not([data-sk=""]):hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -459,12 +474,98 @@ function packClass(name) {
   return 'pack-other';
 }
 
+// ── All-TOs table helpers ───────────────────────────────────────────────
+function getSortVal(to, key, now) {
+  switch (key) {
+    case 'to_number': return to.to_number || '';
+    case 'operator':  return cleanOp(to.operator);
+    case 'pack_name': return to.pack_name || '';
+    case 'quantity':  return to.quantity || 0;
+    case 'weight':    return to.weight || 0;
+    case 'ctime':     return to.ctime || 0;
+    case 'dur':       return to.ctime ? now - to.ctime : 0;
+    case 'fanout':    return to._fanout || '';
+    default:          return 0;
+  }
+}
+
+function sortAllTOs(key) {
+  allTOsSortAsc = allTOsSortKey === key ? !allTOsSortAsc : false;
+  allTOsSortKey = key;
+  filterAllTOs();
+}
+
+function filterAllTOs() {
+  const q = (document.getElementById('allToSearch')?.value || '').trim().toLowerCase();
+  const tbody = document.getElementById('allTOsBody');
+  if (!tbody) return;
+  const now = Math.floor(Date.now() / 1000);
+
+  let filtered = allTOsData.filter(to =>
+    !q || [to.to_number, to._fanout, cleanOp(to.operator), to.pack_name || '']
+      .some(v => (v || '').toLowerCase().includes(q))
+  );
+
+  filtered.sort((a, b) => {
+    const va = getSortVal(a, allTOsSortKey, now);
+    const vb = getSortVal(b, allTOsSortKey, now);
+    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+    return allTOsSortAsc ? cmp : -cmp;
+  });
+
+  let count = 0;
+  tbody.innerHTML = filtered.map(to => {
+    count++;
+    const durSec = to.ctime ? now - to.ctime : 0;
+    return `<tr>
+      <td class="row-idx">${count}</td>
+      <td><span class="to-num">${to.to_number}</span></td>
+      <td class="op-name">${cleanOp(to.operator)}</td>
+      <td><span class="pack-pill ${packClass(to.pack_name)}">${to.pack_name || '—'}</span></td>
+      <td style="text-align:right;font-family:monospace">${to.quantity || 0}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtWeight(to.weight || 0)}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(to.ctime)}</td>
+      <td><span class="dur ${durClass(durSec)}">${fmtDur(durSec)}</span></td>
+      <td style="font-size:11px;color:var(--blue)">${to._fanout || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const el = document.getElementById('allTOsCount');
+  if (el) el.textContent = `${filtered.length} de ${allTOsData.length} TOs`;
+
+  document.querySelectorAll('.tos-all-table th[data-sk]').forEach(th => {
+    const sk = th.dataset.sk;
+    if (!sk) return;
+    const base = th.dataset.label;
+    th.textContent = sk === allTOsSortKey ? base + (allTOsSortAsc ? ' ▲' : ' ▼') : base;
+  });
+}
+
+function exportAllTOs() {
+  const now = Math.floor(Date.now() / 1000);
+  const header = ['#','TO Number','Operador','Tipo','Pacotes','Peso (g)','Início','Duração (s)','Fanout'];
+  const rows = allTOsData.map((to, i) => [
+    i + 1, to.to_number, cleanOp(to.operator), to.pack_name || '',
+    to.quantity || 0, to.weight || 0, fmtTime(to.ctime),
+    to.ctime ? now - to.ctime : 0,
+    to._fanout || '',
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tos_packing_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
 // ── State ──────────────────────────────────────────────────────────────
-let groups   = [];
-let sortKey  = 'duracao';
-let sortAsc  = false;
-let lastAt   = null;
-let activeTab = 'dash';
+let groups        = [];
+let sortKey       = 'duracao';
+let sortAsc       = false;
+let lastAt        = null;
+let activeTab     = 'dash';
+let allTOsData    = [];
+let allTOsSortKey = 'dur';
+let allTOsSortAsc = false;
 
 // ── Tab switching ──────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -831,7 +932,48 @@ function renderReport() {
       <div class="report-section-title">Curva de TO's Packing por Hora</div>
       <div class="hour-chart">${hourBars}</div>
     </div>
+
+    <!-- All TOs table -->
+    <div class="report-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="report-section-title" style="margin-bottom:0">Todas as TOs &mdash; ${totalTOs} registros</div>
+        <button onclick="exportAllTOs()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:8px;font-size:12px;cursor:pointer"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">&#x2B07; CSV</button>
+      </div>
+      <div style="margin-bottom:10px">
+        <input type="text" id="allToSearch" placeholder="Buscar por TO, operador, fanout, tipo&hellip;"
+          oninput="filterAllTOs()"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:560px;overflow-y:auto">
+        <table class="tos-all-table">
+          <thead>
+            <tr>
+              <th data-sk="" data-label="#">#</th>
+              <th data-sk="to_number" data-label="TO Number"  onclick="sortAllTOs('to_number')">TO Number</th>
+              <th data-sk="operator"  data-label="Operador"   onclick="sortAllTOs('operator')">Operador</th>
+              <th data-sk="pack_name" data-label="Tipo"       onclick="sortAllTOs('pack_name')">Tipo</th>
+              <th data-sk="quantity"  data-label="Pacotes"    onclick="sortAllTOs('quantity')" style="text-align:right">Pacotes</th>
+              <th data-sk="weight"    data-label="Peso"       onclick="sortAllTOs('weight')">Peso</th>
+              <th data-sk="ctime"     data-label="In&iacute;cio"  onclick="sortAllTOs('ctime')">In&#237;cio</th>
+              <th data-sk="dur"       data-label="Dura&ccedil;&atilde;o" onclick="sortAllTOs('dur')">Dura&#231;&#227;o &#x25BC;</th>
+              <th data-sk="fanout"    data-label="Fanout"     onclick="sortAllTOs('fanout')">Fanout</th>
+            </tr>
+          </thead>
+          <tbody id="allTOsBody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right" id="allTOsCount">${totalTOs} TOs</div>
+    </div>
   `;
+
+  allTOsData = groups.flatMap(g => g.tos.map(to => ({ ...to, _fanout: g.name })));
+  allTOsData.sort((a, b) => {
+    const wa = a.ctime ? now - a.ctime : 0;
+    const wb = b.ctime ? now - b.ctime : 0;
+    return wb - wa;
+  });
+  filterAllTOs();
 }
 
 // ── Load data ──────────────────────────────────────────────────────────
