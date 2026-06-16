@@ -362,6 +362,19 @@ body {
   .dest-badges .badge:nth-child(n+3) { display: none; }
   .header-right .meta-tag { display: none; }
 }
+
+/* ── All TOs table ── */
+.tos-all-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tos-all-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-weight: 500; white-space: nowrap; position: sticky; top: 0; z-index: 1;
+}
+.tos-all-table td { padding: 6px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.tos-all-table tr:last-child td { border-bottom: none; }
+.tos-all-table tbody tr:hover td { background: rgba(255,255,255,.025); }
+.tos-all-table .row-idx { color: var(--muted); font-size: 11px; min-width: 28px; }
 </style>
 </head>
 <body>
@@ -487,11 +500,59 @@ function packClass(name) {
   return 'pack-other';
 }
 
+// ── All-TOs table helpers ───────────────────────────────────────────────
+function filterAllTOs() {
+  const q = (document.getElementById('allToSearch')?.value || '').trim().toLowerCase();
+  const tbody = document.getElementById('allTOsBody');
+  if (!tbody) return;
+  const now = Math.floor(Date.now() / 1000);
+  let count = 0;
+  tbody.innerHTML = allTOsData.map(to => {
+    if (q && ![to.to_number, to._fanout, cleanOp(to.operator), to.pack_name || '']
+        .some(v => v.toLowerCase().includes(q))) return '';
+    count++;
+    const packSec = (to.complete_time || 0) - to.ctime;
+    const waitSec = to.complete_time ? now - to.complete_time : 0;
+    return `<tr>
+      <td class="row-idx">${count}</td>
+      <td><span class="to-num">${to.to_number}</span></td>
+      <td class="op-name">${cleanOp(to.operator)}</td>
+      <td><span class="pack-pill ${packClass(to.pack_name)}">${to.pack_name || '—'}</span></td>
+      <td style="text-align:right;font-family:monospace">${to.quantity || 0}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtWeight(to.weight || 0)}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(to.complete_time)}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtDur(packSec)}</td>
+      <td><span class="dur ${durClass(waitSec)}">${fmtDur(waitSec)}</span></td>
+      <td style="font-size:11px;color:var(--blue)">${to._fanout || '—'}</td>
+    </tr>`;
+  }).join('');
+  const el = document.getElementById('allTOsCount');
+  if (el) el.textContent = `${count} de ${allTOsData.length} TOs`;
+}
+
+function exportAllTOs() {
+  const now = Math.floor(Date.now() / 1000);
+  const header = ['#','TO Number','Operador','Tipo','Pacotes','Peso (g)','Concluído','T.Proc (s)','T.Pack (s)','Fanout'];
+  const rows = allTOsData.map((to, i) => [
+    i + 1, to.to_number, cleanOp(to.operator), to.pack_name || '',
+    to.quantity || 0, to.weight || 0, fmtTime(to.complete_time),
+    (to.complete_time || 0) - to.ctime,
+    to.complete_time ? now - to.complete_time : 0,
+    to._fanout || '',
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tos_packed_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
 // ── State ──────────────────────────────────────────────────────────────
-let groups  = [];
-let sortKey = 'duracao';
-let sortAsc = false;
-let lastAt  = null;
+let groups     = [];
+let sortKey    = 'duracao';
+let sortAsc    = false;
+let lastAt     = null;
+let allTOsData = [];
 
 // ── Group by destination ───────────────────────────────────────────────
 function buildGroups(list) {
@@ -840,7 +901,50 @@ function renderReport() {
       <div class="report-section-title">Curva de TO's Packed por Hora</div>
       <div class="hour-chart">${hourBars}</div>
     </div>
+
+    <!-- All TOs table -->
+    <div class="report-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="report-section-title" style="margin-bottom:0">Todas as TOs &mdash; ${totalTOs} registros</div>
+        <button onclick="exportAllTOs()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:8px;font-size:12px;cursor:pointer"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">&#x2B07; CSV</button>
+      </div>
+      <div style="margin-bottom:10px">
+        <input type="text" id="allToSearch" placeholder="Buscar por TO, operador, fanout, tipo&hellip;"
+          oninput="filterAllTOs()"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:560px;overflow-y:auto">
+        <table class="tos-all-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>TO Number</th>
+              <th>Operador</th>
+              <th>Tipo</th>
+              <th style="text-align:right">Pacotes</th>
+              <th>Peso</th>
+              <th>Conclu&iacute;do</th>
+              <th>T. Processamento</th>
+              <th>T. Pack</th>
+              <th>Fanout</th>
+            </tr>
+          </thead>
+          <tbody id="allTOsBody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right" id="allTOsCount">${totalTOs} TOs</div>
+    </div>
   `;
+
+  // Populate the global data store and fill the tbody
+  allTOsData = groups.flatMap(g => g.tos.map(to => ({ ...to, _fanout: g.name })));
+  allTOsData.sort((a, b) => {
+    const wa = a.complete_time ? now - a.complete_time : 0;
+    const wb = b.complete_time ? now - b.complete_time : 0;
+    return wb - wa;
+  });
+  filterAllTOs();
 }
 
 // ── Load data ──────────────────────────────────────────────────────────
