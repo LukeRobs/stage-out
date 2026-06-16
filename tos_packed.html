@@ -375,6 +375,8 @@ body {
 .tos-all-table tr:last-child td { border-bottom: none; }
 .tos-all-table tbody tr:hover td { background: rgba(255,255,255,.025); }
 .tos-all-table .row-idx { color: var(--muted); font-size: 11px; min-width: 28px; }
+.tos-all-table th[data-sk]:not([data-sk=""]) { cursor: pointer; user-select: none; }
+.tos-all-table th[data-sk]:not([data-sk=""]):hover { color: var(--text); }
 </style>
 </head>
 <body>
@@ -501,15 +503,47 @@ function packClass(name) {
 }
 
 // ── All-TOs table helpers ───────────────────────────────────────────────
+function getSortVal(to, key, now) {
+  switch (key) {
+    case 'to_number':     return to.to_number || '';
+    case 'operator':      return cleanOp(to.operator);
+    case 'pack_name':     return to.pack_name || '';
+    case 'quantity':      return to.quantity || 0;
+    case 'weight':        return to.weight || 0;
+    case 'complete_time': return to.complete_time || 0;
+    case 'tproc':         return (to.complete_time || 0) - to.ctime;
+    case 'tpack':         return to.complete_time ? now - to.complete_time : 0;
+    case 'fanout':        return to._fanout || '';
+    default:              return 0;
+  }
+}
+
+function sortAllTOs(key) {
+  allTOsSortAsc = allTOsSortKey === key ? !allTOsSortAsc : false;
+  allTOsSortKey = key;
+  filterAllTOs();
+}
+
 function filterAllTOs() {
   const q = (document.getElementById('allToSearch')?.value || '').trim().toLowerCase();
   const tbody = document.getElementById('allTOsBody');
   if (!tbody) return;
   const now = Math.floor(Date.now() / 1000);
+
+  let filtered = allTOsData.filter(to =>
+    !q || [to.to_number, to._fanout, cleanOp(to.operator), to.pack_name || '']
+      .some(v => (v || '').toLowerCase().includes(q))
+  );
+
+  filtered.sort((a, b) => {
+    const va = getSortVal(a, allTOsSortKey, now);
+    const vb = getSortVal(b, allTOsSortKey, now);
+    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+    return allTOsSortAsc ? cmp : -cmp;
+  });
+
   let count = 0;
-  tbody.innerHTML = allTOsData.map(to => {
-    if (q && ![to.to_number, to._fanout, cleanOp(to.operator), to.pack_name || '']
-        .some(v => v.toLowerCase().includes(q))) return '';
+  tbody.innerHTML = filtered.map(to => {
     count++;
     const packSec = (to.complete_time || 0) - to.ctime;
     const waitSec = to.complete_time ? now - to.complete_time : 0;
@@ -526,8 +560,16 @@ function filterAllTOs() {
       <td style="font-size:11px;color:var(--blue)">${to._fanout || '—'}</td>
     </tr>`;
   }).join('');
+
   const el = document.getElementById('allTOsCount');
-  if (el) el.textContent = `${count} de ${allTOsData.length} TOs`;
+  if (el) el.textContent = `${filtered.length} de ${allTOsData.length} TOs`;
+
+  document.querySelectorAll('.tos-all-table th[data-sk]').forEach(th => {
+    const sk = th.dataset.sk;
+    if (!sk) return;
+    const base = th.dataset.label;
+    th.textContent = sk === allTOsSortKey ? base + (allTOsSortAsc ? ' ▲' : ' ▼') : base;
+  });
 }
 
 function exportAllTOs() {
@@ -552,7 +594,9 @@ let groups     = [];
 let sortKey    = 'duracao';
 let sortAsc    = false;
 let lastAt     = null;
-let allTOsData = [];
+let allTOsData    = [];
+let allTOsSortKey = 'tpack';
+let allTOsSortAsc = false;
 
 // ── Group by destination ───────────────────────────────────────────────
 function buildGroups(list) {
@@ -918,16 +962,16 @@ function renderReport() {
         <table class="tos-all-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>TO Number</th>
-              <th>Operador</th>
-              <th>Tipo</th>
-              <th style="text-align:right">Pacotes</th>
-              <th>Peso</th>
-              <th>Conclu&iacute;do</th>
-              <th>T. Processamento</th>
-              <th>T. Pack</th>
-              <th>Fanout</th>
+              <th data-sk="" data-label="#">#</th>
+              <th data-sk="to_number"     data-label="TO Number"        onclick="sortAllTOs('to_number')">TO Number</th>
+              <th data-sk="operator"      data-label="Operador"         onclick="sortAllTOs('operator')">Operador</th>
+              <th data-sk="pack_name"     data-label="Tipo"             onclick="sortAllTOs('pack_name')">Tipo</th>
+              <th data-sk="quantity"      data-label="Pacotes"          onclick="sortAllTOs('quantity')" style="text-align:right">Pacotes</th>
+              <th data-sk="weight"        data-label="Peso"             onclick="sortAllTOs('weight')">Peso</th>
+              <th data-sk="complete_time" data-label="Conclu&#237;do"   onclick="sortAllTOs('complete_time')">Conclu&#237;do</th>
+              <th data-sk="tproc"         data-label="T. Processamento" onclick="sortAllTOs('tproc')">T. Processamento</th>
+              <th data-sk="tpack"         data-label="T. Pack"          onclick="sortAllTOs('tpack')">T. Pack ▼</th>
+              <th data-sk="fanout"        data-label="Fanout"           onclick="sortAllTOs('fanout')">Fanout</th>
             </tr>
           </thead>
           <tbody id="allTOsBody"></tbody>
