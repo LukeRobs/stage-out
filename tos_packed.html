@@ -514,8 +514,30 @@ function getSortVal(to, key, now) {
     case 'tproc':         return (to.complete_time || 0) - to.ctime;
     case 'tpack':         return to.complete_time ? now - to.complete_time : 0;
     case 'fanout':        return to._fanout || '';
+    case 'ruas':          return stagingMap ? (stagingMap[to._fanout] || []).length : 0;
     default:              return 0;
   }
+}
+
+async function loadStagingMap() {
+  try {
+    const res = await fetch('/api/stage-out');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    const map = {};
+    (data.list || []).forEach(r => {
+      const m = (r.to_destination || '').match(/^\[\d+\](.*)/);
+      const name = (m ? m[1] : r.to_destination || '').trim();
+      if (!name) return;
+      const pct = parseFloat((r.occupancy_percentage || '0').replace('%', '').trim()) || 0;
+      if (pct >= 100) return;
+      if (!map[name]) map[name] = [];
+      if (r.staging_area_name) map[name].push(r.staging_area_name);
+    });
+    stagingMap = map;
+    if (document.getElementById('allTOsBody')) filterAllTOs();
+  } catch (e) {}
 }
 
 function sortAllTOs(key) {
@@ -547,6 +569,12 @@ function filterAllTOs() {
     count++;
     const packSec = (to.complete_time || 0) - to.ctime;
     const waitSec = to.complete_time ? now - to.complete_time : 0;
+    const ruas = stagingMap ? (stagingMap[to._fanout] || []) : null;
+    const ruasCell = ruas === null
+      ? `<span style="color:var(--muted);font-size:10px">…</span>`
+      : ruas.length === 0
+      ? `<span style="color:var(--red);font-size:10px;font-weight:600">CHEIO</span>`
+      : `<span style="font-size:10px;font-family:monospace;color:var(--teal);line-height:1.6">${ruas.join(', ')}</span>`;
     return `<tr>
       <td class="row-idx">${count}</td>
       <td><span class="to-num">${to.to_number}</span></td>
@@ -558,6 +586,7 @@ function filterAllTOs() {
       <td style="font-family:monospace;font-size:11px">${fmtDur(packSec)}</td>
       <td><span class="dur ${durClass(waitSec)}">${fmtDur(waitSec)}</span></td>
       <td style="font-size:11px;color:var(--blue)">${to._fanout || '—'}</td>
+      <td>${ruasCell}</td>
     </tr>`;
   }).join('');
 
@@ -574,13 +603,14 @@ function filterAllTOs() {
 
 function exportAllTOs() {
   const now = Math.floor(Date.now() / 1000);
-  const header = ['#','TO Number','Operador','Tipo','Pacotes','Peso (g)','Concluído','T.Proc (s)','T.Pack (s)','Fanout'];
+  const header = ['#','TO Number','Operador','Tipo','Pacotes','Peso (g)','Concluído','T.Proc (s)','T.Pack (s)','Fanout','Ruas Disponíveis'];
   const rows = allTOsData.map((to, i) => [
     i + 1, to.to_number, cleanOp(to.operator), to.pack_name || '',
     to.quantity || 0, to.weight || 0, fmtTime(to.complete_time),
     (to.complete_time || 0) - to.ctime,
     to.complete_time ? now - to.complete_time : 0,
     to._fanout || '',
+    stagingMap ? (stagingMap[to._fanout] || []).join(' | ') || 'CHEIO' : '',
   ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
   const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
@@ -597,6 +627,7 @@ let lastAt     = null;
 let allTOsData    = [];
 let allTOsSortKey = 'tpack';
 let allTOsSortAsc = false;
+let stagingMap    = null; // { destName: ['OUT-92', ...] } — ruas com ocupação < 100%
 
 // ── Group by destination ───────────────────────────────────────────────
 function buildGroups(list) {
@@ -972,6 +1003,7 @@ function renderReport() {
               <th data-sk="tproc"         data-label="T. Processamento" onclick="sortAllTOs('tproc')">T. Processamento</th>
               <th data-sk="tpack"         data-label="T. Pack"          onclick="sortAllTOs('tpack')">T. Pack ▼</th>
               <th data-sk="fanout"        data-label="Fanout"           onclick="sortAllTOs('fanout')">Fanout</th>
+              <th data-sk="ruas"          data-label="Ruas Disp."       onclick="sortAllTOs('ruas')">Ruas Disp.</th>
             </tr>
           </thead>
           <tbody id="allTOsBody"></tbody>
@@ -1038,7 +1070,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(tc => {
       tc.style.display = tc.id === target ? '' : 'none';
     });
-    if (target === 'reportTab') renderReport();
+    if (target === 'reportTab') { renderReport(); loadStagingMap(); }
   });
 });
 
@@ -1058,7 +1090,9 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 });
 
 loadData();
-setInterval(loadData, 15000);
+loadStagingMap();
+setInterval(loadData,       15000);
+setInterval(loadStagingMap, 30000);
 </script>
 </body>
 </html>
