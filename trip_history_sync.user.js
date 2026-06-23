@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Trip History → Transbordo Dashboard
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync.user.js
 // @description  Sincroniza histórico de Linehaul trips com o dashboard Transbordo
@@ -23,13 +23,15 @@
     return m ? m[1] : '';
   }
 
+  const PAGE_SIZE = 100;
+
   async function fetchPage(pageno) {
     const now   = Math.floor(Date.now() / 1000);
     const start = now - DAYS_BACK * 86400;
     const params = new URLSearchParams({
       mtime:  `${start},${now}`,
       pageno: `${pageno}`,
-      count:  '500',
+      count:  String(PAGE_SIZE),
     });
     const res = await fetch(`${API_URL}?${params}`, {
       credentials: 'include',
@@ -77,14 +79,16 @@
       let list    = page1.list || [];
       const total = page1.total || 0;
 
-      // Página 2 se houver mais (até 1000 trips = cobertura de ~7 dias)
-      if (total > 500) {
+      // Busca páginas restantes (até 1000 trips = 10 páginas de 100)
+      const pages = Math.min(Math.ceil(total / PAGE_SIZE), 10);
+      for (let p = 2; p <= pages; p++) {
         try {
-          const page2 = await fetchPage(2);
-          list = list.concat(page2.list || []);
-          console.log(`[TripHistory] Pág 2: +${page2.list?.length || 0} trips`);
+          const page = await fetchPage(p);
+          list = list.concat(page.list || []);
+          console.log(`[TripHistory] Pág ${p}: +${page.list?.length || 0} trips`);
         } catch (e) {
-          console.warn('[TripHistory] Erro na página 2:', e.message);
+          console.warn(`[TripHistory] Erro na página ${p}:`, e.message);
+          break;
         }
       }
 

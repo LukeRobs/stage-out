@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Trip List → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync.user.js
 // @description  Sincroniza trip list (viagens em trânsito) com o dashboard local
@@ -22,38 +22,52 @@
     return m ? m[1] : '';
   }
 
-  async function fetchTrips() {
-    const now   = Math.floor(Date.now() / 1000);
-    const start = now - 24 * 3600;  // -24h
-    const end   = now + 24 * 3600;  // +24h
+  const PAGE_SIZE = 100;
 
+  async function fetchPage(pageno, start, end) {
     const params = new URLSearchParams({
       station_type:        '2,3,7,12,14,16,18',
-      trip_station_status: '50,60',   // 50=em trânsito/chegando, 60=na doca/descarregando
-      pageno:              '1',
-      count:               '500',
+      trip_station_status: '50,60',
+      pageno:              String(pageno),
+      count:               String(PAGE_SIZE),
       query_type:          '1',
       tab_type:            '2',
       sta:                 `${start},${end}`,
     });
-
     const res = await fetch(`${API_URL}?${params}`, {
-      method:      'GET',
       credentials: 'include',
-      headers: {
-        'x-csrftoken': getCsrf(),
-      },
+      headers: { 'x-csrftoken': getCsrf() },
     });
-
     const raw = await res.text();
     let json;
     try { json = JSON.parse(raw); }
     catch (e) { throw new Error(`Resposta não é JSON (status ${res.status}): ${raw.substring(0, 100)}`); }
     if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
+    return json.data;
+  }
 
-    const list = json.data.list || [];
-    console.log(`[Trips] ${list.length}/${json.data.total} viagens recebidas`);
-    return { list, total: json.data.total || 0, fetchedAt: Date.now() };
+  async function fetchTrips() {
+    const now   = Math.floor(Date.now() / 1000);
+    const start = now - 24 * 3600;
+    const end   = now + 24 * 3600;
+
+    const first = await fetchPage(1, start, end);
+    const total = first.total || 0;
+    let list    = first.list || [];
+
+    const pages = Math.min(Math.ceil(total / PAGE_SIZE), 10);
+    for (let p = 2; p <= pages; p++) {
+      try {
+        const d = await fetchPage(p, start, end);
+        list = list.concat(d.list || []);
+      } catch (e) {
+        console.warn(`[Trips] Erro na página ${p}:`, e.message);
+        break;
+      }
+    }
+
+    console.log(`[Trips] ${list.length}/${total} viagens recebidas`);
+    return { list, total, fetchedAt: Date.now() };
   }
 
   function sendToServer(data) {
