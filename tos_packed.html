@@ -525,8 +525,17 @@ async function loadStagingMap() {
     if (!res.ok) return;
     const data = await res.json();
     if (data.error) return;
+    const list = data.list || [];
+    // DEBUG — remove after confirming names match
+    if (list.length) {
+      const sample = list[0];
+      console.log('[StagingMap] sample row keys:', Object.keys(sample));
+      console.log('[StagingMap] sample to_destination:', sample.to_destination);
+      console.log('[StagingMap] sample staging_area_name:', sample.staging_area_name);
+      console.log('[StagingMap] sample occupancy_percentage:', sample.occupancy_percentage);
+    }
     const map = {};
-    (data.list || []).forEach(r => {
+    list.forEach(r => {
       const m = (r.to_destination || '').match(/^\[\d+\](.*)/);
       const name = (m ? m[1] : r.to_destination || '').trim();
       if (!name) return;
@@ -535,9 +544,12 @@ async function loadStagingMap() {
       if (!map[name]) map[name] = [];
       if (r.staging_area_name) map[name].push(r.staging_area_name);
     });
+    console.log('[StagingMap] map keys sample:', Object.keys(map).slice(0, 5));
+    // log a sample _fanout to compare
+    if (allTOsData.length) console.log('[StagingMap] _fanout sample:', allTOsData[0]._fanout);
     stagingMap = map;
     if (document.getElementById('allTOsBody')) filterAllTOs();
-  } catch (e) {}
+  } catch (e) { console.error('[StagingMap] error:', e); }
 }
 
 function sortAllTOs(key) {
