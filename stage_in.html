@@ -834,6 +834,8 @@ function getAreaLabel(a) {
     if (n >= 1  && n <= 16) return { label: 'Buffer Termoplástica', color: '#22c55e',  bg: 'rgba(34,197,94,.15)'  };
     if (n >= 17 && n <= 35) return { label: 'HS VOLUMOSO',     color: '#3b82f6',  bg: 'rgba(59,130,246,.15)' };
   }
+  // LN- → Buffer Linear
+  if (/^LN-/i.test(name)) return { label: 'Buffer Linear', color: '#14b8a6', bg: 'rgba(20,184,166,.15)' };
   // VOLUMOSO sem V → Buffer LMH
   return { label: 'Buffer LMH', color: '#8b5cf6', bg: 'rgba(139,92,246,.15)' };
 }
