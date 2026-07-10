@@ -679,11 +679,11 @@ table.main-table tr:last-child td { border-bottom: none; }
       <div id="vDistrib"></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Turno Ofensor (TOs &gt; 30 pcts)</div>
+      <div class="panel-title" id="vTurnoOfensorTitle">Turno Ofensor</div>
       <div id="vTurnoOfensor"></div>
     </div>
     <div class="panel">
-      <div class="panel-title">Top 5 TOs com Maior Volume (&gt; 30 pcts)</div>
+      <div class="panel-title" id="vTop5Title">Top 5 TOs com Maior Volume</div>
       <div id="vTop5"></div>
     </div>
   </div>
@@ -1865,6 +1865,9 @@ function buildVolumoso() {
   }).join('');
 
   // ── Turno Ofensor — todos os turnos presentes nos TOs filtrados ────────
+  const filterSuffix = activeVolFilter.type ? ` (${filterLabel()})` : ' (Todas as TOs)';
+  document.getElementById('vTurnoOfensorTitle').textContent = `Turno Ofensor${filterSuffix}`;
+  document.getElementById('vTop5Title').textContent = `Top 5 TOs com Maior Volume${filterSuffix}`;
   const byTurno = {};
   tos.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
   const turnoSorted = Object.entries(byTurno).sort((a, b) => b[1] - a[1]);
