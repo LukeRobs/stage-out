@@ -1864,14 +1864,15 @@ function buildVolumoso() {
     </div>`;
   }).join('');
 
-  // ── Turno Ofensor — todos os turnos presentes nos TOs filtrados ────────
-  const filterSuffix = activeVolFilter.type ? ` (${filterLabel()})` : ' (Todas as TOs)';
-  document.getElementById('vTurnoOfensorTitle').textContent = `Turno Ofensor${filterSuffix}`;
-  document.getElementById('vTop5Title').textContent = `Top 5 TOs com Maior Volume${filterSuffix}`;
+  // ── Turno Ofensor — sempre restrito aos TOs pesados (> 30 pcts), ────────
+  // independente de qual outro filtro esteja ativo, pois é isso que os torna "ofensores"
+  document.getElementById('vTurnoOfensorTitle').textContent   = `Turno Ofensor (TOs > ${PCT_THRESHOLD} pcts)`;
+  document.getElementById('vTop5Title').textContent           = `Top 5 TOs com Maior Volume (> ${PCT_THRESHOLD} pcts)`;
+  const heavyTos = tos.filter(t => t.pacotes > PCT_THRESHOLD);
   const byTurno = {};
-  tos.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
+  heavyTos.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
   const turnoSorted = Object.entries(byTurno).sort((a, b) => b[1] - a[1]);
-  const turnoTotal  = tos.length;
+  const turnoTotal  = heavyTos.length;
   document.getElementById('vTurnoOfensor').innerHTML = turnoSorted.length
     ? turnoSorted.map(([turno, cnt]) => {
         const pct    = turnoTotal ? Math.round(cnt / turnoTotal * 100) : 0;
@@ -1886,8 +1887,8 @@ function buildVolumoso() {
       }).join('')
     : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhum TO no filtro atual</div>`;
 
-  // ── Top 5 TOs com maior volume (do conjunto filtrado) ─────────────────
-  const top5 = [...tos].sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
+  // ── Top 5 TOs com maior volume (sempre entre os TOs > 30 pcts) ─────────
+  const top5 = [...heavyTos].sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
   document.getElementById('vTop5').innerHTML = top5.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--muted);font-size:11px">
