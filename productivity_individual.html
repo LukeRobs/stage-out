@@ -122,6 +122,13 @@ button{font-family:var(--font);cursor:pointer}
 .toggle-wrap input{accent-color:var(--blue);cursor:pointer}
 .tcount{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
 
+/* ── Search input ── */
+.tsearch-wrap{position:relative;display:flex;align-items:center}
+.tsearch-icon{position:absolute;left:10px;color:var(--muted);pointer-events:none}
+.tsearch{height:32px;padding:0 10px 0 30px;width:220px;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color .15s}
+.tsearch:focus{border-color:var(--blue)}
+.tsearch::placeholder{color:var(--muted)}
+
 /* ── Table ── */
 .table-wrap{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);overflow:clip;margin-bottom:14px;box-shadow:var(--shadow)}
 table.main-t{width:100%;border-collapse:collapse}
@@ -142,6 +149,13 @@ table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.05)}
 /* ── Rank ── */
 .rank{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;min-width:24px;display:inline-block;text-align:right;color:var(--muted)}
 .rank.r1{color:#f59e0b}.rank.r2{color:#9ca3af}.rank.r3{color:#b45309}
+
+/* ── Rank badge (pivot table) ── */
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.rank-badge.rk-1{background:rgba(245,158,11,.16);color:#f59e0b}
+.rank-badge.rk-2{background:rgba(156,163,175,.18);color:#9ca3af}
+.rank-badge.rk-3{background:rgba(180,120,80,.18);color:#b8874a}
+.rank-badge.rk-n{background:var(--surf3);color:var(--muted)}
 
 /* ── Op cell ── */
 .op-name{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
@@ -221,6 +235,15 @@ table.hm-t .hm-ok{background:rgba(245,158,11,.18);color:var(--yellow)}
 table.hm-t .hm-ruim{background:rgba(239,68,68,.18);color:var(--red)}
 table.hm-t .hm-empty{color:var(--border2)}
 table.hm-t th.hm-active{color:var(--blue)}
+table.hm-t th.th-sort{cursor:pointer;user-select:none;transition:color .15s}
+table.hm-t th.th-sort:hover{color:var(--text)}
+table.hm-t td.hm-total{font-weight:700;color:var(--blue);background:transparent;border-left:2px solid var(--border2);font-size:12px}
+table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
+
+/* ── Table head bar ── */
+.table-head-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.table-head-title{font-size:13px;font-weight:700}
+.table-head-sub{font-size:11px;color:var(--muted);margin-top:1px}
 
 /* ── Status bar ── */
 .status-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--border);padding:5px 24px;font-size:10px;color:var(--muted);display:flex;gap:20px;z-index:100;align-items:center}
@@ -330,6 +353,10 @@ table.hm-t th.hm-active{color:var(--blue)}
       <span style="font-size:11px;color:var(--muted)">Aguardando dados...</span>
     </div>
     <div class="toolbar-right">
+      <div class="tsearch-wrap">
+        <svg class="tsearch-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="opSearch" class="tsearch" placeholder="Buscar colaborador..." autocomplete="off">
+      </div>
       <label class="toggle-wrap">
         <input type="checkbox" id="chkWh05" checked>
         Ranking: wh ≥ 0.5h
@@ -338,26 +365,22 @@ table.hm-t th.hm-active{color:var(--blue)}
         <input type="checkbox" id="chkShowAll">
         Mostrar todos
       </label>
-      <span class="tcount" id="tableCount"></span>
     </div>
   </div>
 
-  <!-- ── Main table ── -->
-  <div class="table-wrap">
-    <table class="main-t" id="mainTable">
-      <thead>
-        <tr>
-          <th style="width:36px;cursor:default">#</th>
-          <th data-col="op_name">Operador <span class="sa"></span></th>
-          <th data-col="wh" style="text-align:center">Tempo <span class="sa"></span></th>
-          <th data-col="tp" style="text-align:center">Produção <span class="sa"></span></th>
-          <th data-col="prod">Itens/hora <span class="sa"></span></th>
-          <th data-col="classe" style="text-align:center">Status <span class="sa"></span></th>
-          <th style="text-align:center;cursor:default">Anomalia</th>
-        </tr>
-      </thead>
+  <!-- ── Ranking table (pivot: colaborador × hora) ── -->
+  <div class="table-head-bar">
+    <div>
+      <div class="table-head-title">Ranking — Operação por colaborador</div>
+      <div class="table-head-sub">Produção por hora · coluna Total = soma do turno</div>
+    </div>
+    <span class="tcount" id="rankCount"></span>
+  </div>
+  <div class="heatmap-wrap" style="margin-bottom:14px">
+    <table class="hm-t" id="rankTable">
+      <thead id="rankHead"></thead>
       <tbody id="rankBody">
-        <tr><td colspan="7" class="empty-msg">Aguardando dados do Tampermonkey...</td></tr>
+        <tr><td class="empty-msg">Aguardando dados do Tampermonkey...</td></tr>
       </tbody>
     </table>
   </div>
@@ -396,19 +419,6 @@ table.hm-t th.hm-active{color:var(--blue)}
     </div>
   </div>
 
-  <!-- ── Heatmap ── -->
-  <div class="heatmap-section" id="heatmapSection" style="display:none">
-    <div class="heatmap-header">
-      <span class="sec-title">Heatmap · Itens/hora por Operador</span>
-      <span class="sec-hint" id="hmHint">— operadores · uma célula = média ponderada da hora</span>
-    </div>
-    <div class="heatmap-wrap">
-      <table class="hm-t" id="hmTable">
-        <thead id="hmHead"></thead>
-        <tbody id="hmBody"></tbody>
-      </table>
-    </div>
-  </div>
 
 </div>
 
@@ -422,15 +432,14 @@ table.hm-t th.hm-active{color:var(--blue)}
 <script>
 // ── Config ────────────────────────────────────────────────────────────────
 const REFRESH = 60_000;
-const BAR_REF = 800; // prod value at 100% bar width
 
 // ── State ─────────────────────────────────────────────────────────────────
 let allHours   = {};
 let processed  = {};
 let timelist   = []; // [{timestamp, total}] from dashboard/list — authoritative totals
 let activeHora = null;
-let sortCol    = 'prod';
-let sortAsc    = false;
+let pivotSortCol = 'total'; // 'total' | 'name'
+let pivotSortAsc = false;
 
 // ── Theme ──────────────────────────────────────────────────────────────────
 function toggleTheme() {
@@ -549,10 +558,9 @@ function render() {
   const wh05 = document.getElementById('chkWh05').checked;
   const view = wh05 ? all.filter(o => o.wh >= 0.5) : all;
   buildKPIs(all, view);
-  buildTable(view);
   buildDistribution(all);
   buildAlerts(all);
-  buildHeatmap();
+  buildRankTable();
   document.getElementById('headerSub').textContent = `${activeHora} · ${all.length} operadores`;
 }
 
@@ -619,57 +627,70 @@ function buildKPIs(all, view) {
   document.getElementById('kpiAnom').textContent    = anom;
 }
 
-// ── Table ─────────────────────────────────────────────────────────────────
-function buildTable(rows) {
-  const sorted = [...rows].sort((a, b) => {
-    let va = a[sortCol], vb = b[sortCol];
-    if (typeof va === 'string') return sortAsc ? va.localeCompare(vb,'pt-BR') : vb.localeCompare(va,'pt-BR');
-    return sortAsc ? va - vb : vb - va;
+// ── Ranking table (pivot: colaborador × hora, com coluna Total) ───────────
+function buildRankTable() {
+  const hours = Object.keys(allHours).sort();
+  const wh05  = document.getElementById('chkWh05').checked;
+  const q     = (document.getElementById('opSearch').value || '').trim().toLowerCase();
+
+  // União de operadores em todas as horas disponíveis
+  const opMap = {};
+  hours.forEach(h => {
+    (processed[h] || []).forEach(o => {
+      if (!opMap[o.id]) opMap[o.id] = { id: o.id, name: o.name, byHour: {}, tp: 0, wh: 0 };
+      opMap[o.id].byHour[h] = o;
+      opMap[o.id].tp += o.tp;
+      opMap[o.id].wh += o.wh;
+    });
   });
 
-  document.querySelectorAll('table.main-t th[data-col]').forEach(th => {
-    th.classList.toggle('sorted', th.dataset.col === sortCol);
-    const sa = th.querySelector('.sa');
-    if (sa) sa.textContent = th.dataset.col === sortCol ? (sortAsc ? '▲' : '▼') : '';
+  const totalOps = Object.keys(opMap).length;
+  let rows = Object.values(opMap);
+  if (wh05) rows = rows.filter(o => o.wh >= 0.5);
+  if (q)    rows = rows.filter(o => o.name.toLowerCase().includes(q));
+
+  rows.sort((a, b) => {
+    if (pivotSortCol === 'name') {
+      return pivotSortAsc ? a.name.localeCompare(b.name, 'pt-BR') : b.name.localeCompare(a.name, 'pt-BR');
+    }
+    return pivotSortAsc ? a.tp - b.tp : b.tp - a.tp;
   });
 
-  document.getElementById('tableCount').textContent = `${sorted.length} operadores`;
+  const lbls = hours.map(h => (h.split(' ')[1] || h).substring(0, 2) + 'H');
 
-  if (!sorted.length) {
-    document.getElementById('rankBody').innerHTML = `<tr><td colspan="7" class="empty-msg">Nenhum operador nesta hora</td></tr>`;
-    return;
+  document.getElementById('rankHead').innerHTML = `<tr>
+    <th style="width:36px;text-align:center;cursor:default">#</th>
+    <th class="th-sort" id="thSortName">Colaborador${pivotSortCol === 'name' ? (pivotSortAsc ? ' ▲' : ' ▼') : ''}</th>
+    ${lbls.map((l, i) => `<th class="${hours[i] === activeHora ? 'hm-active' : ''}" style="text-align:center">${l}</th>`).join('')}
+    <th class="hm-total-h th-sort" id="thSortTotal" style="text-align:right">Total${pivotSortCol === 'total' ? (pivotSortAsc ? ' ▲' : ' ▼') : ''}</th>
+  </tr>`;
+
+  document.getElementById('rankCount').textContent = `${rows.length} de ${totalOps} colaborador(es)`;
+
+  if (!rows.length) {
+    document.getElementById('rankBody').innerHTML = `<tr><td colspan="${hours.length + 3}" class="empty-msg">Nenhum colaborador encontrado</td></tr>`;
+  } else {
+    document.getElementById('rankBody').innerHTML = rows.map((o, i) => {
+      const ri   = i + 1;
+      const rCls = ri === 1 ? 'rk-1' : ri === 2 ? 'rk-2' : ri === 3 ? 'rk-3' : 'rk-n';
+      const cells = hours.map(h => {
+        const c = o.byHour[h];
+        if (!c || !c.tp) return `<td class="hm-empty">—</td>`;
+        return `<td class="hm-${c.classe.toLowerCase()}" title="${toHHMM(c.wh)} · ${fmt(c.prod)} itens/h">${fmt(c.tp)}</td>`;
+      }).join('');
+      return `<tr>
+        <td style="text-align:center"><span class="rank-badge ${rCls}">${ri}</span></td>
+        <td><div class="op-name" title="${esc(o.name)}">${esc(o.name)}</div></td>
+        ${cells}
+        <td class="hm-total" style="text-align:right">${fmt(o.tp)}</td>
+      </tr>`;
+    }).join('');
   }
 
-  document.getElementById('rankBody').innerHTML = sorted.map((o, i) => {
-    const ri    = i + 1;
-    const rCls  = ri === 1 ? 'r1' : ri === 2 ? 'r2' : ri === 3 ? 'r3' : '';
-    const rowCls = o.anomalia ? 'row-anomalia' : o.problema ? 'row-problema' : '';
-    const barPct = Math.min(100, Math.round(o.prod / BAR_REF * 100));
-    const cls    = o.classe.toLowerCase();
-    const anom   = o.anomalia
-      ? `<span class="anomalia-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Anomalia</span>`
-      : `<span class="no-anomalia">—</span>`;
-
-    return `<tr class="${rowCls}">
-      <td><span class="rank ${rCls}">${ri}</span></td>
-      <td>
-        <div class="op-name" title="${esc(o.name)}">${esc(o.name)}</div>
-        <div class="op-id">${o.id}</div>
-      </td>
-      <td style="text-align:center"><span class="tempo-val">${toHHMM(o.wh)}</span></td>
-      <td style="text-align:center"><span class="prod-num">${fmt(o.tp)}</span></td>
-      <td>
-        <div class="bar-wrap">
-          <div class="bar"><div class="bar-fill ${cls}" style="width:${barPct}%"></div></div>
-          <span class="bar-num ${cls}">${fmt(o.prod)}</span>
-        </div>
-      </td>
-      <td style="text-align:center">
-        <span class="pill ${cls}"><span class="pill-dot"></span>${o.classe}</span>
-      </td>
-      <td style="text-align:center">${anom}</td>
-    </tr>`;
-  }).join('');
+  const thName  = document.getElementById('thSortName');
+  const thTotal = document.getElementById('thSortTotal');
+  if (thName)  thName.onclick  = () => { pivotSortAsc = pivotSortCol === 'name'  ? !pivotSortAsc : true;  pivotSortCol = 'name';  buildRankTable(); };
+  if (thTotal) thTotal.onclick = () => { pivotSortAsc = pivotSortCol === 'total' ? !pivotSortAsc : false; pivotSortCol = 'total'; buildRankTable(); };
 }
 
 // ── Distribution ──────────────────────────────────────────────────────────
@@ -729,59 +750,9 @@ function buildAlerts(all) {
     </div>`).join('');
 }
 
-// ── Heatmap ───────────────────────────────────────────────────────────────
-function buildHeatmap() {
-  const hours = Object.keys(allHours).sort();
-  if (hours.length < 2) { document.getElementById('heatmapSection').style.display = 'none'; return; }
-  document.getElementById('heatmapSection').style.display = '';
-
-  // Collect operators: keyed by id, ranked by max prod
-  const opMap = {};
-  hours.forEach(h => {
-    (processed[h] || []).forEach(o => {
-      if (!opMap[o.id]) opMap[o.id] = { id: o.id, name: o.name, max: 0 };
-      opMap[o.id].max = Math.max(opMap[o.id].max, o.prod);
-    });
-  });
-  const top = Object.values(opMap).filter(o => o.max > 0).sort((a,b) => b.max - a.max);
-  document.getElementById('hmHint').textContent = `${top.length} operadores · uma célula = média ponderada da hora`;
-
-  // Build lookup
-  const lk = {};
-  hours.forEach(h => {
-    lk[h] = {};
-    (processed[h] || []).forEach(o => { lk[h][o.id] = o; });
-  });
-
-  const lbls = hours.map(h => (h.split(' ')[1] || h).substring(0,5));
-
-  document.getElementById('hmHead').innerHTML = `<tr>
-    <th>Operador</th>
-    ${lbls.map((l,i) => `<th class="${hours[i]===activeHora?'hm-active':''}">${l}</th>`).join('')}
-  </tr>`;
-
-  document.getElementById('hmBody').innerHTML = top.map(op => {
-    const cells = hours.map(h => {
-      const o = lk[h][op.id];
-      if (!o) return `<td class="hm-empty">—</td>`;
-      return `<td class="hm-${o.classe.toLowerCase()}" title="${esc(op.name)}: ${fmt(o.prod)} itens/h · ${toHHMM(o.wh)}">${fmt(o.prod)}</td>`;
-    }).join('');
-    return `<tr><td title="${esc(op.name)}">${esc(op.name)}</td>${cells}</tr>`;
-  }).join('');
-}
-
-// ── Sort ──────────────────────────────────────────────────────────────────
-document.querySelectorAll('table.main-t th[data-col]').forEach(th => {
-  th.addEventListener('click', () => {
-    const col = th.dataset.col;
-    sortAsc = sortCol === col ? !sortAsc : (col === 'op_name');
-    sortCol = col;
-    render();
-  });
-});
-
 // ── Filters ───────────────────────────────────────────────────────────────
 document.getElementById('chkWh05').addEventListener('change', render);
+document.getElementById('opSearch').addEventListener('input', buildRankTable);
 document.getElementById('chkShowAll').addEventListener('change', () => {
   const showAll = document.getElementById('chkShowAll').checked;
   const keys = Object.keys(allHours).sort();

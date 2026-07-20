@@ -129,14 +129,18 @@
 
     const pct = (n) => total > 0 ? Math.round(n / total * 100) : 0;
 
-    const melhor = ops.sort((a, b) => b.prod - a.prod)[0];
+    // Melhor operador DA HORA reportada (horaKey) — maior produção naquele horário
+    const melhor = [...ops].sort((a, b) => b.prod - a.prod)[0];
     const melhorStr = melhor
       ? `${melhor.name} — ${fmt(melhor.prod)} itens/h`
       : '—';
 
-    const now      = new Date();
-    const data     = now.toLocaleDateString('pt-BR');
-    const horaReport = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    // Label "Hora:" reflete a hora dos dados (horaKey), não o relógio atual —
+    // evita reportar "Hora: 14:00" com dados/melhor operador da hora 13:00
+    const [dataPart, horaPart] = horaKey.split(' ');
+    const [ano, mes, dia] = dataPart.split('-');
+    const data        = `${dia}/${mes}/${ano}`;
+    const horaReport  = horaPart;
 
     const text = [
       `Report - Produtividade Packing (${data}):`,
