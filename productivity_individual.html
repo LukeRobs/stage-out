@@ -179,11 +179,21 @@ button{font-family:var(--font);cursor:pointer}
 .cleg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
 .cdot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .cdot-line{width:14px;height:2px;background:var(--orange);border-radius:1px;flex-shrink:0}
+.cdot-line-alt{background:var(--purple);opacity:.8}
 
 .chart-svg-wrap{width:100%;overflow-x:auto}
 .chart-svg-wrap svg{display:block;margin:0 auto}
 .chart-bar-rect{transition:height .35s ease,y .35s ease}
 .chart-empty-note{text-align:center;padding:60px 24px;color:var(--muted);font-size:12px}
+
+/* ── Aderência por hora (badges) ── */
+.chart-aderencia{display:flex;gap:6px;margin-top:14px;overflow-x:auto;padding-bottom:2px}
+.ader-col{flex:1;min-width:64px;display:flex;flex-direction:column;gap:5px}
+.ader-badge{text-align:center;padding:6px 4px;border-radius:8px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.ader-badge.g{background:rgba(16,185,129,.18);color:var(--green)}
+.ader-badge.r{background:rgba(239,68,68,.18);color:var(--red)}
+.ader-badge.n{background:var(--surf3);color:var(--muted)}
+.ader-range{text-align:center;font-size:10px;color:var(--muted);font-weight:600;background:var(--surf3);border-radius:6px;padding:3px 4px}
 
 /* ── Heatmap ── */
 .heatmap-section{margin-bottom:14px}
@@ -373,8 +383,10 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
       <span class="cleg"><span class="cdot" style="background:var(--green)"></span>Bateu a meta ajustada</span>
       <span class="cleg"><span class="cdot" style="background:var(--red)"></span>Abaixo da meta ajustada</span>
       <span class="cleg"><span class="cdot-line"></span>Meta ajustada</span>
+      <span class="cleg"><span class="cdot-line cdot-line-alt"></span>Meta padrão</span>
     </div>
     <div id="chartBody"><div class="empty-msg">Aguardando dados...</div></div>
+    <div id="chartAderencia" class="chart-aderencia"></div>
   </div>
 
   <!-- ── Ranking table (pivot: colaborador × hora) ── -->
@@ -715,12 +727,14 @@ function buildKPIs(all, view, hasBreakdown) {
 
 // ── Ranking table (pivot: colaborador × hora, com coluna Total) ───────────
 function buildRankTable() {
-  const hours = hoursInTurno(activeTurno);
+  // Todas as horas do turno (mesmo as que ainda não têm quebra por operador —
+  // aparecem com células vazias em vez de sumir da tabela)
+  const hours = turnoHourKeys(activeTurno);
   const wh05  = document.getElementById('chkWh05').checked;
   const q     = (document.getElementById('opSearch').value || '').trim().toLowerCase();
 
   const rankSub = document.getElementById('rankSub');
-  rankSub.textContent = (activeHora && !hours.includes(activeHora))
+  rankSub.textContent = (activeHora && !hoursInTurno(activeTurno).includes(activeHora))
     ? `Produção por hora · coluna Total = soma do turno · hora ativa (${activeHora.split(' ')[1]}) ainda sem detalhamento por colaborador`
     : 'Produção por hora · coluna Total = soma do turno';
 
@@ -826,6 +840,7 @@ function buildHourChart() {
     const meta = metaData.byHour?.[hourNum] || {};
     return {
       key: k,
+      hourNum,
       label: String(hourNum).padStart(2, '0') + 'H',
       real: realForHourKey(k),
       metaPadrao: meta.metaPadrao || 0,
@@ -837,11 +852,28 @@ function buildHourChart() {
 
   if (!rows.length) {
     document.getElementById('chartBody').innerHTML = `<div class="empty-msg">Sem dados para este turno</div>`;
+    document.getElementById('chartAderencia').innerHTML = '';
     return;
   }
   if (chartView === 'bars')      renderChartBars(rows);
   else if (chartView === 'line') renderChartLine(rows);
   else                            renderChartTable(rows);
+  renderAderencia(rows);
+}
+
+// Faixa de badges "aderência" por hora — Real vs Meta Ajustada, rotulada com o
+// intervalo da hora (ex: "06-07" = produção da hora 06, que decorre até as 07)
+function renderAderencia(rows) {
+  document.getElementById('chartAderencia').innerHTML = rows.map(r => {
+    const nextH = String((r.hourNum + 1) % 24).padStart(2, '0');
+    const range = `${r.label.replace('H','')}-${nextH}`;
+    if (r.real === 0 && r.metaAjustada === 0) {
+      return `<div class="ader-col"><div class="ader-badge n">—</div><div class="ader-range">${range}</div></div>`;
+    }
+    const ader = r.metaAjustada > 0 ? Math.round(r.real / r.metaAjustada * 100) : 0;
+    const cls  = ader >= 100 ? 'g' : 'r';
+    return `<div class="ader-col"><div class="ader-badge ${cls}">${ader}%</div><div class="ader-range">${range}</div></div>`;
+  }).join('');
 }
 
 function renderChartBars(rows) {
@@ -875,17 +907,24 @@ function renderChartBars(rows) {
     ? `<text x="${xCenter(i)}" y="${y(r.real) - 8}" font-size="10" font-weight="700" fill="var(--text2)" text-anchor="middle">${fmt(r.real)}</text>`
     : '').join('');
 
-  const hasMeta  = rows.some(r => r.metaAjustada > 0);
-  const metaPts  = rows.map((r, i) => `${xCenter(i)},${y(r.metaAjustada)}`).join(' ');
-  const metaLine = hasMeta
-    ? `<polyline points="${metaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="5 4"/>
+  const hasMetaAjustada = rows.some(r => r.metaAjustada > 0);
+  const metaAjustadaPts = rows.map((r, i) => `${xCenter(i)},${y(r.metaAjustada)}`).join(' ');
+  const metaAjustadaLine = hasMetaAjustada
+    ? `<polyline points="${metaAjustadaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="5 4"/>
        ${rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${xCenter(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('')}`
+    : '';
+
+  const hasMetaPadrao = rows.some(r => r.metaPadrao > 0);
+  const metaPadraoPts = rows.map((r, i) => `${xCenter(i)},${y(r.metaPadrao)}`).join(' ');
+  const metaPadraoLine = hasMetaPadrao
+    ? `<polyline points="${metaPadraoPts}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-dasharray="2 3" opacity=".85"/>
+       ${rows.map((r, i) => r.metaPadrao > 0 ? `<circle cx="${xCenter(i)}" cy="${y(r.metaPadrao)}" r="2.5" fill="var(--purple)"/>` : '').join('')}`
     : '';
 
   const labels = rows.map((r, i) => `<text x="${xCenter(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
 
   const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%">
-    ${gridLines}${bars}${metaLine}${valLabels}${labels}
+    ${gridLines}${bars}${metaPadraoLine}${metaAjustadaLine}${valLabels}${labels}
   </svg>`;
   document.getElementById('chartBody').innerHTML = `<div class="chart-svg-wrap">${svg}</div>`;
 }
@@ -898,8 +937,9 @@ function renderChartLine(rows) {
   const x = i => padL + (rows.length <= 1 ? plotW / 2 : (i / (rows.length - 1)) * plotW);
   const y = v => padT + plotH - (v / maxVal) * plotH;
 
-  const realPts = rows.map((r, i) => `${x(i)},${y(r.real)}`).join(' ');
-  const metaPts = rows.map((r, i) => `${x(i)},${y(r.metaAjustada)}`).join(' ');
+  const realPts        = rows.map((r, i) => `${x(i)},${y(r.real)}`).join(' ');
+  const metaAjustadaPts = rows.map((r, i) => `${x(i)},${y(r.metaAjustada)}`).join(' ');
+  const metaPadraoPts  = rows.map((r, i) => `${x(i)},${y(r.metaPadrao)}`).join(' ');
 
   const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
     const gy = padT + plotH * (1 - f);
@@ -907,15 +947,17 @@ function renderChartLine(rows) {
       <text x="${padL - 8}" y="${gy + 3}" font-size="9" fill="var(--muted)" text-anchor="end">${fmt(Math.round(maxVal * f))}</text>`;
   }).join('');
 
-  const dots     = rows.map((r, i) => `<circle cx="${x(i)}" cy="${y(r.real)}" r="3.5" fill="${r.metaAjustada > 0 && r.real >= r.metaAjustada ? 'var(--green)' : 'var(--red)'}"/>`).join('');
-  const metaDots = rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${x(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('');
-  const labels   = rows.map((r, i) => `<text x="${x(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
+  const dots            = rows.map((r, i) => `<circle cx="${x(i)}" cy="${y(r.real)}" r="3.5" fill="${r.metaAjustada > 0 && r.real >= r.metaAjustada ? 'var(--green)' : 'var(--red)'}"/>`).join('');
+  const metaAjustadaDots = rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${x(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('');
+  const metaPadraoDots  = rows.map((r, i) => r.metaPadrao > 0 ? `<circle cx="${x(i)}" cy="${y(r.metaPadrao)}" r="2.5" fill="var(--purple)"/>` : '').join('');
+  const labels          = rows.map((r, i) => `<text x="${x(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
 
   const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%">
     ${gridLines}
-    <polyline points="${metaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="4 3"/>
+    <polyline points="${metaPadraoPts}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-dasharray="2 3" opacity=".85"/>
+    <polyline points="${metaAjustadaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="4 3"/>
     <polyline points="${realPts}" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
-    ${metaDots}${dots}${labels}
+    ${metaPadraoDots}${metaAjustadaDots}${dots}${labels}
   </svg>`;
   document.getElementById('chartBody').innerHTML = `<div class="chart-svg-wrap">${svg}</div>`;
 }
