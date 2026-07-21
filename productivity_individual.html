@@ -111,6 +111,20 @@ button{font-family:var(--font);cursor:pointer}
 .kpi-badge.r{background:var(--red-bg);color:var(--red)}
 .kpi-badge.p{background:var(--purple-bg);color:var(--purple)}
 
+/* ── Turno tabs ── */
+.turno-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.turno-tab{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 16px;border-radius:10px;border:1px solid var(--border2);background:var(--surf);color:var(--text2);transition:.15s;min-width:130px;cursor:pointer}
+.turno-tab:hover{border-color:var(--border);background:var(--surf2)}
+.turno-tab-name{font-size:13px;font-weight:700;color:var(--text)}
+.turno-tab-range{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.turno-tab.active{border-color:transparent}
+.turno-tab.tt-T1.active{background:var(--orange-bg);border-color:var(--orange)}
+.turno-tab.tt-T1.active .turno-tab-name{color:var(--orange)}
+.turno-tab.tt-T2.active{background:var(--blue-bg);border-color:var(--blue)}
+.turno-tab.tt-T2.active .turno-tab-name{color:var(--blue)}
+.turno-tab.tt-T3.active{background:var(--purple-bg);border-color:var(--purple)}
+.turno-tab.tt-T3.active .turno-tab-name{color:var(--purple)}
+
 /* ── Toolbar ── */
 .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px}
 .hour-tabs{display:flex;gap:5px;flex-wrap:wrap}
@@ -129,27 +143,6 @@ button{font-family:var(--font);cursor:pointer}
 .tsearch:focus{border-color:var(--blue)}
 .tsearch::placeholder{color:var(--muted)}
 
-/* ── Table ── */
-.table-wrap{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);overflow:clip;margin-bottom:14px;box-shadow:var(--shadow)}
-table.main-t{width:100%;border-collapse:collapse}
-table.main-t thead{position:sticky;top:56px;z-index:10}
-table.main-t th{background:var(--surf3);padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s}
-table.main-t th:hover,table.main-t th.sorted{color:var(--text)}
-table.main-t th .sa{font-size:9px;margin-left:3px;opacity:.6}
-table.main-t th.sorted .sa{opacity:1;color:var(--blue)}
-table.main-t td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;transition:background .15s}
-table.main-t tr:last-child td{border-bottom:none}
-table.main-t tbody tr:hover td{background:rgba(255,255,255,.025)}
-[data-theme="light"] table.main-t tbody tr:hover td{background:rgba(0,0,0,.025)}
-
-/* Row states */
-table.main-t tbody tr.row-anomalia td:first-child{border-left:2px solid var(--purple)}
-table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.05)}
-
-/* ── Rank ── */
-.rank{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;min-width:24px;display:inline-block;text-align:right;color:var(--muted)}
-.rank.r1{color:#f59e0b}.rank.r2{color:#9ca3af}.rank.r3{color:#b45309}
-
 /* ── Rank badge (pivot table) ── */
 .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
 .rank-badge.rk-1{background:rgba(245,158,11,.16);color:#f59e0b}
@@ -159,40 +152,8 @@ table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.05)}
 
 /* ── Op cell ── */
 .op-name{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
-.op-id{font-size:10px;color:var(--muted);font-family:monospace;margin-top:1px}
 
-/* ── Tempo cell ── */
-.tempo-val{font-family:monospace;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
-
-/* ── Prod bar ── */
-.bar-wrap{display:flex;align-items:center;gap:8px}
-.bar{flex:1;min-width:64px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
-.bar-fill{height:100%;border-radius:3px;transition:width .4s ease}
-.bar-fill.bom{background:var(--green)}
-.bar-fill.ok{background:var(--yellow)}
-.bar-fill.ruim{background:var(--red)}
-.bar-num{font-family:monospace;font-size:12px;font-weight:700;min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
-.bar-num.bom{color:var(--green)}.bar-num.ok{color:var(--yellow)}.bar-num.ruim{color:var(--red)}
-
-/* ── Producao cell ── */
-.prod-num{font-family:monospace;font-weight:600;font-size:12px;font-variant-numeric:tabular-nums}
-
-/* ── Status pill ── */
-.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:700;letter-spacing:.3px;line-height:1}
-.pill.bom{background:var(--green-bg);color:var(--green)}
-.pill.ok{background:var(--yellow-bg);color:var(--yellow)}
-.pill.ruim{background:var(--red-bg);color:var(--red)}
-.pill-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.pill.bom .pill-dot{background:var(--green)}
-.pill.ok .pill-dot{background:var(--yellow)}
-.pill.ruim .pill-dot{background:var(--red)}
-
-/* ── Anomalia badge ── */
-.anomalia-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;background:var(--purple-bg);color:var(--purple)}
-.no-anomalia{color:var(--muted);font-size:12px}
-
-/* ── Two-col bottom ── */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+/* ── Panel ── */
 .panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
 .panel-title{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;margin-bottom:14px}
 
@@ -210,15 +171,29 @@ table.main-t tbody tr.row-anomalia:hover td{background:rgba(139,92,246,.05)}
 .dist-p.bom{color:var(--green)}.dist-p.ok{color:var(--yellow)}.dist-p.ruim{color:var(--red)}
 .dist-total{font-size:10px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
 
-/* ── Alerts ── */
-.alert-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto}
-.alert-item{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:8px;border:1px solid transparent}
-.alert-item.problema{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2)}
-.alert-item.anomalia{background:rgba(139,92,246,.06);border-color:rgba(139,92,246,.2)}
-.alert-icon{flex-shrink:0;margin-top:2px;width:16px;height:16px}
-.alert-body{flex:1;min-width:0}
-.alert-name{font-weight:600;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.alert-meta{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.4}
+/* ── Produção por Hora (chart) ── */
+.panel-header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.chart-toggles{display:flex;gap:3px;background:var(--surf2);border-radius:8px;padding:3px;flex-shrink:0}
+.tog{padding:5px 12px;border-radius:6px;border:none;background:transparent;color:var(--muted);font-size:11px;font-weight:600;font-family:var(--font);transition:.15s}
+.tog.tog-active{background:var(--blue);color:#fff}
+.tog:hover:not(.tog-active){color:var(--text)}
+.chart-legend{display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.cleg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.cdot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.cdot-line{width:14px;height:2px;background:var(--orange);border-radius:1px;flex-shrink:0}
+
+.chart-bars{display:flex;align-items:flex-end;gap:8px;padding:4px 4px 0}
+.chart-col{flex:1;min-width:28px;display:flex;flex-direction:column;align-items:center;gap:6px}
+.chart-bar-area{position:relative;width:100%;height:160px;display:flex;align-items:flex-end;justify-content:center}
+.chart-bar{width:58%;min-height:2px;border-radius:4px 4px 0 0;transition:height .4s ease}
+.chart-bar.ok{background:var(--green)}
+.chart-bar.under{background:var(--red)}
+.chart-bar.empty{background:var(--border2)}
+.chart-meta-tick{position:absolute;left:6%;right:6%;height:2px;background:var(--orange);border-radius:1px;pointer-events:none}
+.chart-meta-tick::after{content:'';position:absolute;right:-2px;top:-2.5px;width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px var(--surf)}
+.chart-val{font-size:10px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
+.chart-hlabel{font-size:10px;color:var(--muted);font-weight:600}
+.chart-svg-wrap{width:100%;overflow-x:auto}
 
 /* ── Heatmap ── */
 .heatmap-section{margin-bottom:14px}
@@ -260,7 +235,6 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
 @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:900px){
   .kpi-grid{grid-template-columns:repeat(2,1fr)}
-  .two-col{grid-template-columns:1fr}
   .header{padding:0 16px}
   .content{padding:16px}
 }
@@ -347,11 +321,14 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
     </div>
   </div>
 
+  <!-- ── Turno tabs ── -->
+  <div class="turno-tabs" id="turnoTabs">
+    <span style="font-size:11px;color:var(--muted)">Aguardando dados...</span>
+  </div>
+
   <!-- ── Hour tabs + filters ── -->
   <div class="toolbar">
-    <div class="hour-tabs" id="hourTabs">
-      <span style="font-size:11px;color:var(--muted)">Aguardando dados...</span>
-    </div>
+    <div class="hour-tabs" id="hourTabs"></div>
     <div class="toolbar-right">
       <div class="tsearch-wrap">
         <svg class="tsearch-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -366,6 +343,27 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
         Mostrar todos
       </label>
     </div>
+  </div>
+
+  <!-- ── Produção por Hora (Real × Meta) ── -->
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-header-row">
+      <div>
+        <div class="panel-title" style="margin-bottom:2px">Produção por Hora — <span id="chartTurnoLbl">—</span></div>
+        <div class="table-head-sub">Real × Meta Padrão × Meta Ajustada</div>
+      </div>
+      <div class="chart-toggles" id="chartToggles">
+        <button class="tog tog-active" data-view="bars">Barras</button>
+        <button class="tog" data-view="line">Linha</button>
+        <button class="tog" data-view="table">Tabela</button>
+      </div>
+    </div>
+    <div class="chart-legend">
+      <span class="cleg"><span class="cdot" style="background:var(--green)"></span>Bateu a meta ajustada</span>
+      <span class="cleg"><span class="cdot" style="background:var(--red)"></span>Abaixo da meta ajustada</span>
+      <span class="cleg"><span class="cdot-line"></span>Meta ajustada</span>
+    </div>
+    <div id="chartBody"><div class="empty-msg">Aguardando dados...</div></div>
   </div>
 
   <!-- ── Ranking table (pivot: colaborador × hora) ── -->
@@ -385,40 +383,31 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
     </table>
   </div>
 
-  <!-- ── Distribution + Alerts ── -->
-  <div class="two-col">
-    <div class="panel">
-      <div class="panel-title">Distribuição — hora selecionada</div>
-      <div class="dist-rows">
-        <div class="dist-row">
-          <div class="dist-lbl"><span class="dist-dot bom"></span>Bom</div>
-          <div class="dist-bar"><div class="dist-fill bom" id="dbarBom" style="width:0%"></div></div>
-          <span class="dist-n" id="dnBom">—</span>
-          <span class="dist-p bom" id="dpBom">—</span>
-        </div>
-        <div class="dist-row">
-          <div class="dist-lbl"><span class="dist-dot ok"></span>OK</div>
-          <div class="dist-bar"><div class="dist-fill ok" id="dbarOk" style="width:0%"></div></div>
-          <span class="dist-n" id="dnOk">—</span>
-          <span class="dist-p ok" id="dpOk">—</span>
-        </div>
-        <div class="dist-row">
-          <div class="dist-lbl"><span class="dist-dot ruim"></span>Ruim</div>
-          <div class="dist-bar"><div class="dist-fill ruim" id="dbarRuim" style="width:0%"></div></div>
-          <span class="dist-n" id="dnRuim">—</span>
-          <span class="dist-p ruim" id="dpRuim">—</span>
-        </div>
+  <!-- ── Distribution ── -->
+  <div class="panel" style="max-width:520px">
+    <div class="panel-title">Distribuição — hora selecionada</div>
+    <div class="dist-rows">
+      <div class="dist-row">
+        <div class="dist-lbl"><span class="dist-dot bom"></span>Bom</div>
+        <div class="dist-bar"><div class="dist-fill bom" id="dbarBom" style="width:0%"></div></div>
+        <span class="dist-n" id="dnBom">—</span>
+        <span class="dist-p bom" id="dpBom">—</span>
       </div>
-      <div class="dist-total" id="distTotal"></div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">Alertas — hora selecionada</div>
-      <div class="alert-list" id="alertList">
-        <div class="empty-msg" style="padding:16px">—</div>
+      <div class="dist-row">
+        <div class="dist-lbl"><span class="dist-dot ok"></span>OK</div>
+        <div class="dist-bar"><div class="dist-fill ok" id="dbarOk" style="width:0%"></div></div>
+        <span class="dist-n" id="dnOk">—</span>
+        <span class="dist-p ok" id="dpOk">—</span>
+      </div>
+      <div class="dist-row">
+        <div class="dist-lbl"><span class="dist-dot ruim"></span>Ruim</div>
+        <div class="dist-bar"><div class="dist-fill ruim" id="dbarRuim" style="width:0%"></div></div>
+        <span class="dist-n" id="dnRuim">—</span>
+        <span class="dist-p ruim" id="dpRuim">—</span>
       </div>
     </div>
+    <div class="dist-total" id="distTotal"></div>
   </div>
-
 
 </div>
 
@@ -433,11 +422,30 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
 // ── Config ────────────────────────────────────────────────────────────────
 const REFRESH = 60_000;
 
+// ── Turnos ────────────────────────────────────────────────────────────────
+const TURNOS = {
+  T1: { hours: [6,7,8,9,10,11,12,13],    label: '06:00–14:00' },
+  T2: { hours: [14,15,16,17,18,19,20,21],label: '14:00–22:00' },
+  T3: { hours: [22,23,0,1,2,3,4,5],      label: '22:00–06:00' },
+};
+function turnoOfHour(h) {
+  if (TURNOS.T1.hours.includes(h)) return 'T1';
+  if (TURNOS.T2.hours.includes(h)) return 'T2';
+  return 'T3';
+}
+function hourOfKey(k) { return parseInt((k || '').split(' ')[1] || '0', 10); }
+function hoursInTurno(turno) {
+  return Object.keys(allHours).filter(k => turnoOfHour(hourOfKey(k)) === turno).sort();
+}
+
 // ── State ─────────────────────────────────────────────────────────────────
 let allHours   = {};
 let processed  = {};
 let timelist   = []; // [{timestamp, total}] from dashboard/list — authoritative totals
-let activeHora = null;
+let metaData   = { byHour: {} }; // { [hourNum]: { metaPadrao, metaAjustada } } from /api/productivity-meta
+let activeHora  = null;
+let activeTurno = null; // 'T1' | 'T2' | 'T3'
+let chartView   = 'bars'; // 'bars' | 'line' | 'table'
 let pivotSortCol = 'total'; // 'total' | 'name'
 let pivotSortAsc = false;
 
@@ -493,9 +501,7 @@ function processRecords(records, showAll) {
     const classe   = prod < 200 ? 'Ruim' : prod <= 500 ? 'OK' : 'Bom';
     // Anomalia: tempo < 0.5h E prod > 500
     const anomalia = wh < 0.5 && prod > 500;
-    // Problema real: Ruim E tempo alto
-    const problema = classe === 'Ruim' && wh >= 0.5;
-    return { id: o.id, name: o.name, wh, tp: o.tp, prod, classe, anomalia, problema };
+    return { id: o.id, name: o.name, wh, tp: o.tp, prod, classe, anomalia };
   }).sort((a, b) => b.prod - a.prod);
 }
 
@@ -503,18 +509,23 @@ function processRecords(records, showAll) {
 async function loadData() {
   setLoading(true);
   try {
-    const [indRes, tlRes] = await Promise.all([
+    const [indRes, tlRes, metaRes] = await Promise.all([
       fetch('/api/productivity-individual'),
       fetch('/api/productivity-timelist'),
+      fetch('/api/productivity-meta'),
     ]);
     if (!indRes.ok) throw new Error(`HTTP ${indRes.status}`);
     const data = await indRes.json();
     if (data.error) throw new Error(data.error);
 
-    // Timelist (tolera falha — não bloqueia o dashboard)
+    // Timelist e Metas (toleram falha — não bloqueiam o dashboard)
     if (tlRes.ok) {
       const tlData = await tlRes.json();
       timelist = tlData.time_list || [];
+    }
+    if (metaRes.ok) {
+      const mdData = await metaRes.json();
+      if (!mdData.error) metaData = mdData;
     }
 
     allHours = data.hours || {};
@@ -525,9 +536,20 @@ async function loadData() {
     processed = {};
     keys.forEach(k => { processed[k] = processRecords(allHours[k].records || [], showAll); });
 
-    if (!activeHora || !allHours[activeHora]) activeHora = keys[keys.length - 1];
+    // Turno ativo: turno da hora atual (se tiver dados), senão turno da última hora disponível
+    if (!activeTurno) {
+      const nowTurno = turnoOfHour(new Date().getHours());
+      activeTurno = keys.some(k => turnoOfHour(hourOfKey(k)) === nowTurno) ? nowTurno : turnoOfHour(hourOfKey(keys[keys.length - 1]));
+    }
+    let turnoKeys = hoursInTurno(activeTurno);
+    if (!turnoKeys.length) {
+      activeTurno = turnoOfHour(hourOfKey(keys[keys.length - 1]));
+      turnoKeys = hoursInTurno(activeTurno);
+    }
+    if (!activeHora || !turnoKeys.includes(activeHora)) activeHora = turnoKeys[turnoKeys.length - 1];
 
-    buildHourTabs(keys);
+    buildTurnoTabs();
+    buildHourTabs(turnoKeys);
     render();
     setStatus('ok', keys);
   } catch (e) {
@@ -539,6 +561,23 @@ async function loadData() {
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
+function buildTurnoTabs() {
+  document.getElementById('turnoTabs').innerHTML = Object.keys(TURNOS).map(t => {
+    const active = t === activeTurno;
+    return `<button class="turno-tab tt-${t}${active ? ' active' : ''}" onclick="selectTurno('${t}')">
+      <span class="turno-tab-name">${t}</span>
+      <span class="turno-tab-range">${TURNOS[t].label}</span>
+    </button>`;
+  }).join('');
+}
+function selectTurno(t) {
+  activeTurno = t;
+  const turnoKeys = hoursInTurno(t);
+  activeHora = turnoKeys[turnoKeys.length - 1] || null;
+  buildTurnoTabs();
+  buildHourTabs(turnoKeys);
+  render();
+}
 function buildHourTabs(keys) {
   document.getElementById('hourTabs').innerHTML = keys.map(k => {
     const lbl = (k.split(' ')[1] || k).substring(0, 5);
@@ -559,7 +598,7 @@ function render() {
   const view = wh05 ? all.filter(o => o.wh >= 0.5) : all;
   buildKPIs(all, view);
   buildDistribution(all);
-  buildAlerts(all);
+  buildHourChart();
   buildRankTable();
   document.getElementById('headerSub').textContent = `${activeHora} · ${all.length} operadores`;
 }
@@ -629,7 +668,7 @@ function buildKPIs(all, view) {
 
 // ── Ranking table (pivot: colaborador × hora, com coluna Total) ───────────
 function buildRankTable() {
-  const hours = Object.keys(allHours).sort();
+  const hours = hoursInTurno(activeTurno);
   const wh05  = document.getElementById('chkWh05').checked;
   const q     = (document.getElementById('opSearch').value || '').trim().toLowerCase();
 
@@ -713,42 +752,121 @@ function buildDistribution(all) {
   document.getElementById('distTotal').textContent = `Total: ${t} operadores na hora selecionada`;
 }
 
-// ── Alerts ────────────────────────────────────────────────────────────────
-function buildAlerts(all) {
-  const alerts = [];
-  // Problema real: Ruim + alto tempo
-  all.filter(o => o.problema).forEach(o => {
-    alerts.push({
-      type: 'problema',
-      icon: `<svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
-      name: o.name,
-      meta: `Prod: ${fmt(o.prod)} itens/h · Tempo: ${toHHMM(o.wh)} · ${o.id} — baixa produtividade com tempo elevado`,
-    });
-  });
-  // Anomalia: alto prod + baixo tempo
-  all.filter(o => o.anomalia).forEach(o => {
-    alerts.push({
-      type: 'anomalia',
-      icon: `<svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-      name: o.name,
-      meta: `Prod: ${fmt(o.prod)} itens/h · Tempo: ${toHHMM(o.wh)} · ${o.id} — alta produtividade com tempo baixo`,
-    });
+// ── Produção por Hora (Real × Meta) ────────────────────────────────────────
+function realForHourKey(k) {
+  const [datePart, timePart] = (k || '').split(' ');
+  if (datePart && timePart && timelist.length) {
+    const ts = Math.floor(new Date(`${datePart}T${timePart}:00`).getTime() / 1000);
+    const entry = timelist.find(t => t.timestamp === ts);
+    if (entry) return entry.total;
+  }
+  return (processed[k] || []).reduce((s, o) => s + o.tp, 0);
+}
+
+function buildHourChart() {
+  const turnoKeys = hoursInTurno(activeTurno);
+  const rows = turnoKeys.map(k => {
+    const hourNum = hourOfKey(k);
+    const meta = metaData.byHour?.[hourNum] || {};
+    return {
+      key: k,
+      label: String(hourNum).padStart(2, '0') + 'H',
+      real: realForHourKey(k),
+      metaPadrao: meta.metaPadrao || 0,
+      metaAjustada: meta.metaAjustada || 0,
+    };
   });
 
-  const el = document.getElementById('alertList');
-  if (!alerts.length) {
-    el.innerHTML = `<div class="empty-msg" style="padding:20px;font-size:11px">Sem alertas nesta hora ✓</div>`;
+  document.getElementById('chartTurnoLbl').textContent = `${activeTurno || '—'} · ${TURNOS[activeTurno]?.label || ''}`;
+
+  if (!rows.length) {
+    document.getElementById('chartBody').innerHTML = `<div class="empty-msg">Sem dados para este turno</div>`;
     return;
   }
-  el.innerHTML = alerts.map(a => `
-    <div class="alert-item ${a.type}">
-      ${a.icon}
-      <div class="alert-body">
-        <div class="alert-name">${esc(a.name)}</div>
-        <div class="alert-meta">${a.meta}</div>
-      </div>
-    </div>`).join('');
+  if (chartView === 'bars')      renderChartBars(rows);
+  else if (chartView === 'line') renderChartLine(rows);
+  else                            renderChartTable(rows);
 }
+
+function renderChartBars(rows) {
+  const maxVal = Math.max(1, ...rows.map(r => Math.max(r.real, r.metaAjustada, r.metaPadrao)));
+  document.getElementById('chartBody').innerHTML = `<div class="chart-bars">${rows.map(r => {
+    const h     = Math.round(r.real / maxVal * 100);
+    const metaH = Math.round(r.metaAjustada / maxVal * 100);
+    const cls   = r.real === 0 ? 'empty' : (r.metaAjustada > 0 && r.real >= r.metaAjustada) ? 'ok' : 'under';
+    return `<div class="chart-col" title="${r.label} · Real ${fmt(r.real)} · Meta Ajustada ${fmt(r.metaAjustada)}">
+      <span class="chart-val">${fmt(r.real)}</span>
+      <div class="chart-bar-area">
+        <div class="chart-bar ${cls}" style="height:${h}%"></div>
+        ${r.metaAjustada > 0 ? `<div class="chart-meta-tick" style="bottom:${metaH}%"></div>` : ''}
+      </div>
+      <span class="chart-hlabel">${r.label}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderChartLine(rows) {
+  const W = Math.max(560, rows.length * 70);
+  const H = 220, padL = 42, padR = 16, padT = 16, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...rows.map(r => Math.max(r.real, r.metaAjustada, r.metaPadrao)));
+  const x = i => padL + (rows.length <= 1 ? plotW / 2 : (i / (rows.length - 1)) * plotW);
+  const y = v => padT + plotH - (v / maxVal) * plotH;
+
+  const realPts = rows.map((r, i) => `${x(i)},${y(r.real)}`).join(' ');
+  const metaPts = rows.map((r, i) => `${x(i)},${y(r.metaAjustada)}`).join(' ');
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const gy = padT + plotH * (1 - f);
+    return `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="var(--border)" stroke-width="1"/>
+      <text x="${padL - 8}" y="${gy + 3}" font-size="9" fill="var(--muted)" text-anchor="end">${fmt(Math.round(maxVal * f))}</text>`;
+  }).join('');
+
+  const dots     = rows.map((r, i) => `<circle cx="${x(i)}" cy="${y(r.real)}" r="3.5" fill="${r.metaAjustada > 0 && r.real >= r.metaAjustada ? 'var(--green)' : 'var(--red)'}"/>`).join('');
+  const metaDots = rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${x(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('');
+  const labels   = rows.map((r, i) => `<text x="${x(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%">
+    ${gridLines}
+    <polyline points="${metaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="4 3"/>
+    <polyline points="${realPts}" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+    ${metaDots}${dots}${labels}
+  </svg>`;
+  document.getElementById('chartBody').innerHTML = `<div class="chart-svg-wrap">${svg}</div>`;
+}
+
+function renderChartTable(rows) {
+  document.getElementById('chartBody').innerHTML = `<div class="heatmap-wrap" style="max-height:340px">
+    <table class="hm-t" style="min-width:0">
+      <thead><tr>
+        <th style="text-align:left">Hora</th>
+        <th>Real</th><th>Meta Padrão</th><th>Meta Ajustada</th><th>Aderência</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => {
+          const ader = r.metaAjustada > 0 ? Math.round(r.real / r.metaAjustada * 100) : 0;
+          const cls  = r.real === 0 ? 'hm-empty' : ader >= 100 ? 'hm-bom' : ader >= 80 ? 'hm-ok' : 'hm-ruim';
+          return `<tr>
+            <td style="text-align:left">${r.label}</td>
+            <td>${fmt(r.real)}</td>
+            <td>${fmt(r.metaPadrao)}</td>
+            <td>${fmt(r.metaAjustada)}</td>
+            <td class="${cls}">${ader}%</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ── Chart view toggle ────────────────────────────────────────────────────
+document.getElementById('chartToggles').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tog');
+  if (!btn) return;
+  chartView = btn.dataset.view;
+  document.querySelectorAll('#chartToggles .tog').forEach(b => b.classList.toggle('tog-active', b === btn));
+  buildHourChart();
+});
 
 // ── Filters ───────────────────────────────────────────────────────────────
 document.getElementById('chkWh05').addEventListener('change', render);

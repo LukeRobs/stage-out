@@ -552,6 +552,53 @@
     }
     return result;
   }
+  // ── Meta sheet (Meta Padrão / Meta Ajustada por hora, aba Visual) ──────
+  const META_SPREADSHEET_ID = '1aewkoRSoFqzTDPq1mxl7r0chDnsirihHrdBtLkowHLo';
+  const META_RANGE          = 'Visual!I1:L40';
+  const META_TTL            = 5 * 60 * 1000; // 5 min
+  let   metaCache            = null;
+  let   metaFetchedAt        = 0;
+
+  function parsePtNumber(s) {
+    if (s === undefined || s === null || s === '') return 0;
+    return parseFloat(String(s).trim().replace(/\./g, '').replace(',', '.')) || 0;
+  }
+
+  async function getMetaData() {
+    if (metaCache && Date.now() - metaFetchedAt < META_TTL) return metaCache;
+    if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+
+    const token = await getServiceAccountToken();
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${META_SPREADSHEET_ID}/values/${encodeURIComponent(META_RANGE)}`;
+    const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
+
+    const raw  = await resp.json();
+    const rows = raw.values || [];
+
+    // Coluna I = Hora, J = Meta Padrão, K = Meta Ajustada Lin, L = Processamento Hora
+    const headerIdx = rows.findIndex(r => (r[0] || '').trim().toLowerCase() === 'hora');
+    const dataRows  = headerIdx >= 0 ? rows.slice(headerIdx + 1) : [];
+
+    const byHour = {};
+    dataRows.forEach(r => {
+      const h = parseInt(r[0], 10);
+      if (Number.isNaN(h)) return;
+      byHour[h] = {
+        hora:         h,
+        metaPadrao:   parsePtNumber(r[1]),
+        metaAjustada: parsePtNumber(r[2]),
+      };
+    });
+
+    const result = { byHour, fetchedAt: Date.now() };
+    if (Object.keys(byHour).length > 0) {
+      metaCache     = result;
+      metaFetchedAt = Date.now();
+    }
+    return result;
+  }
+
   // ── Cage map + sacas (calculados pelo Tampermonkey via SPX cage API) ───
   let cageMapCache = null; // { cageMap: { CG001: OUT-185 }, byArea: { OUT-185: { sacas, cages } }, fetchedAt }
   async function forceSaveToSheets() {
@@ -1244,6 +1291,26 @@
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
         }
       });
+      return;
+    }
+
+    // GET /api/productivity-meta — metas por hora (aba Visual)
+    if (urlPath === '/api/productivity-meta') {
+      if (!SERVICE_ACCOUNT) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Service Account não configurado — configure GOOGLE_SERVICE_ACCOUNT no Render' }));
+        return;
+      }
+      getMetaData()
+        .then(data => {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+          res.end(JSON.stringify(data));
+        })
+        .catch(err => {
+          console.error('[productivity-meta] Erro:', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
       return;
     }
 
