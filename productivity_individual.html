@@ -437,6 +437,21 @@ function hourOfKey(k) { return parseInt((k || '').split(' ')[1] || '0', 10); }
 function hoursInTurno(turno) {
   return Object.keys(allHours).filter(k => turnoOfHour(hourOfKey(k)) === turno).sort();
 }
+// Chave "YYYY-MM-DD HH:00" a partir de um timestamp da timelist
+function timelistKey(ts) {
+  const d = new Date(ts * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
+}
+// Horas de um turno = união de horas com dado por operador (allHours) + horas com
+// total real na timelist — cobre o caso em que a timelist já tem a hora mas o
+// coletor por operador ainda não postou (ex: início de hora/turno)
+function turnoHourKeys(turno) {
+  const fromIndividual = Object.keys(allHours);
+  const fromTimelist   = timelist.map(t => timelistKey(t.timestamp));
+  const merged = [...new Set([...fromIndividual, ...fromTimelist])];
+  return merged.filter(k => turnoOfHour(hourOfKey(k)) === turno).sort();
+}
 
 // ── State ─────────────────────────────────────────────────────────────────
 let allHours   = {};
@@ -529,29 +544,32 @@ async function loadData() {
     }
 
     allHours = data.hours || {};
-    const keys = Object.keys(allHours).sort();
-    if (!keys.length) throw new Error('Sem dados');
+    const keys = Object.keys(allHours).sort(); // horas com dado por operador
 
     const showAll = document.getElementById('chkShowAll').checked;
     processed = {};
     keys.forEach(k => { processed[k] = processRecords(allHours[k].records || [], showAll); });
 
+    // Todas as horas conhecidas (por operador ∪ timelist) — usado p/ escolher o turno ativo
+    const knownKeys = [...new Set([...keys, ...timelist.map(t => timelistKey(t.timestamp))])].sort();
+    if (!knownKeys.length) throw new Error('Sem dados');
+
     // Turno ativo: turno da hora atual (se tiver dados), senão turno da última hora disponível
     if (!activeTurno) {
       const nowTurno = turnoOfHour(new Date().getHours());
-      activeTurno = keys.some(k => turnoOfHour(hourOfKey(k)) === nowTurno) ? nowTurno : turnoOfHour(hourOfKey(keys[keys.length - 1]));
+      activeTurno = knownKeys.some(k => turnoOfHour(hourOfKey(k)) === nowTurno) ? nowTurno : turnoOfHour(hourOfKey(knownKeys[knownKeys.length - 1]));
     }
-    let turnoKeys = hoursInTurno(activeTurno);
+    let turnoKeys = turnoHourKeys(activeTurno);
     if (!turnoKeys.length) {
-      activeTurno = turnoOfHour(hourOfKey(keys[keys.length - 1]));
-      turnoKeys = hoursInTurno(activeTurno);
+      activeTurno = turnoOfHour(hourOfKey(knownKeys[knownKeys.length - 1]));
+      turnoKeys = turnoHourKeys(activeTurno);
     }
     if (!activeHora || !turnoKeys.includes(activeHora)) activeHora = turnoKeys[turnoKeys.length - 1];
 
     buildTurnoTabs();
     buildHourTabs(turnoKeys);
     render();
-    setStatus('ok', keys);
+    setStatus('ok', knownKeys);
   } catch (e) {
     setStatus('err', null, e.message);
     document.getElementById('headerSub').textContent = 'Erro ao carregar dados';
@@ -572,7 +590,7 @@ function buildTurnoTabs() {
 }
 function selectTurno(t) {
   activeTurno = t;
-  const turnoKeys = hoursInTurno(t);
+  const turnoKeys = turnoHourKeys(t);
   activeHora = turnoKeys[turnoKeys.length - 1] || null;
   buildTurnoTabs();
   buildHourTabs(turnoKeys);
@@ -592,8 +610,10 @@ function selectHora(h) {
 
 // ── Render ────────────────────────────────────────────────────────────────
 function render() {
-  if (!activeHora || !processed[activeHora]) return;
-  const all  = processed[activeHora];
+  if (!activeHora) return;
+  // processed[activeHora] pode não existir ainda quando a hora só tem total na
+  // timelist (coletor por operador não postou essa hora) — trata como 0 operadores
+  const all  = processed[activeHora] || [];
   const wh05 = document.getElementById('chkWh05').checked;
   const view = wh05 ? all.filter(o => o.wh >= 0.5) : all;
   buildKPIs(all, view);
@@ -764,7 +784,7 @@ function realForHourKey(k) {
 }
 
 function buildHourChart() {
-  const turnoKeys = hoursInTurno(activeTurno);
+  const turnoKeys = turnoHourKeys(activeTurno);
   const rows = turnoKeys.map(k => {
     const hourNum = hourOfKey(k);
     const meta = metaData.byHour?.[hourNum] || {};
