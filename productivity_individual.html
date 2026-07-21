@@ -47,7 +47,7 @@
   --border2:  #e8e8f4;
   --text:     #0c0c1e;
   --text2:    #4a4a6a;
-  --muted:    #9090a8;
+  --muted:    #6e6e89;
   --green:    #059669;
   --yellow:   #d97706;
   --red:      #dc2626;
@@ -89,27 +89,25 @@ button{font-family:var(--font);cursor:pointer}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── Content ── */
-.content{padding:20px 24px;max-width:1520px;margin:0 auto}
+.content{padding:20px 32px;max-width:2200px;margin:0 auto}
 
 /* ── KPI grid ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
-.kpi-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;transition:border-color .2s}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.kpi-card.k-blue::before{background:var(--blue)}
-.kpi-card.k-green::before{background:var(--green)}
-.kpi-card.k-yellow::before{background:var(--yellow)}
-.kpi-card.k-red::before{background:var(--red)}
-.kpi-card.k-purple::before{background:var(--purple)}
-.kpi-card.k-teal::before{background:var(--teal)}
-.kpi-card.k-orange::before{background:var(--orange)}
-.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:6px}
-.kpi-val{font-size:28px;font-weight:700;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
-.kpi-sub{font-size:10px;color:var(--text2);margin-top:5px}
-.kpi-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;margin-top:4px}
-.kpi-badge.g{background:var(--green-bg);color:var(--green)}
-.kpi-badge.y{background:var(--yellow-bg);color:var(--yellow)}
-.kpi-badge.r{background:var(--red-bg);color:var(--red)}
-.kpi-badge.p{background:var(--purple-bg);color:var(--purple)}
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:18px}
+.kpi-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border2)}
+.kpi-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-icon svg{width:16px;height:16px}
+.kpi-card.k-blue .kpi-icon{background:var(--blue-bg);color:var(--blue)}
+.kpi-card.k-green .kpi-icon{background:var(--green-bg);color:var(--green)}
+.kpi-card.k-yellow .kpi-icon{background:var(--yellow-bg);color:var(--yellow)}
+.kpi-card.k-red .kpi-icon{background:var(--red-bg);color:var(--red)}
+.kpi-card.k-purple .kpi-icon{background:var(--purple-bg);color:var(--purple)}
+.kpi-card.k-teal .kpi-icon{background:var(--teal-bg);color:var(--teal)}
+.kpi-card.k-orange .kpi-icon{background:var(--orange-bg);color:var(--orange)}
+.kpi-body{min-width:0;flex:1}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-val{font-size:26px;font-weight:700;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:10px;color:var(--text2);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ── Turno tabs ── */
 .turno-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
@@ -182,18 +180,10 @@ button{font-family:var(--font);cursor:pointer}
 .cdot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 .cdot-line{width:14px;height:2px;background:var(--orange);border-radius:1px;flex-shrink:0}
 
-.chart-bars{display:flex;align-items:flex-end;gap:8px;padding:4px 4px 0}
-.chart-col{flex:1;min-width:28px;display:flex;flex-direction:column;align-items:center;gap:6px}
-.chart-bar-area{position:relative;width:100%;height:160px;display:flex;align-items:flex-end;justify-content:center}
-.chart-bar{width:58%;min-height:2px;border-radius:4px 4px 0 0;transition:height .4s ease}
-.chart-bar.ok{background:var(--green)}
-.chart-bar.under{background:var(--red)}
-.chart-bar.empty{background:var(--border2)}
-.chart-meta-tick{position:absolute;left:6%;right:6%;height:2px;background:var(--orange);border-radius:1px;pointer-events:none}
-.chart-meta-tick::after{content:'';position:absolute;right:-2px;top:-2.5px;width:7px;height:7px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 2px var(--surf)}
-.chart-val{font-size:10px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
-.chart-hlabel{font-size:10px;color:var(--muted);font-weight:600}
 .chart-svg-wrap{width:100%;overflow-x:auto}
+.chart-svg-wrap svg{display:block;margin:0 auto}
+.chart-bar-rect{transition:height .35s ease,y .35s ease}
+.chart-empty-note{text-align:center;padding:60px 24px;color:var(--muted);font-size:12px}
 
 /* ── Heatmap ── */
 .heatmap-section{margin-bottom:14px}
@@ -285,39 +275,60 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
   <!-- ── KPI cards ── -->
   <div class="kpi-grid">
     <div class="kpi-card k-teal">
-      <div class="kpi-label">Produção da Hora</div>
-      <div class="kpi-val" id="kpiProdHora">—</div>
-      <div class="kpi-sub" id="kpiProdHoraSub">itens · hora selecionada</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Produção da Hora</div>
+        <div class="kpi-val" id="kpiProdHora">—</div>
+        <div class="kpi-sub" id="kpiProdHoraSub">itens · hora selecionada</div>
+      </div>
     </div>
     <div class="kpi-card k-orange">
-      <div class="kpi-label">Produção do Dia</div>
-      <div class="kpi-val" id="kpiProdDia">—</div>
-      <div class="kpi-sub" id="kpiProdDiaSub">itens · todas as horas</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Produção do Dia</div>
+        <div class="kpi-val" id="kpiProdDia">—</div>
+        <div class="kpi-sub" id="kpiProdDiaSub">itens · todas as horas</div>
+      </div>
     </div>
     <div class="kpi-card k-blue">
-      <div class="kpi-label">Operadores</div>
-      <div class="kpi-val" id="kpiTotal">—</div>
-      <div class="kpi-sub" id="kpiTotalSub">no ranking (wh ≥ 0.5)</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Operadores</div>
+        <div class="kpi-val" id="kpiTotal">—</div>
+        <div class="kpi-sub" id="kpiTotalSub">no ranking (wh ≥ 0.5)</div>
+      </div>
     </div>
     <div class="kpi-card k-green">
-      <div class="kpi-label">Bom</div>
-      <div class="kpi-val" id="kpiBom">—</div>
-      <div class="kpi-sub" id="kpiBomPct">Itens/hora &gt; 500</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Bom</div>
+        <div class="kpi-val" id="kpiBom">—</div>
+        <div class="kpi-sub" id="kpiBomPct">Itens/hora &gt; 500</div>
+      </div>
     </div>
     <div class="kpi-card k-yellow">
-      <div class="kpi-label">OK</div>
-      <div class="kpi-val" id="kpiOk">—</div>
-      <div class="kpi-sub" id="kpiOkPct">200 – 500 itens/hora</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">OK</div>
+        <div class="kpi-val" id="kpiOk">—</div>
+        <div class="kpi-sub" id="kpiOkPct">200 – 500 itens/hora</div>
+      </div>
     </div>
     <div class="kpi-card k-red">
-      <div class="kpi-label">Ruim</div>
-      <div class="kpi-val" id="kpiRuim">—</div>
-      <div class="kpi-sub" id="kpiRuimPct">Itens/hora &lt; 200</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Ruim</div>
+        <div class="kpi-val" id="kpiRuim">—</div>
+        <div class="kpi-sub" id="kpiRuimPct">Itens/hora &lt; 200</div>
+      </div>
     </div>
     <div class="kpi-card k-purple">
-      <div class="kpi-label">Anomalias</div>
-      <div class="kpi-val" id="kpiAnom">—</div>
-      <div class="kpi-sub">tempo &lt; 0:30 · prod &gt; 500</div>
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Anomalias</div>
+        <div class="kpi-val" id="kpiAnom">—</div>
+        <div class="kpi-sub">tempo &lt; 0:30 · prod &gt; 500</div>
+      </div>
     </div>
   </div>
 
@@ -370,7 +381,7 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
   <div class="table-head-bar">
     <div>
       <div class="table-head-title">Ranking — Operação por colaborador</div>
-      <div class="table-head-sub">Produção por hora · coluna Total = soma do turno</div>
+      <div class="table-head-sub" id="rankSub">Produção por hora · coluna Total = soma do turno</div>
     </div>
     <span class="tcount" id="rankCount"></span>
   </div>
@@ -386,27 +397,30 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
   <!-- ── Distribution ── -->
   <div class="panel" style="max-width:520px">
     <div class="panel-title">Distribuição — hora selecionada</div>
-    <div class="dist-rows">
-      <div class="dist-row">
-        <div class="dist-lbl"><span class="dist-dot bom"></span>Bom</div>
-        <div class="dist-bar"><div class="dist-fill bom" id="dbarBom" style="width:0%"></div></div>
-        <span class="dist-n" id="dnBom">—</span>
-        <span class="dist-p bom" id="dpBom">—</span>
+    <div id="distEmpty" class="empty-msg" style="display:none;padding:20px 4px">Detalhamento por colaborador ainda não chegou para esta hora — mostrando apenas o total agregado nos KPIs acima.</div>
+    <div id="distContent">
+      <div class="dist-rows">
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot bom"></span>Bom</div>
+          <div class="dist-bar"><div class="dist-fill bom" id="dbarBom" style="width:0%"></div></div>
+          <span class="dist-n" id="dnBom">—</span>
+          <span class="dist-p bom" id="dpBom">—</span>
+        </div>
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot ok"></span>OK</div>
+          <div class="dist-bar"><div class="dist-fill ok" id="dbarOk" style="width:0%"></div></div>
+          <span class="dist-n" id="dnOk">—</span>
+          <span class="dist-p ok" id="dpOk">—</span>
+        </div>
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot ruim"></span>Ruim</div>
+          <div class="dist-bar"><div class="dist-fill ruim" id="dbarRuim" style="width:0%"></div></div>
+          <span class="dist-n" id="dnRuim">—</span>
+          <span class="dist-p ruim" id="dpRuim">—</span>
+        </div>
       </div>
-      <div class="dist-row">
-        <div class="dist-lbl"><span class="dist-dot ok"></span>OK</div>
-        <div class="dist-bar"><div class="dist-fill ok" id="dbarOk" style="width:0%"></div></div>
-        <span class="dist-n" id="dnOk">—</span>
-        <span class="dist-p ok" id="dpOk">—</span>
-      </div>
-      <div class="dist-row">
-        <div class="dist-lbl"><span class="dist-dot ruim"></span>Ruim</div>
-        <div class="dist-bar"><div class="dist-fill ruim" id="dbarRuim" style="width:0%"></div></div>
-        <span class="dist-n" id="dnRuim">—</span>
-        <span class="dist-p ruim" id="dpRuim">—</span>
-      </div>
+      <div class="dist-total" id="distTotal"></div>
     </div>
-    <div class="dist-total" id="distTotal"></div>
   </div>
 
 </div>
@@ -612,19 +626,22 @@ function selectHora(h) {
 function render() {
   if (!activeHora) return;
   // processed[activeHora] pode não existir ainda quando a hora só tem total na
-  // timelist (coletor por operador não postou essa hora) — trata como 0 operadores
+  // timelist (coletor por operador não postou essa hora) — trata como sem detalhamento
+  const hasBreakdown = !!processed[activeHora];
   const all  = processed[activeHora] || [];
   const wh05 = document.getElementById('chkWh05').checked;
   const view = wh05 ? all.filter(o => o.wh >= 0.5) : all;
-  buildKPIs(all, view);
-  buildDistribution(all);
+  buildKPIs(all, view, hasBreakdown);
+  buildDistribution(all, hasBreakdown);
   buildHourChart();
   buildRankTable();
-  document.getElementById('headerSub').textContent = `${activeHora} · ${all.length} operadores`;
+  document.getElementById('headerSub').textContent = hasBreakdown
+    ? `${activeHora} · ${all.length} operadores`
+    : `${activeHora} · detalhamento por colaborador ainda não disponível`;
 }
 
 // ── KPIs ──────────────────────────────────────────────────────────────────
-function buildKPIs(all, view) {
+function buildKPIs(all, view, hasBreakdown) {
   const t    = all.length || 1;
   const bom  = all.filter(o => o.classe === 'Bom').length;
   const ok   = all.filter(o => o.classe === 'OK').length;
@@ -676,14 +693,24 @@ function buildKPIs(all, view) {
   document.getElementById('kpiProdDia').textContent     = fmt(prodDia);
   document.getElementById('kpiProdDiaSub').textContent  = prodDiaLabel;
 
-  document.getElementById('kpiTotal').textContent   = view.length;
-  document.getElementById('kpiBom').textContent     = bom;
-  document.getElementById('kpiBomPct').textContent  = `${pct(bom,t)}% de ${t} operadores`;
-  document.getElementById('kpiOk').textContent      = ok;
-  document.getElementById('kpiOkPct').textContent   = `${pct(ok,t)}% de ${t} operadores`;
-  document.getElementById('kpiRuim').textContent    = ruim;
-  document.getElementById('kpiRuimPct').textContent = `${pct(ruim,t)}% de ${t} operadores`;
-  document.getElementById('kpiAnom').textContent    = anom;
+  if (hasBreakdown) {
+    document.getElementById('kpiTotal').textContent   = view.length;
+    document.getElementById('kpiTotalSub').textContent = 'no ranking (wh ≥ 0.5)';
+    document.getElementById('kpiBom').textContent     = bom;
+    document.getElementById('kpiBomPct').textContent  = `${pct(bom,t)}% de ${all.length} operadores`;
+    document.getElementById('kpiOk').textContent      = ok;
+    document.getElementById('kpiOkPct').textContent   = `${pct(ok,t)}% de ${all.length} operadores`;
+    document.getElementById('kpiRuim').textContent    = ruim;
+    document.getElementById('kpiRuimPct').textContent = `${pct(ruim,t)}% de ${all.length} operadores`;
+    document.getElementById('kpiAnom').textContent    = anom;
+  } else {
+    // Hora só tem total agregado (timelist) — ainda sem quebra por operador
+    ['kpiTotal', 'kpiBom', 'kpiOk', 'kpiRuim', 'kpiAnom'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    document.getElementById('kpiTotalSub').textContent = 'detalhamento indisponível nesta hora';
+    document.getElementById('kpiBomPct').textContent   = 'aguardando dados';
+    document.getElementById('kpiOkPct').textContent    = 'aguardando dados';
+    document.getElementById('kpiRuimPct').textContent  = 'aguardando dados';
+  }
 }
 
 // ── Ranking table (pivot: colaborador × hora, com coluna Total) ───────────
@@ -691,6 +718,11 @@ function buildRankTable() {
   const hours = hoursInTurno(activeTurno);
   const wh05  = document.getElementById('chkWh05').checked;
   const q     = (document.getElementById('opSearch').value || '').trim().toLowerCase();
+
+  const rankSub = document.getElementById('rankSub');
+  rankSub.textContent = (activeHora && !hours.includes(activeHora))
+    ? `Produção por hora · coluna Total = soma do turno · hora ativa (${activeHora.split(' ')[1]}) ainda sem detalhamento por colaborador`
+    : 'Produção por hora · coluna Total = soma do turno';
 
   // União de operadores em todas as horas disponíveis
   const opMap = {};
@@ -753,7 +785,11 @@ function buildRankTable() {
 }
 
 // ── Distribution ──────────────────────────────────────────────────────────
-function buildDistribution(all) {
+function buildDistribution(all, hasBreakdown) {
+  document.getElementById('distEmpty').style.display   = hasBreakdown ? 'none' : '';
+  document.getElementById('distContent').style.display = hasBreakdown ? '' : 'none';
+  if (!hasBreakdown) return;
+
   const t    = all.length || 1;
   const bom  = all.filter(o => o.classe === 'Bom').length;
   const ok   = all.filter(o => o.classe === 'OK').length;
@@ -769,7 +805,7 @@ function buildDistribution(all) {
   set('dbarOk',   'dnOk',   'dpOk',   ok);
   set('dbarRuim', 'dnRuim', 'dpRuim', ruim);
 
-  document.getElementById('distTotal').textContent = `Total: ${t} operadores na hora selecionada`;
+  document.getElementById('distTotal').textContent = `Total: ${all.length} operadores na hora selecionada`;
 }
 
 // ── Produção por Hora (Real × Meta) ────────────────────────────────────────
@@ -809,20 +845,49 @@ function buildHourChart() {
 }
 
 function renderChartBars(rows) {
+  const n = rows.length;
+  const W = Math.max(560, n * 90);
+  const H = 240, padL = 46, padR = 20, padT = 26, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
   const maxVal = Math.max(1, ...rows.map(r => Math.max(r.real, r.metaAjustada, r.metaPadrao)));
-  document.getElementById('chartBody').innerHTML = `<div class="chart-bars">${rows.map(r => {
-    const h     = Math.round(r.real / maxVal * 100);
-    const metaH = Math.round(r.metaAjustada / maxVal * 100);
-    const cls   = r.real === 0 ? 'empty' : (r.metaAjustada > 0 && r.real >= r.metaAjustada) ? 'ok' : 'under';
-    return `<div class="chart-col" title="${r.label} · Real ${fmt(r.real)} · Meta Ajustada ${fmt(r.metaAjustada)}">
-      <span class="chart-val">${fmt(r.real)}</span>
-      <div class="chart-bar-area">
-        <div class="chart-bar ${cls}" style="height:${h}%"></div>
-        ${r.metaAjustada > 0 ? `<div class="chart-meta-tick" style="bottom:${metaH}%"></div>` : ''}
-      </div>
-      <span class="chart-hlabel">${r.label}</span>
-    </div>`;
-  }).join('')}</div>`;
+  const slot    = plotW / n;
+  const bw      = Math.min(48, slot * 0.5);
+  const xCenter = i => padL + slot * i + slot / 2;
+  const y       = v => padT + plotH - (v / maxVal) * plotH;
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const gy = padT + plotH * (1 - f);
+    return `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="var(--border)" stroke-width="1"/>
+      <text x="${padL - 8}" y="${gy + 3}" font-size="9" fill="var(--muted)" text-anchor="end">${fmt(Math.round(maxVal * f))}</text>`;
+  }).join('');
+
+  const bars = rows.map((r, i) => {
+    const color = r.real === 0 ? 'var(--border2)' : (r.metaAjustada > 0 && r.real >= r.metaAjustada) ? 'var(--green)' : 'var(--red)';
+    const bx = xCenter(i) - bw / 2;
+    const by = y(r.real);
+    const bh = Math.max(2, padT + plotH - by);
+    return `<rect class="chart-bar-rect" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="4" fill="${color}">
+      <title>${r.label} · Real ${fmt(r.real)}${r.metaAjustada ? ` · Meta Ajustada ${fmt(r.metaAjustada)}` : ''}</title>
+    </rect>`;
+  }).join('');
+
+  const valLabels = rows.map((r, i) => r.real > 0
+    ? `<text x="${xCenter(i)}" y="${y(r.real) - 8}" font-size="10" font-weight="700" fill="var(--text2)" text-anchor="middle">${fmt(r.real)}</text>`
+    : '').join('');
+
+  const hasMeta  = rows.some(r => r.metaAjustada > 0);
+  const metaPts  = rows.map((r, i) => `${xCenter(i)},${y(r.metaAjustada)}`).join(' ');
+  const metaLine = hasMeta
+    ? `<polyline points="${metaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="5 4"/>
+       ${rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${xCenter(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('')}`
+    : '';
+
+  const labels = rows.map((r, i) => `<text x="${xCenter(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%">
+    ${gridLines}${bars}${metaLine}${valLabels}${labels}
+  </svg>`;
+  document.getElementById('chartBody').innerHTML = `<div class="chart-svg-wrap">${svg}</div>`;
 }
 
 function renderChartLine(rows) {
