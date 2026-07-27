@@ -369,6 +369,12 @@ table.main-table tr:last-child td { border-bottom: none; }
 .t-t3 { background: rgba(34,197,94,.15);  color: #4ade80; }
 .t-other { background: rgba(139,92,246,.15); color: #a78bfa; }
 
+.perfil-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 8px;
+  font-size: 10px; font-weight: 700; font-family: monospace;
+  margin: 1px 3px 1px 0; white-space: nowrap;
+}
+
 @media (max-width: 900px)  { .panel-row { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 700px) {
   .stats { grid-template-columns: repeat(2,1fr); }
@@ -860,6 +866,7 @@ const ZONE_RGBA = {
 // ── State ──────────────────────────────────────────────────────────────
 let allAreas       = [];
 let reportData     = null;
+let profileData    = null;
 let activeZone     = 'all';
 let sortCol        = 'staging_duration_time'; // default: aging mais antigo
 let sortAsc        = false;                    // false = decrescente (maior aging primeiro)
@@ -1332,6 +1339,25 @@ function turnoTag(t) {
   return `<span class="turno-tag ${cls}">${t || '—'}</span>`;
 }
 
+// ── Perfil de pacote (aba "db") ──────────────────────────────────────────
+const PERFIL_DEFS = [
+  { key: 'pp',          label: 'PP', color: '#3b82f6' },
+  { key: 'p',           label: 'P',  color: '#22c55e' },
+  { key: 'm',           label: 'M',  color: '#f59e0b' },
+  { key: 'g',           label: 'G',  color: '#ee4d2d' },
+  { key: 'bulky',       label: 'BK', color: '#8b5cf6' },
+  { key: 'ultra_bulky', label: 'UB', color: '#ef4444' },
+  { key: 'sem_perfil',  label: 'SP', color: '#6b7280' },
+];
+function renderPerfilBadges(to) {
+  const rec = profileData?.byTO?.[to];
+  if (!rec) return '<span style="color:var(--muted);font-size:10px">—</span>';
+  const parts = PERFIL_DEFS
+    .filter(d => (rec[d.key] || 0) > 0)
+    .map(d => `<span class="perfil-badge" style="background:${d.color}22;color:${d.color};border:1px solid ${d.color}44">${d.label} ${rec[d.key]}</span>`);
+  return parts.length ? parts.join('') : '<span style="color:var(--muted);font-size:10px">—</span>';
+}
+
 // ── Expanded TOs sub-table ─────────────────────────────────────────────
 function renderTosSub(areaName) {
   const tos = reportData?.byAreaTOs?.[areaName];
@@ -1355,6 +1381,7 @@ function renderTosSub(areaName) {
       <td style="font-family:monospace">${fmtDurH(t.aging_h)}</td>
       <td style="color:var(--muted)">${t.hora_end}</td>
       <td>${turnoTag(t.turno)}</td>
+      <td>${renderPerfilBadges(t.to)}</td>
     </tr>`;
   }).join('');
 
@@ -1366,7 +1393,7 @@ function renderTosSub(areaName) {
   return `<div class="expand-inner">
     ${matchNote}
     <table class="tos-subtable">
-      <thead><tr><th>TO</th><th style="text-align:center">Pacotes</th><th>Aging</th><th>Hora End.</th><th>Turno</th></tr></thead>
+      <thead><tr><th>TO</th><th style="text-align:center">Pacotes</th><th>Aging</th><th>Hora End.</th><th>Turno</th><th>Perfil</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>`;
@@ -2242,9 +2269,10 @@ function render() {
 // ── Load data ──────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [stageRes, reportRes] = await Promise.all([
+    const [stageRes, reportRes, profileRes] = await Promise.all([
       fetch('/api/stage-in'),
       fetch('/api/report-data').catch(() => null),
+      fetch('/api/profile-data').catch(() => null),
     ]);
 
     if (!stageRes.ok) return;
@@ -2259,6 +2287,11 @@ async function loadData() {
       // Só usa o resultado se tiver dados reais (rowCount > 0)
       // Evita sobrescrever dados válidos com resultado vazio durante recálculo da planilha
       if (rd && !rd.error && (rd.rowCount ?? 1) > 0) reportData = rd;
+    }
+
+    if (profileRes?.ok) {
+      const pd = await profileRes.json().catch(() => null);
+      if (pd && !pd.error && (pd.rowCount ?? 1) > 0) profileData = pd;
     }
 
     const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });

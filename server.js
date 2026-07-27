@@ -552,6 +552,68 @@
     }
     return result;
   }
+  // ── Profile sheet (perfil de pacote por TO, aba "db") ──────────────────
+  const PROFILE_SPREADSHEET_ID = '16do3FeFUI32Zp4asu5u_iMd1fp0Wt2XADBwBhgRr8Ik';
+  const PROFILE_RANGE          = 'db!A:R';
+  const PROFILE_TTL            = 5 * 60 * 1000; // 5 min
+  let   profileCache           = null;
+  let   profileFetchedAt       = 0;
+
+  async function getProfileData() {
+    if (profileCache && Date.now() - profileFetchedAt < PROFILE_TTL) return profileCache;
+    if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+
+    const token = await getServiceAccountToken();
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${PROFILE_SPREADSHEET_ID}/values/${encodeURIComponent(PROFILE_RANGE)}`;
+    const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
+
+    const raw  = await resp.json();
+    const rows = (raw.values || []).slice(1); // pula cabeçalho
+
+    // Colunas: A=mapping_item_number, B=staging_area_id, C=staging_area_name,
+    // D=group_name, E=staging_group_id, F=station_code, G=aging_hours,
+    // H=aging_cluster, I=aging_cluster_looker, J=num_packs_in_staging,
+    // K=last_update, L=num_packs_sem_perfil, M=num_packs_pp, N=num_packs_p,
+    // O=num_packs_m, P=num_packs_g, Q=num_packs_bulky, R=num_packs_ultra_bulky
+    const byTO = {};
+    rows.forEach(r => {
+      const to = (r[0] || '').trim();
+      if (!to) return;
+      byTO[to] = {
+        staging_area_id:      r[1]  || '',
+        staging_area_name:    (r[2] || '').trim(),
+        group_name:           (r[3] || '').trim(),
+        staging_group_id:     r[4]  || '',
+        station_code:         r[5]  || '',
+        aging_hours:          parseFloat(r[6]) || 0,
+        aging_cluster:        r[7]  || '',
+        aging_cluster_looker: r[8]  || '',
+        num_packs_in_staging: parseInt(r[9], 10)  || 0,
+        last_update:          r[10] || '',
+        sem_perfil:           parseInt(r[11], 10) || 0,
+        pp:                   parseInt(r[12], 10) || 0,
+        p:                    parseInt(r[13], 10) || 0,
+        m:                    parseInt(r[14], 10) || 0,
+        g:                    parseInt(r[15], 10) || 0,
+        bulky:                parseInt(r[16], 10) || 0,
+        ultra_bulky:          parseInt(r[17], 10) || 0,
+      };
+    });
+
+    const result = { byTO, rowCount: rows.length, fetchedAt: Date.now() };
+    console.log(`[profile] ${rows.length} linhas lidas — ${Object.keys(byTO).length} TOs com perfil`);
+
+    // Só cacheia se tiver dados reais — mesmo motivo do getReportData()
+    if (rows.length > 0) {
+      profileCache     = result;
+      profileFetchedAt = Date.now();
+    } else {
+      console.warn('[profile] rowCount=0 — resultado não cacheado, próxima req tentará novamente');
+    }
+    return result;
+  }
+
   // ── Meta sheet (Meta Padrão / Meta Ajustada por hora, aba Visual) ──────
   const META_SPREADSHEET_ID = '1aewkoRSoFqzTDPq1mxl7r0chDnsirihHrdBtLkowHLo';
   const META_RANGE          = 'Visual!I1:L40';
@@ -963,6 +1025,26 @@
         })
         .catch(err => {
           console.error('[report] Erro:', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
+      return;
+    }
+
+    // GET /api/profile-data — serves package profile breakdown per TO (aba "db")
+    if (urlPath === '/api/profile-data') {
+      if (!SERVICE_ACCOUNT) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Service Account não configurado — configure GOOGLE_SERVICE_ACCOUNT no Render' }));
+        return;
+      }
+      getProfileData()
+        .then(data => {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+          res.end(JSON.stringify(data));
+        })
+        .catch(err => {
+          console.error('[profile] Erro:', err.message);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
         });
