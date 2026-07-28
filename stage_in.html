@@ -601,6 +601,15 @@ table.main-table tr:last-child td { border-bottom: none; }
   </div>
 </div>
 
+<!-- Visão por Perfil de Pacote -->
+<div class="section" id="perfilSection" style="display:none">
+  <div class="section-label">Visão por Perfil de Pacote</div>
+  <div class="zone-cards" id="perfilCards"></div>
+  <div class="crosstab-wrap">
+    <table class="crosstab" id="perfilCrosstabTable"></table>
+  </div>
+</div>
+
 <!-- Visão SPP · Todas as zonas (somente aba TODAS) -->
 <div id="sppView" style="display:none;padding:0 24px 14px">
   <div class="section-label" style="margin-bottom:10px">Distribuição por SPP · Todas as Zonas</div>
@@ -1162,6 +1171,100 @@ function buildZonaSection(areas) {
     <thead><tr><th>Faixa Aging</th>${zoneHeaders}<th class="col-total">Total</th>${hasTOData ? '<th class="col-total">SPP</th>' : ''}</tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td>${hasTOData ? (() => { const gt = tosBins.reduce((s,v) => s+v, 0); return `<td class="total-cell">${gt > 0 ? Math.round(grandTotal / gt) : '—'}</td>`; })() : ''}</tr></tfoot>`;
+}
+
+// ── Visão por Perfil de Pacote ──────────────────────────────────────────
+const PERFIL_ORDER = [
+  { key: 'sem_perfil',  label: 'Sem Perfil',  color: '#6b7280' },
+  { key: 'pp',          label: 'PP',          color: '#3b82f6' },
+  { key: 'p',           label: 'P',           color: '#22c55e' },
+  { key: 'm',           label: 'M',           color: '#f59e0b' },
+  { key: 'g',           label: 'G',           color: '#ee4d2d' },
+  { key: 'bulky',       label: 'Bulky',       color: '#8b5cf6' },
+  { key: 'ultra_bulky', label: 'Ultra Bulky', color: '#ef4444' },
+];
+
+function buildPerfilSection() {
+  const section = document.getElementById('perfilSection');
+  const recsAll = profileData?.byTO ? Object.values(profileData.byTO) : [];
+  if (!recsAll.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  // Respeita a aba de zona ativa (mesmo filtro usado na Visão por Zona)
+  const zoneFilter = activeZone !== 'all' ? activeZone : null;
+  const recs = zoneFilter ? recsAll.filter(r => r.group_name === zoneFilter) : recsAll;
+
+  // KPI cards — perfil geral (ou da zona filtrada)
+  const totals = {};
+  PERFIL_ORDER.forEach(d => { totals[d.key] = 0; });
+  recs.forEach(r => PERFIL_ORDER.forEach(d => { totals[d.key] += (r[d.key] || 0); }));
+  const grandTotal = PERFIL_ORDER.reduce((s, d) => s + totals[d.key], 0);
+
+  document.getElementById('perfilCards').innerHTML = PERFIL_ORDER.map(d => {
+    const v   = totals[d.key];
+    const pct = grandTotal ? (v / grandTotal * 100).toFixed(1) : '0.0';
+    return `
+      <div class="zone-card" style="border-top-color:${d.color}">
+        <div class="zone-card-label" style="color:${d.color}">${d.label}</div>
+        <div class="zone-card-value" style="color:${d.color}">${v.toLocaleString('pt-BR')}</div>
+        <div class="zone-card-meta"><span>${pct}% do total</span></div>
+      </div>`;
+  }).join('');
+
+  // Crosstab: linhas = perfil, colunas = zonas
+  const zoneNames = [...new Set(recs.map(r => r.group_name).filter(Boolean))].sort();
+  const counts = PERFIL_ORDER.map(() => {
+    const row = {};
+    zoneNames.forEach(z => { row[z] = 0; });
+    return row;
+  });
+  const colTotals = {};
+  zoneNames.forEach(z => { colTotals[z] = 0; });
+  recs.forEach(r => {
+    const z = r.group_name;
+    if (!z) return;
+    PERFIL_ORDER.forEach((d, i) => {
+      const v = r[d.key] || 0;
+      counts[i][z]  += v;
+      colTotals[z]  += v;
+    });
+  });
+  const colMax = {};
+  zoneNames.forEach(z => { colMax[z] = Math.max(...counts.map(row => row[z] || 0), 1); });
+
+  const zoneHeaders = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<th class="col-zone" style="color:rgb(${rgb.join(',')})">
+      ${zoneShort(z)}<span class="sub">(${(colTotals[z]||0).toLocaleString('pt-BR')} pcts)</span>
+    </th>`;
+  }).join('');
+
+  const rows = PERFIL_ORDER.map((d, i) => {
+    const rowTotal = zoneNames.reduce((s, z) => s + (counts[i][z] || 0), 0);
+    const cells = zoneNames.map(z => {
+      const v   = counts[i][z] || 0;
+      const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+      const bg  = v > 0 ? `background:rgba(${rgb.join(',')},${(v / colMax[z] * 0.55 + 0.06).toFixed(2)})` : '';
+      return `<td class="zone-cell">
+        <span class="cell-inner ${v === 0 ? 'cell-zero' : ''}" style="${bg}">
+          ${v > 0 ? v.toLocaleString('pt-BR') : '—'}
+        </span>
+      </td>`;
+    }).join('');
+    return `<tr><td class="faixa" style="color:${d.color};font-weight:600">${d.label}</td>${cells}<td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td></tr>`;
+  }).join('');
+
+  const totalCells = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<td class="zone-cell" style="color:rgb(${rgb.join(',')});font-weight:800;text-align:center">
+      ${(colTotals[z]||0).toLocaleString('pt-BR')}
+    </td>`;
+  }).join('');
+
+  document.getElementById('perfilCrosstabTable').innerHTML = `
+    <thead><tr><th>Perfil</th>${zoneHeaders}<th class="col-total">Total</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td></tr></tfoot>`;
 }
 
 // ── Top 5 ──────────────────────────────────────────────────────────────
@@ -2254,6 +2357,7 @@ function render() {
   } else {
     updateStats(areas);
     buildZonaSection(areas);
+    buildPerfilSection();
     buildSPPView();
     buildTop5(areas);
     buildOccByZone(areas);
