@@ -708,6 +708,12 @@ table.main-table tr:last-child td { border-bottom: none; }
     <div class="section-label">Histograma por Faixa de Aging</div>
     <div id="vAgingHist" style="padding:8px 0"></div>
   </div>
+
+  <!-- Perfil de pacote · Zona Volumoso -->
+  <div class="section" id="vPerfilSection" style="display:none">
+    <div class="section-label">Perfil de Pacote · Zona Volumoso</div>
+    <div class="zone-cards" id="vPerfilCards"></div>
+  </div>
 </div>
 
 <div id="detailSection">
@@ -2070,6 +2076,33 @@ function buildVolumoso() {
         <span style="font-size:12px;font-weight:600;color:${pct>0?color:'var(--muted)'};text-align:right">${pct > 0 ? pct+'%' : '—'}</span>
       </div>`;
     }).join('') + `</div>`;
+
+  buildVolPerfilCards();
+}
+
+// ── Perfil de pacote · Zona Volumoso ────────────────────────────────────
+function buildVolPerfilCards() {
+  const section = document.getElementById('vPerfilSection');
+  const recs = (profileData?.byTO ? Object.values(profileData.byTO) : [])
+    .filter(r => zoneKey(r.group_name) === 'volumoso');
+  if (!recs.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const totals = {};
+  PERFIL_ORDER.forEach(d => { totals[d.key] = 0; });
+  recs.forEach(r => PERFIL_ORDER.forEach(d => { totals[d.key] += (r[d.key] || 0); }));
+  const grandTotal = PERFIL_ORDER.reduce((s, d) => s + totals[d.key], 0);
+
+  document.getElementById('vPerfilCards').innerHTML = PERFIL_ORDER.map(d => {
+    const v   = totals[d.key];
+    const pct = grandTotal ? (v / grandTotal * 100).toFixed(1) : '0.0';
+    return `
+      <div class="zone-card" style="border-top-color:${d.color}">
+        <div class="zone-card-label" style="color:${d.color}">${d.label}</div>
+        <div class="zone-card-value" style="color:${d.color}">${v.toLocaleString('pt-BR')}</div>
+        <div class="zone-card-meta"><span>${pct}% do total</span></div>
+      </div>`;
+  }).join('');
 }
 
 // ── Aging Criticality Panel ───────────────────────────────────────────
