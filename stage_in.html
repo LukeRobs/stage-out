@@ -604,6 +604,9 @@ table.main-table tr:last-child td { border-bottom: none; }
 <!-- Visão por Perfil de Pacote -->
 <div class="section" id="perfilSection" style="display:none">
   <div class="section-label">Visão por Perfil de Pacote</div>
+  <div id="perfilNoData" style="display:none;color:var(--muted);font-size:12px;padding:14px 0">
+    Esta zona não possui classificação de perfil de pacote (PP/P/M/G/Bulky) na planilha de origem.
+  </div>
   <div class="zone-cards" id="perfilCards"></div>
   <div class="crosstab-wrap">
     <table class="crosstab" id="perfilCrosstabTable"></table>
@@ -1205,6 +1208,13 @@ function buildPerfilSection() {
   // Respeita a aba de zona ativa (mesmo filtro usado na Visão por Zona)
   const zoneFilter = activeZone !== 'all' ? activeZone : null;
   const recs = zoneFilter ? recsAll.filter(r => normZoneName(r.group_name) === normZoneName(zoneFilter)) : recsAll;
+
+  // Zona sem classificação de perfil na planilha de origem (ex: LMH) — mostra aviso em vez de cards zerados
+  const noData = zoneFilter && !recs.length;
+  document.getElementById('perfilNoData').style.display = noData ? '' : 'none';
+  document.getElementById('perfilCards').style.display   = noData ? 'none' : '';
+  document.getElementById('perfilCrosstabTable').closest('.crosstab-wrap').style.display = noData ? 'none' : '';
+  if (noData) return;
 
   // KPI cards — perfil geral (ou da zona filtrada)
   const totals = {};
