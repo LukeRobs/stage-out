@@ -833,6 +833,9 @@ function zoneKey(name) {
 function zoneCardClass(name) { return 'zc-' + zoneKey(name); }
 function zonePillClass(name) { return 'zone-' + zoneKey(name); }
 function zoneShort(name)     { return (name || '').replace('ZONA ', '').trim() || '—'; }
+// Normaliza nome de zona para comparação entre planilhas que usam grafias
+// diferentes (ex: "ZONA LMH" no staging vs "LMH" na planilha de perfil).
+function normZoneName(name)  { return (name || '').replace(/^ZONA\s+/i, '').trim().toUpperCase(); }
 function cleanOp(s) {
   return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
 }
@@ -985,7 +988,10 @@ function updateStats(areas) {
   document.getElementById('sAvgAging').textContent    = avgAging ? fmtDur(Math.round(avgAging)) : '—';
 
   if (reportData) {
-    const totalPac = Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
+    const zoneFilter = activeZone !== 'all' ? activeZone : null;
+    const totalPac = zoneFilter
+      ? (getReportZone(zoneFilter)?.pacotes || 0)
+      : Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
     document.getElementById('sTotalPacotes').textContent = totalPac.toLocaleString('pt-BR');
 
     const avgTO = totalTOs > 0 ? Math.round(totalPac / totalTOs) : null;
@@ -1198,7 +1204,7 @@ function buildPerfilSection() {
 
   // Respeita a aba de zona ativa (mesmo filtro usado na Visão por Zona)
   const zoneFilter = activeZone !== 'all' ? activeZone : null;
-  const recs = zoneFilter ? recsAll.filter(r => r.group_name === zoneFilter) : recsAll;
+  const recs = zoneFilter ? recsAll.filter(r => normZoneName(r.group_name) === normZoneName(zoneFilter)) : recsAll;
 
   // KPI cards — perfil geral (ou da zona filtrada)
   const totals = {};
