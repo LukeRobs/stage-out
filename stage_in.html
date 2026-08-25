@@ -683,9 +683,9 @@ table.main-table tr:last-child td { border-bottom: none; }
   <div class="stats" style="grid-template-columns:repeat(7,1fr)">
     <div class="stat"><div class="stat-label">Total TOs</div><div class="stat-value" id="vTOs" style="color:var(--accent)">—</div><div class="stat-sub">na VOLUMOSO</div></div>
     <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="vPacotes" style="color:var(--purple)">—</div><div class="stat-sub">soma geral</div></div>
-    <div class="stat clickable" id="statLt20"><div class="stat-label">TOs &lt; 30 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
-    <div class="stat clickable" id="statEq20"><div class="stat-label">TOs = 30 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
-    <div class="stat clickable" id="statGt20"><div class="stat-label">TOs &gt; 30 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
+    <div class="stat clickable" id="statLt20"><div class="stat-label" id="lblLt30">TOs &lt; 30 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
+    <div class="stat clickable" id="statEq20"><div class="stat-label" id="lblEq30">TOs = 30 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
+    <div class="stat clickable" id="statGt20"><div class="stat-label" id="lblGt30">TOs &gt; 30 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
     <div class="stat"><div class="stat-label">Média por TO</div><div class="stat-value" id="vMedia" style="color:var(--yellow)">—</div><div class="stat-sub">pacotes/TO</div></div>
     <div class="stat"><div class="stat-label">Maior TO</div><div class="stat-value" id="vMaior" style="color:var(--orange)">—</div><div class="stat-sub">pacotes</div></div>
   </div>
@@ -1716,7 +1716,7 @@ function getVolumosoTOs() {
   return result;
 }
 
-const PCT_THRESHOLD = 30;
+const PCT_THRESHOLD = 40;
 
 // ── Filtro global único (single source of truth) ──────────────────────────
 // type: 'pct' | 'distrib' | 'turno' | 'aging' | null
@@ -1983,6 +1983,9 @@ function buildVolumoso() {
   const maior = total ? Math.max(...tos.map(t => t.pacotes)) : 0;
 
   // KPIs — refletem o filtro ativo
+  document.getElementById('lblLt30').textContent  = `TOs < ${PCT_THRESHOLD} pcts`;
+  document.getElementById('lblEq30').textContent  = `TOs = ${PCT_THRESHOLD} pcts`;
+  document.getElementById('lblGt30').textContent  = `TOs > ${PCT_THRESHOLD} pcts`;
   document.getElementById('vTOs').textContent     = total.toLocaleString('pt-BR');
   document.getElementById('vPacotes').textContent = totalPac.toLocaleString('pt-BR');
   document.getElementById('vLt30').textContent    = lt20.toLocaleString('pt-BR');
@@ -1996,8 +1999,9 @@ function buildVolumoso() {
     { label: '0–9',   min: 0,  max: 10,     color: 'var(--accent)' },
     { label: '10–19', min: 10, max: 20,     color: 'var(--blue)'   },
     { label: '20–29', min: 20, max: 30,     color: 'var(--yellow)' },
-    { label: '= 30',  min: 30, max: 31,     color: 'var(--purple)' },
-    { label: '> 30',  min: 31, max: 999999, color: 'var(--red)'    },
+    { label: `30–${PCT_THRESHOLD-1}`,   min: 30, max: PCT_THRESHOLD,   color: 'var(--orange)' },
+    { label: `= ${PCT_THRESHOLD}`,      min: PCT_THRESHOLD, max: PCT_THRESHOLD+1,     color: 'var(--purple)' },
+    { label: `> ${PCT_THRESHOLD}`,      min: PCT_THRESHOLD+1, max: 999999, color: 'var(--red)'    },
   ];
   // Conta nos TOs originais (sem filtro) para os totais das barras fazerem sentido
   const dCounts = distBands.map(b => allTos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
@@ -2016,7 +2020,7 @@ function buildVolumoso() {
     </div>`;
   }).join('');
 
-  // ── Turno Ofensor — sempre restrito aos TOs pesados (> 30 pcts), ────────
+  // ── Turno Ofensor — sempre restrito aos TOs pesados (> PCT_THRESHOLD pcts), ─
   // independente de qual outro filtro esteja ativo, pois é isso que os torna "ofensores"
   document.getElementById('vTurnoOfensorTitle').textContent   = `Turno Ofensor (TOs > ${PCT_THRESHOLD} pcts)`;
   document.getElementById('vTop5Title').textContent           = `Top 5 TOs com Maior Volume (> ${PCT_THRESHOLD} pcts)`;
@@ -2039,7 +2043,7 @@ function buildVolumoso() {
       }).join('')
     : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhum TO no filtro atual</div>`;
 
-  // ── Top 5 TOs com maior volume (sempre entre os TOs > 30 pcts) ─────────
+  // ── Top 5 TOs com maior volume (sempre entre os TOs > PCT_THRESHOLD pcts) ──
   const top5 = [...heavyTos].sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
   document.getElementById('vTop5').innerHTML = top5.length
     ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
