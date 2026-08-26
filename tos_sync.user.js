@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Management → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
@@ -61,10 +61,14 @@
         })
       )
     );
-    // Mescla e deduplica por to_number (evita duplicar caso duas janelas se sobreponham)
+    // Mescla e deduplica por to_number (evita duplicar caso duas janelas se sobreponham).
+    // dayLists está em ordem [hoje, ontem, ...] — processamos do mais antigo para o mais
+    // recente para que, em caso de conflito, o snapshot de HOJE sempre vença (é o mais
+    // atualizado). Sem isso, uma TO já endereçada/despachada podia continuar aparecendo
+    // como "Packed sem staging" porque o registro de um dia anterior sobrescrevia o atual.
     const merged = new Map();
-    for (const dayList of dayLists) {
-      for (const to of dayList) merged.set(to.to_number, to);
+    for (let i = dayLists.length - 1; i >= 0; i--) {
+      for (const to of dayLists[i]) merged.set(to.to_number, to);
     }
     const all = [...merged.values()];
     return { list: all, total: all.length, fetchedAt: Date.now() };
