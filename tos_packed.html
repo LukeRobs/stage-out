@@ -1036,6 +1036,12 @@ function renderReport() {
 }
 
 // ── Load data ──────────────────────────────────────────────────────────
+// TOs "Packed sem staging" há mais de MAX_AGE_HOURS provavelmente já foram
+// endereçadas/despachadas na vida real, mas o endpoint general_to/outbound/search
+// do SPX não atualizou staging_area_id (inconsistência do lado do SPX, não do sync).
+// Para não poluir a lista e os KPIs com esses registros órfãos, elas somem depois desse prazo.
+const MAX_AGE_HOURS = 48;
+
 async function loadData() {
   try {
     const res  = await fetch('/api/tos-packed');
@@ -1044,10 +1050,14 @@ async function loadData() {
     if (data.error) return;
     if (data.fetchedAt === lastAt) return;
     lastAt = data.fetchedAt;
-    // So mostra TOs Packed que ainda NAO tem Staging Area atribuida
-    const filtered = (data.list || []).filter(to =>
-      !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === ''
-    );
+    const nowSec = Math.floor(Date.now() / 1000);
+    const maxAgeSec = MAX_AGE_HOURS * 3600;
+    // So mostra TOs Packed que ainda NAO tem Staging Area atribuida e nao estao "orfas" (muito antigas)
+    const filtered = (data.list || []).filter(to => {
+      const semStaging = !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === '';
+      const orfa = to.complete_time && (nowSec - to.complete_time) > maxAgeSec;
+      return semStaging && !orfa;
+    });
     groups = buildGroups(filtered);
     updateStats({ ...data, list: filtered });
     render();
