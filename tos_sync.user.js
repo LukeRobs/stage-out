@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Management → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
@@ -18,36 +18,56 @@
   const PAGE_SIZE    = 100;
   const INTERVAL     = 60 * 1000; // 60s
 
-  // Range dos últimos dias até o fim do dia atual (horário local).
-  // Usa uma janela mais ampla que "hoje" porque o filtro de status (1=Packing, 2=Packed)
-  // já garante que só voltam TOs ainda ativas — sem isso, TOs criadas antes da virada
-  // da meia-noite mas ainda pendentes desapareciam da sincronização.
-  const CTIME_LOOKBACK_DAYS = 3;
-  function getTodayCtime() {
+  // Range de um único dia (meia-noite até fim do dia, horário local).
+  // A API só é confiável para uma janela de 1 dia por vez — um range multi-dia
+  // num único parâmetro ctime pode voltar total=0 ou falhar no meio da paginação.
+  // Por isso, para não perder TOs que ficam pendentes de um dia para o outro,
+  // buscamos vários dias SEPARADAMENTE (ver DAYS_BACK) e mesclamos os resultados.
+  const DAYS_BACK = 3; // hoje + 2 dias anteriores
+  function getDayCtime(daysAgo) {
     const now   = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (CTIME_LOOKBACK_DAYS - 1), 0, 0, 0);
-    const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const day   = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0);
+    const end   = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
     return `${Math.floor(start.getTime() / 1000)},${Math.floor(end.getTime() / 1000)}`;
   }
 
-  async function fetchPage(status, pageno) {
-    const ctime = getTodayCtime();
-    const url   = `${SEARCH_URL}?pageno=${pageno}&count=${PAGE_SIZE}&status=${status}&ctime=${ctime}`;
-    const res   = await fetch(url, { credentials: 'include' });
+  async function fetchPage(status, pageno, ctime) {
+    const url = `${SEARCH_URL}?pageno=${pageno}&count=${PAGE_SIZE}&status=${status}&ctime=${ctime}`;
+    const res = await fetch(url, { credentials: 'include' });
     return res.json();
   }
 
-  async function fetchAll(status) {
-    const first = await fetchPage(status, 1);
+  async function fetchDay(status, daysAgo) {
+    const ctime = getDayCtime(daysAgo);
+    const first = await fetchPage(status, 1, ctime);
     if (first.retcode !== 0) throw new Error(`API retcode ${first.retcode}: ${first.message}`);
     const { total, list } = first.data;
     const pages = Math.ceil(total / PAGE_SIZE);
     let all = [...list];
     for (let p = 2; p <= pages; p++) {
-      const r = await fetchPage(status, p);
+      const r = await fetchPage(status, p, ctime);
       if (r.retcode === 0) all = all.concat(r.data.list);
     }
-    return { list: all, total, fetchedAt: Date.now() };
+    return all;
+  }
+
+  async function fetchAll(status) {
+    const dayLists = await Promise.all(
+      Array.from({ length: DAYS_BACK }, (_, daysAgo) =>
+        fetchDay(status, daysAgo).catch(e => {
+          console.warn(`[TO Sync] falha ao buscar dia -${daysAgo} (status ${status}):`, e.message);
+          return []; // uma falha em um dia não deve zerar os outros dias
+        })
+      )
+    );
+    // Mescla e deduplica por to_number (evita duplicar caso duas janelas se sobreponham)
+    const merged = new Map();
+    for (const dayList of dayLists) {
+      for (const to of dayList) merged.set(to.to_number, to);
+    }
+    const all = [...merged.values()];
+    return { list: all, total: all.length, fetchedAt: Date.now() };
   }
 
   function sendToServer(endpoint, data, label) {
