@@ -61,7 +61,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .zone-tab.active .tab-count { background: rgba(59,130,246,.12); color: var(--blue); border-color: rgba(59,130,246,.25); }
 
 /* ── KPIs ── */
-.stats { display: grid; grid-template-columns: repeat(6,1fr); gap: 10px; padding: 14px 24px; }
+.stats { display: grid; grid-template-columns: repeat(7,1fr); gap: 10px; padding: 14px 24px; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
@@ -217,6 +217,7 @@ table.main-table tbody tr:hover td { background: rgba(59,130,246,.06); }
 <!-- KPIs -->
 <div class="stats">
   <div class="stat"><div class="stat-label">Total Viagens</div><div class="stat-value" id="kTotal" style="color:var(--blue)">—</div><div class="stat-sub">LTs ativas</div></div>
+  <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="kTotalPackages" style="color:var(--teal)">—</div><div class="stat-sub">pendentes</div></div>
   <div class="stat"><div class="stat-label">Em Trânsito</div><div class="stat-value" id="kPending" style="color:var(--yellow)">—</div><div class="stat-sub">a caminho</div></div>
   <div class="stat"><div class="stat-label">Descarregando</div><div class="stat-value" id="kOccupied" style="color:var(--green)">—</div><div class="stat-sub">na doca</div></div>
   <div class="stat"><div class="stat-label">Pendente na Fila</div><div class="stat-value" id="kAssigned" style="color:var(--purple)">—</div><div class="stat-sub">aguardando doca</div></div>
@@ -593,7 +594,10 @@ function buildKPIs() {
     return sinceT > sinceB ? t : best;
   }, null);
 
+  const totalPackages = allItems.reduce((sum, t) => sum + (queueMap[t.trip_number]?.order_quantity || 0), 0);
+
   document.getElementById('kTotal').textContent    = allItems.length;
+  document.getElementById('kTotalPackages').textContent = fmtNum(totalPackages);
   document.getElementById('kPending').textContent  = transit.length;
   document.getElementById('kOccupied').textContent = unloading.length;
   document.getElementById('kAssigned').textContent = qPending.length;
