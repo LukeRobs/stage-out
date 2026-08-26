@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Management → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
@@ -24,12 +24,15 @@
   // Por isso, para não perder TOs que ficam pendentes de um dia para o outro,
   // buscamos vários dias SEPARADAMENTE (ver DAYS_BACK) e mesclamos os resultados.
   const DAYS_BACK = 3; // hoje + 2 dias anteriores
-  function getDayCtime(daysAgo) {
-    const now   = new Date();
-    const day   = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
-    const start = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0);
-    const end   = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
-    return `${Math.floor(start.getTime() / 1000)},${Math.floor(end.getTime() / 1000)}`;
+
+  function getDayBounds(daysAgo) {
+    const now = new Date();
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+    return {
+      key:   `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`,
+      start: new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, 0, 0),
+      end:   new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59),
+    };
   }
 
   async function fetchPage(status, pageno, ctime) {
@@ -38,8 +41,8 @@
     return res.json();
   }
 
-  async function fetchDay(status, daysAgo) {
-    const ctime = getDayCtime(daysAgo);
+  async function fetchDay(status, start, end) {
+    const ctime = `${Math.floor(start.getTime() / 1000)},${Math.floor(end.getTime() / 1000)}`;
     const first = await fetchPage(status, 1, ctime);
     if (first.retcode !== 0) throw new Error(`API retcode ${first.retcode}: ${first.message}`);
     const { total, list } = first.data;
@@ -52,23 +55,36 @@
     return all;
   }
 
+  // Cache do último resultado BEM-SUCEDIDO de cada dia (por status e data real).
+  // Uma falha transitória (timeout, rate limit) num dia anterior não deve apagar
+  // dados que já tínhamos coletado com sucesso — em vez de mandar [] pro servidor
+  // e sobrescrever o cache bom, reaproveitamos o último resultado válido daquele dia.
+  const dayResultCache = { 1: new Map(), 2: new Map() }; // status -> Map(dateKey -> list)
+
   async function fetchAll(status) {
-    const dayLists = await Promise.all(
-      Array.from({ length: DAYS_BACK }, (_, daysAgo) =>
-        fetchDay(status, daysAgo).catch(e => {
-          console.warn(`[TO Sync] falha ao buscar dia -${daysAgo} (status ${status}):`, e.message);
-          return []; // uma falha em um dia não deve zerar os outros dias
-        })
-      )
-    );
-    // Mescla e deduplica por to_number (evita duplicar caso duas janelas se sobreponham).
-    // dayLists está em ordem [hoje, ontem, ...] — processamos do mais antigo para o mais
-    // recente para que, em caso de conflito, o snapshot de HOJE sempre vença (é o mais
-    // atualizado). Sem isso, uma TO já endereçada/despachada podia continuar aparecendo
-    // como "Packed sem staging" porque o registro de um dia anterior sobrescrevia o atual.
+    const cache = dayResultCache[status];
+    const days  = Array.from({ length: DAYS_BACK }, (_, daysAgo) => getDayBounds(daysAgo));
+    const validKeys = new Set(days.map(d => d.key));
+
+    // Remove do cache datas que já saíram da janela de lookback
+    for (const key of cache.keys()) if (!validKeys.has(key)) cache.delete(key);
+
+    await Promise.all(days.map(async ({ key, start, end }) => {
+      try {
+        cache.set(key, await fetchDay(status, start, end));
+      } catch (e) {
+        console.warn(`[TO Sync] falha ao buscar ${key} (status ${status}), mantendo último resultado conhecido:`, e.message);
+        // mantém o que já estava em cache para essa data (se houver)
+      }
+    }));
+
+    // Mescla e deduplica por to_number. Processamos do dia mais antigo para o mais
+    // recente para que, em caso de conflito, o snapshot mais atual sempre vença —
+    // sem isso, uma TO já endereçada/despachada podia continuar aparecendo como
+    // "Packed sem staging" por causa de um registro desatualizado de dia anterior.
     const merged = new Map();
-    for (let i = dayLists.length - 1; i >= 0; i--) {
-      for (const to of dayLists[i]) merged.set(to.to_number, to);
+    for (const { key } of [...days].reverse()) {
+      for (const to of cache.get(key) || []) merged.set(to.to_number, to);
     }
     const all = [...merged.values()];
     return { list: all, total: all.length, fetchedAt: Date.now() };
