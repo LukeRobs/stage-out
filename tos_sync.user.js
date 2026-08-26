@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Management → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
@@ -18,10 +18,14 @@
   const PAGE_SIZE    = 100;
   const INTERVAL     = 60 * 1000; // 60s
 
-  // Range do dia atual (meia-noite até fim do dia, horário local)
+  // Range dos últimos dias até o fim do dia atual (horário local).
+  // Usa uma janela mais ampla que "hoje" porque o filtro de status (1=Packing, 2=Packed)
+  // já garante que só voltam TOs ainda ativas — sem isso, TOs criadas antes da virada
+  // da meia-noite mas ainda pendentes desapareciam da sincronização.
+  const CTIME_LOOKBACK_DAYS = 3;
   function getTodayCtime() {
     const now   = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (CTIME_LOOKBACK_DAYS - 1), 0, 0, 0);
     const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
     return `${Math.floor(start.getTime() / 1000)},${Math.floor(end.getTime() / 1000)}`;
   }
