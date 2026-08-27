@@ -1102,15 +1102,30 @@ async function loadData() {
   } catch (e) {}
 }
 
+// Uma TO cujo "sender" (estação de origem do empacotamento) é diferente da
+// "current_station_name" (onde ela está fisicamente agora) já saiu de lá — analisado com
+// dados reais (657 casos): nenhuma tinha idade < 6h de verdade (o único caso abaixo disso
+// era um artefato de encoding corrompido no nome da estação, não uma TO genuinamente fresca).
+// Ou seja, não são reempacotadas de fato na estação atual — são sobra de uma etapa anterior
+// cujo staging_area_id nunca foi atualizado no lado do SPX. Margem de 2h de segurança contra
+// inconsistências passageiras de sincronização ou encoding.
+const TRANSBORDO_GRACE_SEC = 2 * 60 * 60;
+function jaSaiuDaEstacao(to, nowSec) {
+  if (!to.sender || !to.current_station_name || to.sender === to.current_station_name) return false;
+  const ageSec = to.complete_time ? nowSec - to.complete_time : Infinity;
+  return ageSec > TRANSBORDO_GRACE_SEC;
+}
+
 function applyData(data) {
   lastRenderAt = Date.now();
   const nowSec = Math.floor(Date.now() / 1000);
   const maxAgeSec = MAX_AGE_HOURS * 3600;
-  // So mostra TOs Packed que ainda NAO tem Staging Area atribuida e nao estao "orfas" (muito antigas)
+  // So mostra TOs Packed que ainda NAO tem Staging Area atribuida, nao estao "orfas"
+  // (muito antigas) e ainda estao na mesma estacao onde foram empacotadas
   const filtered = (data.list || []).filter(to => {
     const semStaging = !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === '';
     const orfa = to.complete_time && (nowSec - to.complete_time) > maxAgeSec;
-    return semStaging && !orfa;
+    return semStaging && !orfa && !jaSaiuDaEstacao(to, nowSec);
   });
   groups = buildGroups(filtered);
   updateStats({ ...data, list: filtered });
