@@ -458,6 +458,23 @@
   function snapshotToCache(map, fetchedAt) {
     return { list: [...map.values()], total: map.size, fetchedAt };
   }
+
+  // ── TO detail on-demand (relay) ─────────────────────────────────────
+  // O dashboard nao tem sessao no SPX, entao nao consegue chamar a API de
+  // detalhe de pacotes de uma TO diretamente. Em vez disso: o dashboard
+  // registra um "pedido" aqui; o script to_detail_sync (rodando numa aba
+  // aberta do SPX) fica de olho nos pedidos pendentes, busca o detalhe e
+  // devolve o resultado; o dashboard fica consultando ate a resposta chegar.
+  const toDetailRequests = new Map(); // to_number -> { requestedAt, resolvedAt, result, error }
+  const TO_DETAIL_TTL_MS = 3 * 60 * 1000; // 3 min — pedidos mais velhos que isso expiram
+
+  function pruneToDetailRequests() {
+    const now = Date.now();
+    for (const [key, r] of toDetailRequests) {
+      if (now - r.requestedAt > TO_DETAIL_TTL_MS) toDetailRequests.delete(key);
+    }
+  }
+
   let stageInCache      = null; // { list, total, fetchedAt }
   let queueCache        = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
   let tripCache         = null; // { list, fetchedAt } — trip list v2
@@ -919,22 +936,6 @@
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify(toPackedCache));
       return;
-    }
-
-    // ── TO detail on-demand (relay) ───────────────────────────────────────
-    // O dashboard nao tem sessao no SPX, entao nao consegue chamar a API de
-    // detalhe de pacotes de uma TO diretamente. Em vez disso: o dashboard
-    // registra um "pedido" aqui; o script to_detail_sync (rodando numa aba
-    // aberta do SPX) fica de olho nos pedidos pendentes, busca o detalhe e
-    // devolve o resultado; o dashboard fica consultando ate a resposta chegar.
-    const toDetailRequests = new Map(); // to_number -> { requestedAt, resolvedAt, result, error }
-    const TO_DETAIL_TTL_MS = 3 * 60 * 1000; // 3 min — pedidos mais velhos que isso expiram
-
-    function pruneToDetailRequests() {
-      const now = Date.now();
-      for (const [key, r] of toDetailRequests) {
-        if (now - r.requestedAt > TO_DETAIL_TTL_MS) toDetailRequests.delete(key);
-      }
     }
 
     // POST /api/to-detail-request — dashboard pede o detalhe de pacotes de uma TO
