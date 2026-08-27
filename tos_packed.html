@@ -277,6 +277,9 @@ body {
 .farol-pct { font-size: 12px; color: var(--muted); font-family: monospace; }
 .farol-table tr.farol-crit-row { background: rgba(239,68,68,.04); }
 .farol-table tr.farol-urgente-row { background: rgba(249,115,22,.03); }
+.farol-table tbody tr { cursor: pointer; transition: background .15s; }
+.farol-table tbody tr:hover td { background: rgba(255,255,255,.04); }
+.farol-table tbody tr.farol-row-active td { background: rgba(59,130,246,.1); box-shadow: inset 3px 0 0 var(--blue); }
 
 /* ── Top 10 table ── */
 .top10-wrap {
@@ -640,6 +643,7 @@ let allTOsData    = [];
 let allTOsSortKey = 'tpack';
 let allTOsSortAsc = false;
 let stagingMap    = null; // { destName: ['OUT-92', ...] } — ruas com ocupação < 100%
+let reportFarolFilter = null; // 'crit' | 'urgente' | 'atencao' | 'ok' | null — filtra a tela inteira do Report
 
 // ── Group by destination ───────────────────────────────────────────────
 function buildGroups(list) {
@@ -787,12 +791,6 @@ function renderReport() {
   const yyyy = nowDate.getFullYear();
   const tsStr = `${hh}:${mm} · ${dd}/${mo}/${yyyy}`;
 
-  // KPI values
-  const totalTOs     = allTOs.length;
-  const totalPacotes = allTOs.reduce((s, t) => s + (t.quantity || 0), 0);
-  const totalScuttle = allTOs.filter(t => (t.pack_name || '').toLowerCase() === 'scuttle').length;
-  const totalSacas   = allTOs.filter(t => (t.pack_name || '').toLowerCase() === 'saca').length;
-
   // Farol buckets
   const farolLevels = [
     { key: 'crit',    label: 'CRÍTICO',  dotClass: 'crit-dot',    lblClass: 'crit-label',    valClass: 'crit-val',    rowClass: 'farol-crit-row',    cond: s => s > 21600 },
@@ -800,21 +798,25 @@ function renderReport() {
     { key: 'atencao', label: 'ATENÇÃO',  dotClass: 'atencao-dot', lblClass: 'atencao-label', valClass: 'atencao-val', rowClass: '',                  cond: s => s > 7200  && s <= 14400 },
     { key: 'ok',      label: 'OK',       dotClass: 'ok-dot',      lblClass: 'ok-label',      valClass: 'ok-val',      rowClass: '',                  cond: s => s <= 7200 },
   ];
+  function farolKeyOf(to) {
+    const waitSec = to.complete_time ? now - to.complete_time : 0;
+    const level = farolLevels.find(l => l.cond(waitSec));
+    return level ? level.key : null;
+  }
 
+  // Contagens do farol sempre sobre o TOTAL (nao filtrado) — e o "menu" de filtro
+  const totalTOs0 = allTOs.length;
   const farolCounts = {};
   farolLevels.forEach(l => { farolCounts[l.key] = 0; });
-  allTOs.forEach(to => {
-    const waitSec = to.complete_time ? now - to.complete_time : 0;
-    for (const l of farolLevels) {
-      if (l.cond(waitSec)) { farolCounts[l.key]++; break; }
-    }
-  });
+  allTOs.forEach(to => { const k = farolKeyOf(to); if (k) farolCounts[k]++; });
   const hasCrit = farolCounts['crit'] > 0;
 
+  // Clicar numa linha do farol filtra a tela inteira do Report por aquele nivel
   const farolRows = farolLevels.map(l => {
     const cnt = farolCounts[l.key];
-    const pct = totalTOs > 0 ? (cnt / totalTOs * 100).toFixed(1) + '%' : '0.0%';
-    return `<tr class="${l.rowClass}">
+    const pct = totalTOs0 > 0 ? (cnt / totalTOs0 * 100).toFixed(1) + '%' : '0.0%';
+    const active = reportFarolFilter === l.key;
+    return `<tr class="${l.rowClass}${active ? ' farol-row-active' : ''}" onclick="toggleFarolFilter('${l.key}')" title="Clique para filtrar por ${l.label}">
       <td>
         <div class="farol-level ${l.lblClass}">
           <span class="farol-dot ${l.dotClass}"></span>
@@ -832,8 +834,32 @@ function renderReport() {
     </tr>`;
   }).join('');
 
-  // Top 10 destinations by max waitSec
-  const groupsWithWait = groups.map(g => {
+  // A partir daqui, tudo (KPIs, top10, turnos, curva, tabela) reflete o farol selecionado
+  const visibleTOs = reportFarolFilter ? allTOs.filter(to => farolKeyOf(to) === reportFarolFilter) : allTOs;
+
+  // KPI values (sobre o conjunto visivel/filtrado)
+  const totalTOs     = visibleTOs.length;
+  const totalPacotes = visibleTOs.reduce((s, t) => s + (t.quantity || 0), 0);
+  const totalScuttle = visibleTOs.filter(t => (t.pack_name || '').toLowerCase() === 'scuttle').length;
+  const totalSacas   = visibleTOs.filter(t => (t.pack_name || '').toLowerCase() === 'saca').length;
+
+  function regroupByDest(list) {
+    const map = {};
+    list.forEach(to => {
+      const id   = to.dest_station_id;
+      const name = to.dest_station_name || to.receiver || '—';
+      if (!map[id]) map[id] = { id, name, tos: [] };
+      map[id].tos.push(to);
+    });
+    return Object.values(map).map(g => ({
+      ...g,
+      totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
+      totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
+    }));
+  }
+
+  // Top 10 destinations by max waitSec (sobre o conjunto visivel/filtrado)
+  const groupsWithWait = regroupByDest(visibleTOs).map(g => {
     const tosWait = g.tos.map(to => to.complete_time ? now - to.complete_time : 0);
     const maxWait = Math.max(...tosWait, 0);
     const avgWait = tosWait.length ? Math.round(tosWait.reduce((a, b) => a + b, 0) / tosWait.length) : 0;
@@ -864,7 +890,7 @@ function renderReport() {
     T2: { tos: 0, pac: 0, label: 'T2', time: '14:00 – 21:59', cls: 't2' },
     T3: { tos: 0, pac: 0, label: 'T3', time: '22:00 – 05:59', cls: 't3' },
   };
-  allTOs.forEach(to => {
+  visibleTOs.forEach(to => {
     if (!to.complete_time) return;
     const h = new Date(to.complete_time * 1000).getHours();
     const key = (h >= 6 && h < 14) ? 'T1' : (h >= 14 && h < 22) ? 'T2' : 'T3';
@@ -887,7 +913,7 @@ function renderReport() {
   // Hourly curve
   const hourCounts = Array(24).fill(0);
   const hourPacs   = Array(24).fill(0);
-  allTOs.forEach(to => {
+  visibleTOs.forEach(to => {
     if (!to.complete_time) return;
     const h = new Date(to.complete_time * 1000).getHours();
     hourCounts[h]++;
@@ -941,7 +967,12 @@ function renderReport() {
 
     <!-- Farol section -->
     <div class="report-section">
-      <div class="report-section-title">Farol de TOs Aguardando Endere&ccedil;amento</div>
+      <div class="report-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Farol de TOs Aguardando Endere&ccedil;amento &mdash; clique numa linha para filtrar a tela</span>
+        ${reportFarolFilter ? `<button onclick="toggleFarolFilter('${reportFarolFilter}')" style="background:rgba(59,130,246,.12);border:1px solid var(--blue);color:var(--blue);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+          Filtrando: ${farolLevels.find(l => l.key === reportFarolFilter).label} &#x2715;
+        </button>` : ''}
+      </div>
       <div class="farol-wrap${hasCrit ? ' has-crit' : ''}">
         <table class="farol-table">
           <thead>
@@ -1025,14 +1056,20 @@ function renderReport() {
     </div>
   `;
 
-  // Populate the global data store and fill the tbody
-  allTOsData = groups.flatMap(g => g.tos.map(to => ({ ...to, _fanout: g.name })));
+  // Populate the global data store and fill the tbody (respeita o filtro de farol ativo)
+  allTOsData = visibleTOs.map(to => ({ ...to, _fanout: to.dest_station_name || to.receiver || '—' }));
   allTOsData.sort((a, b) => {
     const wa = a.complete_time ? now - a.complete_time : 0;
     const wb = b.complete_time ? now - b.complete_time : 0;
     return wb - wa;
   });
   filterAllTOs();
+}
+
+// Clicar numa linha do farol filtra a tela inteira do Report; clicar de novo limpa o filtro
+function toggleFarolFilter(key) {
+  reportFarolFilter = reportFarolFilter === key ? null : key;
+  renderReport();
 }
 
 // ── Load data ──────────────────────────────────────────────────────────
@@ -1042,6 +1079,12 @@ function renderReport() {
 // Para não poluir a lista e os KPIs com esses registros órfãos, elas somem depois desse prazo.
 const MAX_AGE_HOURS = 48;
 
+// A tela só é re-renderizada a cada RENDER_THROTTLE_MS — o servidor acumula dados de
+// várias estações/abas do Tampermonkey e o total pode saltar bastante entre sincronizações
+// individuais; sem esse "cache", a tela fica piscando/mudando a cada 15s.
+const RENDER_THROTTLE_MS = 5 * 60 * 1000; // 5 minutos
+let lastRenderAt = 0;
+
 async function loadData() {
   try {
     const res  = await fetch('/api/tos-packed');
@@ -1050,19 +1093,29 @@ async function loadData() {
     if (data.error) return;
     if (data.fetchedAt === lastAt) return;
     lastAt = data.fetchedAt;
-    const nowSec = Math.floor(Date.now() / 1000);
-    const maxAgeSec = MAX_AGE_HOURS * 3600;
-    // So mostra TOs Packed que ainda NAO tem Staging Area atribuida e nao estao "orfas" (muito antigas)
-    const filtered = (data.list || []).filter(to => {
-      const semStaging = !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === '';
-      const orfa = to.complete_time && (nowSec - to.complete_time) > maxAgeSec;
-      return semStaging && !orfa;
-    });
-    groups = buildGroups(filtered);
-    updateStats({ ...data, list: filtered });
-    render();
-    renderReport();
+    // Continua buscando a cada 15s (barato, mantém o servidor "vivo"), mas só aplica na
+    // tela a cada 5 minutos — exceto no primeiro carregamento, que deve aparecer na hora.
+    const isFirstLoad = lastRenderAt === 0;
+    if (isFirstLoad || Date.now() - lastRenderAt >= RENDER_THROTTLE_MS) {
+      applyData(data);
+    }
   } catch (e) {}
+}
+
+function applyData(data) {
+  lastRenderAt = Date.now();
+  const nowSec = Math.floor(Date.now() / 1000);
+  const maxAgeSec = MAX_AGE_HOURS * 3600;
+  // So mostra TOs Packed que ainda NAO tem Staging Area atribuida e nao estao "orfas" (muito antigas)
+  const filtered = (data.list || []).filter(to => {
+    const semStaging = !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === '';
+    const orfa = to.complete_time && (nowSec - to.complete_time) > maxAgeSec;
+    return semStaging && !orfa;
+  });
+  groups = buildGroups(filtered);
+  updateStats({ ...data, list: filtered });
+  render();
+  renderReport();
 }
 
 // ── Sort buttons ───────────────────────────────────────────────────────

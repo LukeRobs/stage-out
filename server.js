@@ -432,8 +432,32 @@
 
   // ── Stage-out cache (fed by Tampermonkey) ─────────────────────────────
   let stageCache        = null; // { list, total, fetchedAt }
-  let toPackingCache    = null; // { list, total, fetchedAt }
-  let toPackedCache     = null; // { list, total, fetchedAt }
+  let toPackingCache    = null; // { list, total, fetchedAt } — snapshot derivado do merge abaixo
+  let toPackedCache     = null; // { list, total, fetchedAt } — snapshot derivado do merge abaixo
+
+  // Merge acumulado por to_number. Estações/abas diferentes do Tampermonkey enxergam
+  // escopos diferentes (cada uma via seu próprio "in-station search"); antes, cada POST
+  // substituía o cache inteiro, então o dashboard "piscava" entre o recorte de uma
+  // estação e o de outra. Agora acumulamos por to_number e só podamos por idade —
+  // assim o cache sempre reflete a união de tudo que já foi visto recentemente.
+  const toPackingMap       = new Map(); // to_number -> record
+  const toPackedMap        = new Map(); // to_number -> record
+  const TO_MERGE_MAX_AGE_MS = 72 * 60 * 60 * 1000; // 72h — poda de segurança (evita crescer para sempre)
+
+  function mergeToRecords(map, list) {
+    const nowMs = Date.now();
+    (list || []).forEach(to => {
+      if (to && to.to_number) map.set(to.to_number, to);
+    });
+    for (const [key, to] of map) {
+      const refSec = to.complete_time || to.ctime || 0;
+      if (refSec && (nowMs - refSec * 1000) > TO_MERGE_MAX_AGE_MS) map.delete(key);
+    }
+  }
+
+  function snapshotToCache(map, fetchedAt) {
+    return { list: [...map.values()], total: map.size, fetchedAt };
+  }
   let stageInCache      = null; // { list, total, fetchedAt }
   let queueCache        = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
   let tripCache         = null; // { list, fetchedAt } — trip list v2
@@ -833,14 +857,16 @@
       return;
     }
 
-    // POST /api/tos-packing-data — receives packing TOs from Tampermonkey
+    // POST /api/tos-packing-data — receives packing TOs from Tampermonkey (merge acumulado)
     if (urlPath === '/api/tos-packing-data' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          toPackingCache = JSON.parse(body);
-          console.log(`[tos-packing] Received ${toPackingCache.list?.length}/${toPackingCache.total} TOs`);
+          const incoming = JSON.parse(body);
+          mergeToRecords(toPackingMap, incoming.list);
+          toPackingCache = snapshotToCache(toPackingMap, incoming.fetchedAt || Date.now());
+          console.log(`[tos-packing] +${incoming.list?.length || 0} recebidos, ${toPackingMap.size} acumulados`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -851,14 +877,16 @@
       return;
     }
 
-    // POST /api/tos-packed-data — receives packed TOs from Tampermonkey
+    // POST /api/tos-packed-data — receives packed TOs from Tampermonkey (merge acumulado)
     if (urlPath === '/api/tos-packed-data' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          toPackedCache = JSON.parse(body);
-          console.log(`[tos-packed] Received ${toPackedCache.list?.length}/${toPackedCache.total} TOs`);
+          const incoming = JSON.parse(body);
+          mergeToRecords(toPackedMap, incoming.list);
+          toPackedCache = snapshotToCache(toPackedMap, incoming.fetchedAt || Date.now());
+          console.log(`[tos-packed] +${incoming.list?.length || 0} recebidos, ${toPackedMap.size} acumulados`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
