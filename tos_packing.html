@@ -244,6 +244,9 @@ body {
 .farol-table tr:last-child td { border-bottom: none; }
 .farol-crit-row td    { background: rgba(239,68,68,.06); }
 .farol-urgente-row td { background: rgba(245,158,11,.04); }
+.farol-table tbody tr { cursor: pointer; transition: background .15s; }
+.farol-table tbody tr:hover td { background: rgba(255,255,255,.04); }
+.farol-table tbody tr.farol-row-active td { background: rgba(59,130,246,.1); box-shadow: inset 3px 0 0 var(--blue); }
 .farol-level { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 12px; }
 .farol-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .crit-dot    { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
@@ -566,6 +569,7 @@ let activeTab     = 'dash';
 let allTOsData    = [];
 let allTOsSortKey = 'dur';
 let allTOsSortAsc = false;
+let reportFarolFilter = null; // 'crit' | 'urgente' | 'atencao' | 'ok' | null — filtra a tela inteira do Report
 
 // ── Tab switching ──────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -721,12 +725,6 @@ function renderReport() {
   const yyyy = nowDate.getFullYear();
   const tsStr = `${hh}:${mm} &middot; ${dd}/${mo}/${yyyy}`;
 
-  // KPIs
-  const totalTOs     = allTOs.length;
-  const totalPacotes = allTOs.reduce((s, t) => s + (t.quantity || 0), 0);
-  const totalScuttle = allTOs.filter(t => (t.pack_name || '').toLowerCase() === 'scuttle').length;
-  const totalSacas   = allTOs.filter(t => (t.pack_name || '').toLowerCase() === 'saca').length;
-
   // Farol: based on now - ctime (time in packing)
   // OK <1h, ATENÇÃO 1-3h, URGENTE 3-6h, CRÍTICO >6h
   const farolLevels = [
@@ -735,21 +733,25 @@ function renderReport() {
     { key: 'atencao', label: 'ATEN&Ccedil;&Atilde;O', dotClass: 'atencao-dot', lblClass: 'atencao-label', valClass: 'atencao-val', rowClass: '', cond: s => s > 3600 && s <= 10800 },
     { key: 'ok',      label: 'OK',               dotClass: 'ok-dot',      lblClass: 'ok-label',      valClass: 'ok-val',      rowClass: '',                  cond: s => s <= 3600 },
   ];
+  function farolKeyOf(to) {
+    const dur = to.ctime ? now - to.ctime : 0;
+    const level = farolLevels.find(l => l.cond(dur));
+    return level ? level.key : null;
+  }
 
+  // Contagens do farol sempre sobre o TOTAL (nao filtrado) — e o "menu" de filtro
+  const totalTOs0 = allTOs.length;
   const farolCounts = {};
   farolLevels.forEach(l => { farolCounts[l.key] = 0; });
-  allTOs.forEach(to => {
-    const dur = to.ctime ? now - to.ctime : 0;
-    for (const l of farolLevels) {
-      if (l.cond(dur)) { farolCounts[l.key]++; break; }
-    }
-  });
+  allTOs.forEach(to => { const k = farolKeyOf(to); if (k) farolCounts[k]++; });
   const hasCrit = farolCounts['crit'] > 0;
 
+  // Clicar numa linha do farol filtra a tela inteira do Report por aquele nivel
   const farolRows = farolLevels.map(l => {
     const cnt = farolCounts[l.key];
-    const pct = totalTOs > 0 ? (cnt / totalTOs * 100).toFixed(1) + '%' : '0.0%';
-    return `<tr class="${l.rowClass}">
+    const pct = totalTOs0 > 0 ? (cnt / totalTOs0 * 100).toFixed(1) + '%' : '0.0%';
+    const active = reportFarolFilter === l.key;
+    return `<tr class="${l.rowClass}${active ? ' farol-row-active' : ''}" onclick="toggleFarolFilter('${l.key}')" title="Clique para filtrar por ${l.label}">
       <td>
         <div class="farol-level ${l.lblClass}">
           <span class="farol-dot ${l.dotClass}"></span>
@@ -767,8 +769,32 @@ function renderReport() {
     </tr>`;
   }).join('');
 
-  // Top 10 by max duration
-  const groupsWithDur = groups.map(g => {
+  // A partir daqui, tudo (KPIs, top10, turnos, curva, tabela) reflete o farol selecionado
+  const visibleTOs = reportFarolFilter ? allTOs.filter(to => farolKeyOf(to) === reportFarolFilter) : allTOs;
+
+  // KPIs (sobre o conjunto visivel/filtrado)
+  const totalTOs     = visibleTOs.length;
+  const totalPacotes = visibleTOs.reduce((s, t) => s + (t.quantity || 0), 0);
+  const totalScuttle = visibleTOs.filter(t => (t.pack_name || '').toLowerCase() === 'scuttle').length;
+  const totalSacas   = visibleTOs.filter(t => (t.pack_name || '').toLowerCase() === 'saca').length;
+
+  function regroupByDest(list) {
+    const map = {};
+    list.forEach(to => {
+      const id   = to.dest_station_id;
+      const name = to.dest_station_name || to.receiver || '—';
+      if (!map[id]) map[id] = { id, name, tos: [] };
+      map[id].tos.push(to);
+    });
+    return Object.values(map).map(g => ({
+      ...g,
+      totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
+      totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
+    }));
+  }
+
+  // Top 10 by max duration (sobre o conjunto visivel/filtrado)
+  const groupsWithDur = regroupByDest(visibleTOs).map(g => {
     const durs   = g.tos.map(to => to.ctime ? now - to.ctime : 0);
     const maxDur = Math.max(...durs, 0);
     const avgDur = durs.length ? Math.round(durs.reduce((a, b) => a + b, 0) / durs.length) : 0;
@@ -807,7 +833,7 @@ function renderReport() {
     T2: { tos: 0, pac: 0, label: 'T2', time: '14:00 &ndash; 21:59', cls: 't2' },
     T3: { tos: 0, pac: 0, label: 'T3', time: '22:00 &ndash; 05:59', cls: 't3' },
   };
-  allTOs.forEach(to => {
+  visibleTOs.forEach(to => {
     if (!to.ctime) return;
     const h = new Date(to.ctime * 1000).getHours();
     const key = (h >= 6 && h < 14) ? 'T1' : (h >= 14 && h < 22) ? 'T2' : 'T3';
@@ -830,7 +856,7 @@ function renderReport() {
   // Hourly curve: based on ctime hour
   const hourCounts = Array(24).fill(0);
   const hourPacs   = Array(24).fill(0);
-  allTOs.forEach(to => {
+  visibleTOs.forEach(to => {
     if (!to.ctime) return;
     const h = new Date(to.ctime * 1000).getHours();
     hourCounts[h]++;
@@ -884,7 +910,12 @@ function renderReport() {
 
     <!-- Farol section -->
     <div class="report-section">
-      <div class="report-section-title">Farol Operacional de TO's em Packing</div>
+      <div class="report-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Farol Operacional de TO's em Packing &mdash; clique numa linha para filtrar a tela</span>
+        ${reportFarolFilter ? `<button onclick="toggleFarolFilter('${reportFarolFilter}')" style="background:rgba(59,130,246,.12);border:1px solid var(--blue);color:var(--blue);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+          Filtrando: ${farolLevels.find(l => l.key === reportFarolFilter).label} &#x2715;
+        </button>` : ''}
+      </div>
       <div class="farol-wrap${hasCrit ? ' has-crit' : ''}">
         <table class="farol-table">
           <thead>
@@ -967,13 +998,19 @@ function renderReport() {
     </div>
   `;
 
-  allTOsData = groups.flatMap(g => g.tos.map(to => ({ ...to, _fanout: g.name })));
+  allTOsData = visibleTOs.map(to => ({ ...to, _fanout: to.dest_station_name || to.receiver || '—' }));
   allTOsData.sort((a, b) => {
     const wa = a.ctime ? now - a.ctime : 0;
     const wb = b.ctime ? now - b.ctime : 0;
     return wb - wa;
   });
   filterAllTOs();
+}
+
+// Clicar numa linha do farol filtra a tela inteira do Report; clicar de novo limpa o filtro
+function toggleFarolFilter(key) {
+  reportFarolFilter = reportFarolFilter === key ? null : key;
+  renderReport();
 }
 
 // ── Load data ──────────────────────────────────────────────────────────
