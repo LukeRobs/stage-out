@@ -823,31 +823,32 @@ async function loadData() {
     const tripNums = new Set((tData.list || []).map(t => t.trip_number));
     allItems = [...(tData.list || [])];
 
-    // Adiciona itens queue-only APENAS quando trips já carregou (allItems não vazio).
-    // Se allItems estiver vazio (trips ainda não sincronizou após restart do servidor),
-    // não adicionamos queue items para evitar mostrar dados incompletos.
-    if (allItems.length > 0) {
-      (qData.list || []).forEach(q => {
-        const tn = q.route_info?.lh_trip_number;
-        if (!tn || tripNums.has(tn)) return;
-        // LT está na queue mas não veio na trips API — adiciona como suplemento
-        // _trip_detail é injetado pelo queue_list_sync v1.2 via /api/admin/transportation/trip/detail
-        const det = q._trip_detail;
-        allItems.push({
-          trip_number:       tn,
-          vehicle_number:    q.route_info?.vehicle_number    || q.vehicle_number    || '—',
-          driver_name:       q.route_info?.driver_name       || q.driver_name       || '—',
-          vehicle_type_name: det?.vehicle_type_name || q.route_info?.vehicle_type_name || q.vehicle_type_name || '—',
-          pre_station_name:  det?.pre_station_name  || q.route_info?.pre_station_name  || q.pre_station_name  || '—',
-          agency_name:       q.route_info?.agency_name       || q.agency_name       || '',
-          trip_name:         q.route_info?.trip_name         || q.trip_name         || '',
-          trip_station:      det?.trip_station || null,   // preenchido quando sync v1.2 está ativo
-          _fromQueue:        true,
-        });
+    // Adiciona itens queue-only. A checagem "tData.fetchedAt === lastAt" logo acima já
+    // garante que só chegamos aqui depois de um sync REAL de trips (fetchedAt não-nulo) —
+    // então "allItems vazio" aqui significa "trips sincronizou e não achou nada agora"
+    // (ex: nenhuma viagem em trânsito/descarregando no momento), não "nunca sincronizou".
+    // Usar allItems.length>0 como guarda escondia itens reais da queue nesses momentos
+    // de baixa atividade, mesmo com a queue tendo dados válidos.
+    (qData.list || []).forEach(q => {
+      const tn = q.route_info?.lh_trip_number;
+      if (!tn || tripNums.has(tn)) return;
+      // LT está na queue mas não veio na trips API — adiciona como suplemento
+      // _trip_detail é injetado pelo queue_list_sync v1.2 via /api/admin/transportation/trip/detail
+      const det = q._trip_detail;
+      allItems.push({
+        trip_number:       tn,
+        vehicle_number:    q.route_info?.vehicle_number    || q.vehicle_number    || '—',
+        driver_name:       q.route_info?.driver_name       || q.driver_name       || '—',
+        vehicle_type_name: det?.vehicle_type_name || q.route_info?.vehicle_type_name || q.vehicle_type_name || '—',
+        pre_station_name:  det?.pre_station_name  || q.route_info?.pre_station_name  || q.pre_station_name  || '—',
+        agency_name:       q.route_info?.agency_name       || q.agency_name       || '',
+        trip_name:         q.route_info?.trip_name         || q.trip_name         || '',
+        trip_station:      det?.trip_station || null,   // preenchido quando sync v1.2 está ativo
+        _fromQueue:        true,
       });
-      const qOnly = allItems.filter(t => t._fromQueue).length;
-      if (qOnly > 0) console.log(`[queue] +${qOnly} LTs somente na queue (não na trips API)`);
-    }
+    });
+    const qOnly = allItems.filter(t => t._fromQueue).length;
+    if (qOnly > 0) console.log(`[queue] +${qOnly} LTs somente na queue (não na trips API)`);
 
     const ts = new Date(tData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('lastUpdated').textContent = ts;
