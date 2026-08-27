@@ -634,8 +634,31 @@ function renderToDetailError(to_number, error) {
     </div>`;
 }
 
+// O merge acumulado no servidor so remove um item por idade (nunca sabe sozinho que uma
+// TO ja mudou de status/foi endereçada). O lookup ao vivo do modal e uma oportunidade
+// gratis de verificar isso: se o status real ja nao e mais "Packed" OU se ela ja tem uma
+// staging_area_id de verdade (endereçada), essa TO nao deveria mais estar nesse dashboard
+// — avisa o servidor pra tirar ela do cache e some ela da tela na hora.
+function evictIfStale(to_number, data) {
+  const statusMudou = data.status && data.status !== 'Packed';
+  const jaEndereçada = data.staging_area_id && data.staging_area_id !== '-' && data.staging_area_id !== '';
+  if (!statusMudou && !jaEndereçada) return false;
+  fetch('/api/to-evict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to_number, kind: 'packed' }),
+  }).catch(() => {});
+  groups = groups
+    .map(g => ({ ...g, tos: g.tos.filter(t => t.to_number !== to_number) }))
+    .filter(g => g.tos.length > 0);
+  render();
+  if (document.getElementById('reportTab')?.style.display !== 'none') renderReport();
+  return jaEndereçada ? 'staging' : 'status';
+}
+
 function renderToDetailResult(to_number, data) {
-  const list = data.list || [];
+  const list  = data.list || [];
+  const stale = evictIfStale(to_number, data);
   const rows = list.map(p => {
     const dir = p.transfer_direction === 1
       ? `<span style="color:var(--green)">➡ Forward</span>`
@@ -654,9 +677,16 @@ function renderToDetailResult(to_number, data) {
     </tr>`;
   }).join('');
 
+  const staleMsg = stale === 'staging'
+    ? `Essa TO já foi endereçada no SPX (rua <b>${data.staging_area_id}</b>) e foi removida deste dashboard.`
+    : stale === 'status'
+    ? `Essa TO já mudou de status no SPX (agora é <b>${data.status}</b>) e foi removida deste dashboard.`
+    : '';
+
   document.getElementById('toDetailModalBox').innerHTML = `
     ${toDetailHeader(to_number, `${data.sender || '—'} → ${data.receiver || '—'}`)}
     <div class="to-modal-body">
+      ${stale ? `<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow);border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px">⚠️ ${staleMsg}</div>` : ''}
       <div class="to-modal-kpis">
         <div class="to-mkpi"><div class="to-mkpi-label">Pacotes</div><div class="to-mkpi-val" style="color:var(--purple)">${data.quantity ?? list.length}</div></div>
         <div class="to-mkpi"><div class="to-mkpi-label">Peso</div><div class="to-mkpi-val" style="color:var(--yellow)">${fmtWeight(data.weight || 0)}</div></div>

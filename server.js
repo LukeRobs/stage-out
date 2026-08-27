@@ -1016,6 +1016,37 @@
       return;
     }
 
+    // POST /api/to-evict — remove uma TO especifica do merge acumulado de packing/packed.
+    // O merge por to_number so remove itens por idade (ver TO_MERGE_MAX_AGE_MS); quando o
+    // dashboard confirma via lookup ao vivo (modal de detalhe) que uma TO ja mudou de status
+    // e nao devia mais aparecer, ele chama isso pra corrigir na hora em vez de esperar a poda.
+    if (urlPath === '/api/to-evict' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { to_number, kind } = JSON.parse(body);
+          if (!to_number || (kind !== 'packing' && kind !== 'packed')) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'to_number e kind ("packing"|"packed") obrigatórios' }));
+            return;
+          }
+          const map = kind === 'packing' ? toPackingMap : toPackedMap;
+          const removed = map.delete(to_number);
+          if (removed) {
+            if (kind === 'packing') toPackingCache = snapshotToCache(toPackingMap, toPackingCache?.fetchedAt ?? Date.now());
+            else                    toPackedCache  = snapshotToCache(toPackedMap,  toPackedCache?.fetchedAt  ?? Date.now());
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, removed }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
     // POST /api/stage-in-data — receives inbound staging area data from Tampermonkey
     if (urlPath === '/api/stage-in-data' && req.method === 'POST') {
       let body = '';
