@@ -921,6 +921,100 @@
       return;
     }
 
+    // ── TO detail on-demand (relay) ───────────────────────────────────────
+    // O dashboard nao tem sessao no SPX, entao nao consegue chamar a API de
+    // detalhe de pacotes de uma TO diretamente. Em vez disso: o dashboard
+    // registra um "pedido" aqui; o script to_detail_sync (rodando numa aba
+    // aberta do SPX) fica de olho nos pedidos pendentes, busca o detalhe e
+    // devolve o resultado; o dashboard fica consultando ate a resposta chegar.
+    const toDetailRequests = new Map(); // to_number -> { requestedAt, resolvedAt, result, error }
+    const TO_DETAIL_TTL_MS = 3 * 60 * 1000; // 3 min — pedidos mais velhos que isso expiram
+
+    function pruneToDetailRequests() {
+      const now = Date.now();
+      for (const [key, r] of toDetailRequests) {
+        if (now - r.requestedAt > TO_DETAIL_TTL_MS) toDetailRequests.delete(key);
+      }
+    }
+
+    // POST /api/to-detail-request — dashboard pede o detalhe de pacotes de uma TO
+    if (urlPath === '/api/to-detail-request' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { to_number } = JSON.parse(body);
+          if (!to_number) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'to_number obrigatório' }));
+            return;
+          }
+          pruneToDetailRequests();
+          const existing = toDetailRequests.get(to_number);
+          // Se ja tem um pedido recente sem resposta ainda, nao reseta (evita duplicar fila)
+          if (!existing || existing.result || existing.error) {
+            toDetailRequests.set(to_number, { requestedAt: Date.now(), resolvedAt: null, result: null, error: null });
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/to-detail-pending — to_detail_sync busca quais TOs estao aguardando resposta
+    if (urlPath === '/api/to-detail-pending') {
+      pruneToDetailRequests();
+      const pending = [...toDetailRequests.entries()]
+        .filter(([, r]) => !r.result && !r.error)
+        .map(([to_number]) => to_number);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ pending }));
+      return;
+    }
+
+    // POST /api/to-detail-result — to_detail_sync devolve o detalhe buscado no SPX
+    if (urlPath === '/api/to-detail-result' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { to_number, data, error } = JSON.parse(body);
+          if (!to_number) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'to_number obrigatório' }));
+            return;
+          }
+          const entry = toDetailRequests.get(to_number) || { requestedAt: Date.now() };
+          entry.result     = data  || null;
+          entry.error      = error || null;
+          entry.resolvedAt = Date.now();
+          toDetailRequests.set(to_number, entry);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/to-detail-result?to_number=X — dashboard consulta se a resposta chegou
+    if (urlPath === '/api/to-detail-result' && req.method === 'GET') {
+      const to_number = new URL(req.url, 'http://internal').searchParams.get('to_number');
+      const entry = to_number ? toDetailRequests.get(to_number) : null;
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      if (!entry) { res.end(JSON.stringify({ status: 'unknown' })); return; }
+      if (entry.result) { res.end(JSON.stringify({ status: 'done', data: entry.result })); return; }
+      if (entry.error)  { res.end(JSON.stringify({ status: 'error', error: entry.error })); return; }
+      res.end(JSON.stringify({ status: 'pending' }));
+      return;
+    }
+
     // POST /api/stage-in-data — receives inbound staging area data from Tampermonkey
     if (urlPath === '/api/stage-in-data' && req.method === 'POST') {
       let body = '';
