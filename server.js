@@ -488,6 +488,20 @@
     }
   }
 
+  // ── Rua (staging area) detail on-demand (relay) ──────────────────────
+  // Mesmo mecanismo do TO detail acima, mas pra ver quais TOs/gaiolas estao
+  // alocadas numa rua especifica (staging_area_id) — atendido pelo mesmo
+  // to_detail_sync.user.js.
+  const ruaDetailRequests = new Map(); // staging_area_id -> { requestedAt, resolvedAt, result, error }
+  const RUA_DETAIL_TTL_MS = 3 * 60 * 1000;
+
+  function pruneRuaDetailRequests() {
+    const now = Date.now();
+    for (const [key, r] of ruaDetailRequests) {
+      if (now - r.requestedAt > RUA_DETAIL_TTL_MS) ruaDetailRequests.delete(key);
+    }
+  }
+
   let stageInCache      = null; // { list, total, fetchedAt }
   let queueCache        = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
   let tripCache         = null; // { list, fetchedAt } — trip list v2
@@ -1021,6 +1035,83 @@
     if (urlPath === '/api/to-detail-result' && req.method === 'GET') {
       const to_number = new URL(req.url, 'http://internal').searchParams.get('to_number');
       const entry = to_number ? toDetailRequests.get(to_number) : null;
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      if (!entry) { res.end(JSON.stringify({ status: 'unknown' })); return; }
+      if (entry.result) { res.end(JSON.stringify({ status: 'done', data: entry.result })); return; }
+      if (entry.error)  { res.end(JSON.stringify({ status: 'error', error: entry.error })); return; }
+      res.end(JSON.stringify({ status: 'pending' }));
+      return;
+    }
+
+    // POST /api/rua-detail-request — dashboard pede o detalhe de TOs/gaiolas de uma rua
+    if (urlPath === '/api/rua-detail-request' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { staging_area_id } = JSON.parse(body);
+          if (!staging_area_id) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'staging_area_id obrigatório' }));
+            return;
+          }
+          pruneRuaDetailRequests();
+          const existing = ruaDetailRequests.get(staging_area_id);
+          if (!existing || existing.result || existing.error) {
+            ruaDetailRequests.set(staging_area_id, { requestedAt: Date.now(), resolvedAt: null, result: null, error: null });
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/rua-detail-pending — to_detail_sync busca quais ruas estao aguardando resposta
+    if (urlPath === '/api/rua-detail-pending') {
+      pruneRuaDetailRequests();
+      const pending = [...ruaDetailRequests.entries()]
+        .filter(([, r]) => !r.result && !r.error)
+        .map(([staging_area_id]) => staging_area_id);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ pending }));
+      return;
+    }
+
+    // POST /api/rua-detail-result — to_detail_sync devolve o detalhe buscado no SPX
+    if (urlPath === '/api/rua-detail-result' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { staging_area_id, data, error } = JSON.parse(body);
+          if (!staging_area_id) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'staging_area_id obrigatório' }));
+            return;
+          }
+          const entry = ruaDetailRequests.get(staging_area_id) || { requestedAt: Date.now() };
+          entry.result     = data  || null;
+          entry.error      = error || null;
+          entry.resolvedAt = Date.now();
+          ruaDetailRequests.set(staging_area_id, entry);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/rua-detail-result?staging_area_id=X — dashboard consulta se a resposta chegou
+    if (urlPath === '/api/rua-detail-result' && req.method === 'GET') {
+      const staging_area_id = new URL(req.url, 'http://internal').searchParams.get('staging_area_id');
+      const entry = staging_area_id ? ruaDetailRequests.get(staging_area_id) : null;
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       if (!entry) { res.end(JSON.stringify({ status: 'unknown' })); return; }
       if (entry.result) { res.end(JSON.stringify({ status: 'done', data: entry.result })); return; }

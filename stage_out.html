@@ -347,6 +347,37 @@ body {
   .header-right .meta-tag,
   .header-right .sheet-badge { display: none; }
 }
+
+/* ── Rua clicável ── */
+.ruas-table tbody tr { cursor: pointer; }
+.ruas-table tbody tr:hover td { background: rgba(255,255,255,.03); }
+
+/* ── Rua Detail Modal ── */
+.to-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
+.to-modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 760px; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.to-modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); gap: 12px; }
+.to-modal-title { font-family: monospace; font-size: 16px; font-weight: 700; color: var(--orange2); letter-spacing: .3px; }
+.to-modal-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.to-modal-close { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); width: 30px; height: 30px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+.to-modal-close:hover { color: var(--text); border-color: var(--border2); }
+.to-modal-body { padding: 16px 20px 20px; }
+.to-modal-empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+.to-modal-empty .emoji { font-size: 30px; margin-bottom: 10px; }
+.to-modal-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+.to-mkpi { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.to-mkpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); margin-bottom: 3px; }
+.to-mkpi-val { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.to-modal-table-wrap { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.to-modal-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.to-modal-table th { position: sticky; top: 0; background: var(--surface2); padding: 8px 10px; text-align: left; text-transform: uppercase; font-size: 9px; letter-spacing: .4px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.to-modal-table td { padding: 6px 10px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.to-modal-table tr:last-child td { border-bottom: none; }
+.to-modal-retry { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-top: 14px; }
+.to-modal-retry:hover { border-color: var(--border2); }
+.item-type-pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+.item-type-to   { background: rgba(59,130,246,.14);  color: #60a5fa; }
+.item-type-cage { background: rgba(139,92,246,.14); color: #a78bfa; }
+@media (max-width: 700px) { .to-modal-kpis { grid-template-columns: repeat(2,1fr); } }
 </style>
 </head>
 <body>
@@ -445,6 +476,11 @@ body {
   </div>
 </div>
 
+<!-- Rua Detail Modal -->
+<div class="to-modal-overlay" id="toDetailModal" style="display:none" onclick="if(event.target===this)closeToDetailModal()">
+  <div class="to-modal-box" id="toDetailModalBox"></div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG
@@ -536,6 +572,148 @@ function durClass(s) {
 function parseDestId(to_destination) {
   const m = (to_destination||'').match(/^\[(\d+)\](.*)/);
   return m ? { id: m[1], name: m[2].trim() } : { id: '?', name: to_destination || '—' };
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RUA DETAIL MODAL (sob demanda via to_detail_sync.user.js)
+// ═══════════════════════════════════════════════════════════════
+// O dashboard nao tem sessao no SPX, entao pede pro servidor, que enfileira
+// o pedido; o Tampermonkey (numa aba aberta do SPX) atende e devolve o
+// resultado; aqui a gente fica consultando ate a resposta chegar.
+let ruaDetailPollTimer  = null;
+let ruaDetailPollActive = null;
+const RUA_DETAIL_TIMEOUT_MS = 25000;
+const RUA_DETAIL_POLL_MS    = 1500;
+
+async function openRuaDetailModal(staging_area_id) {
+  ruaDetailPollActive = staging_area_id;
+  document.getElementById('toDetailModal').style.display = 'flex';
+  renderRuaDetailLoading(staging_area_id);
+  try {
+    await fetch('/api/rua-detail-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ staging_area_id }),
+    });
+  } catch (e) { /* segue tentando via poll mesmo assim */ }
+  pollRuaDetail(staging_area_id, Date.now());
+}
+
+function pollRuaDetail(staging_area_id, startedAt) {
+  clearTimeout(ruaDetailPollTimer);
+  if (ruaDetailPollActive !== staging_area_id) return;
+  fetch(`/api/rua-detail-result?staging_area_id=${encodeURIComponent(staging_area_id)}`)
+    .then(r => r.json())
+    .then(res => {
+      if (ruaDetailPollActive !== staging_area_id) return;
+      if (res.status === 'done')  { renderRuaDetailResult(staging_area_id, res.data); return; }
+      if (res.status === 'error') { renderRuaDetailError(staging_area_id, res.error); return; }
+      if (Date.now() - startedAt > RUA_DETAIL_TIMEOUT_MS) { renderRuaDetailTimeout(staging_area_id); return; }
+      ruaDetailPollTimer = setTimeout(() => pollRuaDetail(staging_area_id, startedAt), RUA_DETAIL_POLL_MS);
+    })
+    .catch(() => {
+      if (ruaDetailPollActive !== staging_area_id) return;
+      if (Date.now() - startedAt > RUA_DETAIL_TIMEOUT_MS) { renderRuaDetailTimeout(staging_area_id); return; }
+      ruaDetailPollTimer = setTimeout(() => pollRuaDetail(staging_area_id, startedAt), RUA_DETAIL_POLL_MS);
+    });
+}
+
+function closeToDetailModal() {
+  document.getElementById('toDetailModal').style.display = 'none';
+  ruaDetailPollActive = null;
+  clearTimeout(ruaDetailPollTimer);
+}
+
+function ruaDetailHeader(staging_area_id, title, sub) {
+  return `<div class="to-modal-header">
+    <div>
+      <div class="to-modal-title">${title || staging_area_id}</div>
+      ${sub ? `<div class="to-modal-sub">${sub}</div>` : ''}
+    </div>
+    <button class="to-modal-close" onclick="closeToDetailModal()">✕</button>
+  </div>`;
+}
+
+function renderRuaDetailLoading(staging_area_id) {
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${ruaDetailHeader(staging_area_id)}
+    <div class="to-modal-body">
+      <div class="to-modal-empty">
+        <div class="emoji">⏳</div>
+        Buscando TOs e gaiolas no SPX...<br>
+        <span style="font-size:11px">precisa de uma aba do SPX aberta com o Tampermonkey ativo</span>
+      </div>
+    </div>`;
+}
+
+function renderRuaDetailTimeout(staging_area_id) {
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${ruaDetailHeader(staging_area_id)}
+    <div class="to-modal-body">
+      <div class="to-modal-empty">
+        <div class="emoji">⚠️</div>
+        Nenhuma aba do SPX respondeu a tempo.<br>
+        <span style="font-size:11px">Verifique se o script <b>to_detail_sync.user.js</b> está instalado e se há uma aba do SPX aberta.</span>
+        <div><button class="to-modal-retry" onclick="openRuaDetailModal('${staging_area_id}')">Tentar de novo</button></div>
+      </div>
+    </div>`;
+}
+
+function renderRuaDetailError(staging_area_id, error) {
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${ruaDetailHeader(staging_area_id)}
+    <div class="to-modal-body">
+      <div class="to-modal-empty">
+        <div class="emoji">❌</div>
+        Erro ao buscar essa rua no SPX.<br>
+        <span style="font-size:11px;color:var(--red)">${error || 'erro desconhecido'}</span>
+        <div><button class="to-modal-retry" onclick="openRuaDetailModal('${staging_area_id}')">Tentar de novo</button></div>
+      </div>
+    </div>`;
+}
+
+function renderRuaDetailResult(staging_area_id, data) {
+  const items = data.items || [];
+  const rows = items.map(it => {
+    const isTo = it.target_item_type === 2;
+    const typeBadge = isTo
+      ? `<span class="item-type-pill item-type-to">TO</span>`
+      : `<span class="item-type-pill item-type-cage">Gaiola</span>`;
+    return `<tr>
+      <td>${typeBadge}</td>
+      <td class="rua-name" style="font-size:11px">${it.target_item_number || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${it.to_receiver || '—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtScanTime(it.scan_time)}</td>
+    </tr>`;
+  }).join('');
+
+  const pct = parsePct(data.occupancy_percentage);
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${ruaDetailHeader(staging_area_id, data.staging_area_name || staging_area_id, `${staging_area_id} → ${data.to_destination || '—'}`)}
+    <div class="to-modal-body">
+      <div class="to-modal-kpis">
+        <div class="to-mkpi"><div class="to-mkpi-label">Gaiolas</div><div class="to-mkpi-val" style="color:var(--purple)">${data.cage_quantity ?? 0}</div></div>
+        <div class="to-mkpi"><div class="to-mkpi-label">TOs</div><div class="to-mkpi-val" style="color:var(--green)">${data.transport_order_quantity ?? 0}</div></div>
+        <div class="to-mkpi"><div class="to-mkpi-label">Capacidade</div><div class="to-mkpi-val">${data.capacity ?? '—'}</div></div>
+        <div class="to-mkpi"><div class="to-mkpi-label">Ocupação</div><div class="to-mkpi-val" style="color:${occColor(pct)}">${pct.toFixed(0)}%</div></div>
+      </div>
+      ${items.length ? `
+      <div class="to-modal-table-wrap">
+        <table class="to-modal-table">
+          <thead>
+            <tr>
+              <th>Tipo</th><th>Item</th><th>Receiver</th><th>Scan Time</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>` : `<div class="to-modal-empty" style="padding:24px"><div class="emoji">📭</div>Nenhum item nesta rua.</div>`}
+    </div>`;
+}
+
+function fmtScanTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -644,7 +822,7 @@ function renderCard(g, expanded) {
            </div>`
         : `<span class="sacas-na">—</span>`;
 
-      return `<tr>
+      return `<tr onclick="openRuaDetailModal('${r.staging_area_id}')" title="Ver TOs e gaiolas desta rua">
         <td><span class="rua-name">${r.staging_area_name}</span></td>
         <td><span class="status-pill ${sc}">${sl}</span></td>
         <td style="text-align:center">${r.cage_quantity || 0}</td>
@@ -815,6 +993,8 @@ document.getElementById('search').addEventListener('input', render);
 // ═══════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeToDetailModal(); });
+
 loadData();
 loadSheetData();
 

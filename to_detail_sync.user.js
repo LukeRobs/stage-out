@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
-// @description  Atende sob demanda pedidos de detalhe de pacotes de uma TO vindos do dashboard (tos_packed / tos_packing)
+// @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
 // @connect      stage-out.onrender.com
@@ -17,6 +17,9 @@
   const PENDING_URL   = SERVER_BASE + '/api/to-detail-pending';
   const RESULT_URL    = SERVER_BASE + '/api/to-detail-result';
   const DETAIL_URL    = '/api/in-station/general_to/detail/search';
+  const RUA_PENDING_URL = SERVER_BASE + '/api/rua-detail-pending';
+  const RUA_RESULT_URL  = SERVER_BASE + '/api/rua-detail-result';
+  const RUA_DETAIL_URL  = '/api/in-station/outbound/outbound_staging_area/details';
   const POLL_INTERVAL = 3000; // 3s — precisa ser responsivo, o usuário está esperando o modal abrir
   const PAGE_SIZE     = 200;  // cobre TOs com bastante pacotes numa unica pagina
 
@@ -108,6 +111,63 @@
     }
   }
 
+  // Busca TOs/gaiolas alocadas numa rua (staging_area_id), com paginação
+  async function fetchRuaDetail(staging_area_id) {
+    let pageno  = 1;
+    let all     = [];
+    let total   = 0;
+    let baseInfo = null;
+    while (true) {
+      const params = new URLSearchParams({ staging_area_id, pageno: String(pageno), count: String(PAGE_SIZE) });
+      const res  = await fetch(`${RUA_DETAIL_URL}?${params}`, {
+        credentials: 'include',
+        headers: { 'x-csrftoken': getCsrf() },
+      });
+      const raw  = await res.text();
+      let json;
+      try { json = JSON.parse(raw); }
+      catch (e) { throw new Error(`Resposta não é JSON (status ${res.status})`); }
+      if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
+      const d = json.data || {};
+      if (!baseInfo) baseInfo = d.staging_area_base_info || {};
+      const item = d.staging_area_item || {};
+      total = item.total || 0;
+      all   = all.concat(item.list || []);
+      if (all.length >= total || !item.list?.length || pageno > 10) break;
+      pageno++;
+    }
+    return { ...baseInfo, items: all, total };
+  }
+
+  async function processRuaPending() {
+    let pendingData;
+    try { pendingData = await gmGetJson(RUA_PENDING_URL); }
+    catch (e) { return; }
+    const pending = pendingData?.pending || [];
+    if (!pending.length) {
+      ruaDot.textContent = '🛣 Rua Detail · aguardando';
+      ruaDot.style.background = '#475569';
+      return;
+    }
+
+    for (const staging_area_id of pending) {
+      ruaDot.textContent = `🛣 Buscando ${staging_area_id}...`;
+      ruaDot.style.background = '#0ea5e9';
+      try {
+        const data = await fetchRuaDetail(staging_area_id);
+        await gmPostJson(RUA_RESULT_URL, { staging_area_id, data });
+        ruaDot.textContent = `✅ ${staging_area_id} (${data.items.length} itens)`;
+        ruaDot.style.background = '#059669';
+        console.log(`[Rua Detail] ${staging_area_id}: ${data.items.length} itens enviados`);
+      } catch (e) {
+        await gmPostJson(RUA_RESULT_URL, { staging_area_id, error: e.message }).catch(() => {});
+        ruaDot.textContent = `⚠️ Erro em ${staging_area_id}`;
+        ruaDot.style.background = '#cc7700';
+        console.warn(`[Rua Detail] erro em ${staging_area_id}:`, e.message);
+      }
+    }
+  }
+
   // ── Hub compartilhado ────────────────────────────────────────────────
   function registerSyncDot(label, bgColor) {
     let hub = document.getElementById('spx-sync-hub');
@@ -163,7 +223,12 @@
   const dot = registerSyncDot('📦 TO Detail', '#475569');
   dot.title = 'Atende pedidos de detalhe de pacotes de TO vindos do dashboard';
 
+  const ruaDot = registerSyncDot('🛣 Rua Detail', '#475569');
+  ruaDot.title = 'Atende pedidos de detalhe de TOs/gaiolas de uma rua vindos do dashboard';
+
   // ── Run ─────────────────────────────────────────────────────────────
   processPending();
+  processRuaPending();
   setInterval(processPending, POLL_INTERVAL);
+  setInterval(processRuaPending, POLL_INTERVAL);
 })();
