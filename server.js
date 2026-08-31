@@ -444,10 +444,23 @@
   const toPackedMap        = new Map(); // to_number -> record
   const TO_MERGE_MAX_AGE_MS = 72 * 60 * 60 * 1000; // 72h — poda de segurança (evita crescer para sempre)
 
-  function mergeToRecords(map, list) {
+  // Quando o dashboard confirma via /api/to-evict que uma TO ja mudou de status (lookup ao
+  // vivo), ela precisa ficar EXCLUIDA de verdade — sem isso, a proxima sincronizacao em
+  // massa do Tampermonkey (que usa a busca "outbound/search", mais sujeita a atraso do que
+  // o lookup individual) reinseria a mesma TO no merge minutos depois, desfazendo a remocao.
+  const toEvictedSets = { packing: new Map(), packed: new Map() }; // to_number -> evictedAt (ms)
+  const TO_EVICT_TTL_MS = 24 * 60 * 60 * 1000; // 24h — depois disso volta a aceitar (por segurança)
+
+  function pruneEvicted(evictedMap) {
+    const now = Date.now();
+    for (const [key, t] of evictedMap) if (now - t > TO_EVICT_TTL_MS) evictedMap.delete(key);
+  }
+
+  function mergeToRecords(map, list, evictedMap) {
     const nowMs = Date.now();
+    if (evictedMap) pruneEvicted(evictedMap);
     (list || []).forEach(to => {
-      if (to && to.to_number) map.set(to.to_number, to);
+      if (to && to.to_number && !(evictedMap && evictedMap.has(to.to_number))) map.set(to.to_number, to);
     });
     for (const [key, to] of map) {
       const refSec = to.complete_time || to.ctime || 0;
@@ -881,7 +894,7 @@
       req.on('end', () => {
         try {
           const incoming = JSON.parse(body);
-          mergeToRecords(toPackingMap, incoming.list);
+          mergeToRecords(toPackingMap, incoming.list, toEvictedSets.packing);
           toPackingCache = snapshotToCache(toPackingMap, incoming.fetchedAt || Date.now());
           console.log(`[tos-packing] +${incoming.list?.length || 0} recebidos, ${toPackingMap.size} acumulados`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -901,7 +914,7 @@
       req.on('end', () => {
         try {
           const incoming = JSON.parse(body);
-          mergeToRecords(toPackedMap, incoming.list);
+          mergeToRecords(toPackedMap, incoming.list, toEvictedSets.packed);
           toPackedCache = snapshotToCache(toPackedMap, incoming.fetchedAt || Date.now());
           console.log(`[tos-packed] +${incoming.list?.length || 0} recebidos, ${toPackedMap.size} acumulados`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -1033,6 +1046,10 @@
           }
           const map = kind === 'packing' ? toPackingMap : toPackedMap;
           const removed = map.delete(to_number);
+          // Registra a exclusao SEMPRE (nao so quando "removed"), pra bloquear reinsercao
+          // pela proxima sincronizacao em massa mesmo que ela chegue antes de o merge atual
+          // ter essa TO — o pedido de evict pode chegar um pouco antes do proximo sync.
+          toEvictedSets[kind].set(to_number, Date.now());
           if (removed) {
             if (kind === 'packing') toPackingCache = snapshotToCache(toPackingMap, toPackingCache?.fetchedAt ?? Date.now());
             else                    toPackedCache  = snapshotToCache(toPackedMap,  toPackedCache?.fetchedAt  ?? Date.now());
