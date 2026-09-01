@@ -510,8 +510,8 @@
   // reverificação via o mesmo relay de detalhe — e evicta sozinho quando o status não bate.
   const toDetailExpectations = new Map(); // to_number -> { kind, expectedStatus }
   const lastRevalidatedAt    = new Map(); // to_number -> ms (evita reverificar a mesma TO toda hora)
-  const REVALIDATE_BATCH_SIZE    = 20;
-  const REVALIDATE_INTERVAL_MS   = 5 * 60 * 1000;  // a cada 5min
+  const REVALIDATE_BATCH_SIZE    = 60;
+  const REVALIDATE_INTERVAL_MS   = 90 * 1000;      // a cada 90s — precisa varrer o backlog rapido
   const REVALIDATE_COOLDOWN_MS   = 30 * 60 * 1000; // nao reverifica a mesma TO em menos de 30min
 
   function scheduleRevalidation() {
@@ -535,7 +535,7 @@
       toDetailExpectations.set(c.to_number, { kind: c.kind, expectedStatus: c.expectedStatus });
       const existing = toDetailRequests.get(c.to_number);
       if (!existing || existing.result || existing.error) {
-        toDetailRequests.set(c.to_number, { requestedAt: now, resolvedAt: null, result: null, error: null });
+        toDetailRequests.set(c.to_number, { requestedAt: now, resolvedAt: null, result: null, error: null, source: 'auto' });
       }
     });
     // Poda leve pra nao crescer pra sempre
@@ -1037,9 +1037,12 @@
           }
           pruneToDetailRequests();
           const existing = toDetailRequests.get(to_number);
-          // Se ja tem um pedido recente sem resposta ainda, nao reseta (evita duplicar fila)
+          // Se ja tem um pedido recente sem resposta ainda, nao reseta (evita duplicar fila) —
+          // mas promove pra "manual" pra furar a fila da revalidacao automatica em segundo plano.
           if (!existing || existing.result || existing.error) {
-            toDetailRequests.set(to_number, { requestedAt: Date.now(), resolvedAt: null, result: null, error: null });
+            toDetailRequests.set(to_number, { requestedAt: Date.now(), resolvedAt: null, result: null, error: null, source: 'manual' });
+          } else {
+            existing.source = 'manual';
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -1051,11 +1054,14 @@
       return;
     }
 
-    // GET /api/to-detail-pending — to_detail_sync busca quais TOs estao aguardando resposta
+    // GET /api/to-detail-pending — to_detail_sync busca quais TOs estao aguardando resposta.
+    // Pedidos "manual" (clique no modal) sempre vem antes dos "auto" (revalidacao em segundo
+    // plano), pra um clique do usuario nao ficar esperando atras de uma leva de 60 automaticos.
     if (urlPath === '/api/to-detail-pending') {
       pruneToDetailRequests();
       const pending = [...toDetailRequests.entries()]
         .filter(([, r]) => !r.result && !r.error)
+        .sort((a, b) => (a[1].source === 'manual' ? 0 : 1) - (b[1].source === 'manual' ? 0 : 1))
         .map(([to_number]) => to_number);
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify({ pending }));
