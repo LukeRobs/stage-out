@@ -449,11 +449,24 @@
   // massa do Tampermonkey (que usa a busca "outbound/search", mais sujeita a atraso do que
   // o lookup individual) reinseria a mesma TO no merge minutos depois, desfazendo a remocao.
   const toEvictedSets = { packing: new Map(), packed: new Map() }; // to_number -> evictedAt (ms)
-  const TO_EVICT_TTL_MS = 24 * 60 * 60 * 1000; // 24h — depois disso volta a aceitar (por segurança)
+  const TO_EVICT_TTL_MS = 48 * 60 * 60 * 1000; // 48h — mesmo prazo do corte de idade do dashboard, por consistência
 
   function pruneEvicted(evictedMap) {
     const now = Date.now();
     for (const [key, t] of evictedMap) if (now - t > TO_EVICT_TTL_MS) evictedMap.delete(key);
+  }
+
+  // Remove uma TO do merge de verdade (usado tanto pelo evict manual — clique no modal —
+  // quanto pela revalidacao automatica em segundo plano abaixo).
+  function evictTo(to_number, kind) {
+    const map = kind === 'packing' ? toPackingMap : toPackedMap;
+    const removed = map.delete(to_number);
+    toEvictedSets[kind].set(to_number, Date.now());
+    if (removed) {
+      if (kind === 'packing') toPackingCache = snapshotToCache(toPackingMap, toPackingCache?.fetchedAt ?? Date.now());
+      else                    toPackedCache  = snapshotToCache(toPackedMap,  toPackedCache?.fetchedAt  ?? Date.now());
+    }
+    return removed;
   }
 
   function mergeToRecords(map, list, evictedMap) {
@@ -486,6 +499,51 @@
     for (const [key, r] of toDetailRequests) {
       if (now - r.requestedAt > TO_DETAIL_TTL_MS) toDetailRequests.delete(key);
     }
+  }
+
+  // ── Revalidação automática em segundo plano ──────────────────────────
+  // A busca em massa do SPX (outbound/search) fica desatualizada numa escala bem maior
+  // do que "sender != current_station_name" sozinho detecta — conferido manualmente pelo
+  // usuário, a maioria das TOs antigas já não estava mais em "Packed"/"Packing" de verdade.
+  // Em vez de depender de alguém clicar em cada TO no modal, o servidor mesmo enfileira
+  // periodicamente as TOs mais antigas (mais provável de já estarem resolvidas) pra
+  // reverificação via o mesmo relay de detalhe — e evicta sozinho quando o status não bate.
+  const toDetailExpectations = new Map(); // to_number -> { kind, expectedStatus }
+  const lastRevalidatedAt    = new Map(); // to_number -> ms (evita reverificar a mesma TO toda hora)
+  const REVALIDATE_BATCH_SIZE    = 20;
+  const REVALIDATE_INTERVAL_MS   = 5 * 60 * 1000;  // a cada 5min
+  const REVALIDATE_COOLDOWN_MS   = 30 * 60 * 1000; // nao reverifica a mesma TO em menos de 30min
+
+  function scheduleRevalidation() {
+    const now = Date.now();
+    const candidates = [];
+    for (const [to_number, rec] of toPackingMap) {
+      if (now - (lastRevalidatedAt.get(to_number) || 0) > REVALIDATE_COOLDOWN_MS) {
+        candidates.push({ to_number, kind: 'packing', expectedStatus: 'Packing', refTime: rec.ctime || 0 });
+      }
+    }
+    for (const [to_number, rec] of toPackedMap) {
+      if (now - (lastRevalidatedAt.get(to_number) || 0) > REVALIDATE_COOLDOWN_MS) {
+        candidates.push({ to_number, kind: 'packed', expectedStatus: 'Packed', refTime: rec.complete_time || rec.ctime || 0 });
+      }
+    }
+    // Prioriza as mais antigas primeiro — sao as mais provaveis de ja estarem resolvidas
+    candidates.sort((a, b) => (a.refTime || 0) - (b.refTime || 0));
+    const batch = candidates.slice(0, REVALIDATE_BATCH_SIZE);
+    batch.forEach(c => {
+      lastRevalidatedAt.set(c.to_number, now);
+      toDetailExpectations.set(c.to_number, { kind: c.kind, expectedStatus: c.expectedStatus });
+      const existing = toDetailRequests.get(c.to_number);
+      if (!existing || existing.result || existing.error) {
+        toDetailRequests.set(c.to_number, { requestedAt: now, resolvedAt: null, result: null, error: null });
+      }
+    });
+    // Poda leve pra nao crescer pra sempre
+    if (lastRevalidatedAt.size > 20000) {
+      const cutoff = now - REVALIDATE_COOLDOWN_MS;
+      for (const [k, t] of lastRevalidatedAt) if (t < cutoff) lastRevalidatedAt.delete(k);
+    }
+    if (batch.length) console.log(`[revalidate] +${batch.length} TOs enfileiradas para reverificação`);
   }
 
   // ── Rua (staging area) detail on-demand (relay) ──────────────────────
@@ -1021,6 +1079,17 @@
           entry.error      = error || null;
           entry.resolvedAt = Date.now();
           toDetailRequests.set(to_number, entry);
+
+          // Se essa TO tinha uma expectativa de status (revalidacao automatica em segundo
+          // plano, ou o proprio dashboard verificando ao abrir o modal), confere e evicta
+          // sozinho quando o status real ja nao bate mais.
+          const expectation = toDetailExpectations.get(to_number);
+          if (expectation && data && data.status && data.status !== expectation.expectedStatus) {
+            evictTo(to_number, expectation.kind);
+            console.log(`[auto-evict] ${to_number} (${expectation.kind}) — status real agora é "${data.status}"`);
+          }
+          toDetailExpectations.delete(to_number);
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1135,16 +1204,7 @@
             res.end(JSON.stringify({ error: 'to_number e kind ("packing"|"packed") obrigatórios' }));
             return;
           }
-          const map = kind === 'packing' ? toPackingMap : toPackedMap;
-          const removed = map.delete(to_number);
-          // Registra a exclusao SEMPRE (nao so quando "removed"), pra bloquear reinsercao
-          // pela proxima sincronizacao em massa mesmo que ela chegue antes de o merge atual
-          // ter essa TO — o pedido de evict pode chegar um pouco antes do proximo sync.
-          toEvictedSets[kind].set(to_number, Date.now());
-          if (removed) {
-            if (kind === 'packing') toPackingCache = snapshotToCache(toPackingMap, toPackingCache?.fetchedAt ?? Date.now());
-            else                    toPackedCache  = snapshotToCache(toPackedMap,  toPackedCache?.fetchedAt  ?? Date.now());
-          }
+          const removed = evictTo(to_number, kind);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, removed }));
         } catch (e) {
@@ -1710,4 +1770,8 @@
       console.error('[WS HOURLY] ❌ Erro:', e.message);
     }
   }, 60 * 1000); // roda a cada 1 min
+
+  setInterval(scheduleRevalidation, REVALIDATE_INTERVAL_MS);
+  setTimeout(scheduleRevalidation, 15 * 1000); // primeira leva logo apos o boot, sem esperar 5min
+
   server.listen(PORT, () => console.log(`Dashboard → http://localhost:${PORT}`));
