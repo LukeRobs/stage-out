@@ -1279,7 +1279,7 @@ function toggleFarolFilter(key) {
 // endereçadas/despachadas na vida real, mas o endpoint general_to/outbound/search
 // do SPX não atualizou staging_area_id (inconsistência do lado do SPX, não do sync).
 // Para não poluir a lista e os KPIs com esses registros órfãos, elas somem depois desse prazo.
-const MAX_AGE_HOURS = 48;
+const MAX_AGE_HOURS = 36;
 
 // A tela só é re-renderizada a cada RENDER_THROTTLE_MS — o servidor acumula dados de
 // várias estações/abas do Tampermonkey e o total pode saltar bastante entre sincronizações

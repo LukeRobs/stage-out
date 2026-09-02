@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
@@ -15,12 +15,14 @@
 
   const SERVER_BASE   = 'https://stage-out.onrender.com';
   const PENDING_URL   = SERVER_BASE + '/api/to-detail-pending';
+  const AUTO_PENDING_URL = SERVER_BASE + '/api/to-detail-pending-auto';
   const RESULT_URL    = SERVER_BASE + '/api/to-detail-result';
   const DETAIL_URL    = '/api/in-station/general_to/detail/search';
   const RUA_PENDING_URL = SERVER_BASE + '/api/rua-detail-pending';
   const RUA_RESULT_URL  = SERVER_BASE + '/api/rua-detail-result';
   const RUA_DETAIL_URL  = '/api/in-station/outbound/outbound_staging_area/details';
   const POLL_INTERVAL = 3000; // 3s — precisa ser responsivo, o usuário está esperando o modal abrir
+  const AUTO_POLL_INTERVAL = 4000; // 4s — fila separada da revalidação em segundo plano
   const PAGE_SIZE     = 200;  // cobre TOs com bastante pacotes numa unica pagina
 
   function getCsrf() {
@@ -107,6 +109,38 @@
         dot.textContent = `⚠️ Erro em ${to_number}`;
         dot.style.background = '#cc7700';
         console.warn(`[TO Detail] erro em ${to_number}:`, e.message);
+      }
+    }
+  }
+
+  // Fila separada da revalidação automática em segundo plano — roda de forma totalmente
+  // independente do processPending() acima, pra uma leva grande de itens automáticos nunca
+  // segurar um pedido manual (clique no modal) atrás dela (o loop antigo buscava a lista uma
+  // vez e processava tudo em sequência antes de checar de novo, então um clique manual podia
+  // ficar preso minutos atrás de uma leva de 60 automáticos).
+  async function processAutoPending() {
+    let pendingData;
+    try { pendingData = await gmGetJson(AUTO_PENDING_URL); }
+    catch (e) { return; }
+    const pending = pendingData?.pending || [];
+    if (!pending.length) {
+      autoDot.textContent = '🔄 Revalidação · aguardando';
+      autoDot.style.background = '#475569';
+      return;
+    }
+
+    for (const to_number of pending) {
+      autoDot.textContent = `🔄 Revalidando ${to_number}...`;
+      autoDot.style.background = '#0ea5e9';
+      try {
+        const data = await fetchToDetail(to_number);
+        await gmPostJson(RESULT_URL, { to_number, data });
+        autoDot.textContent = `✅ ${to_number} revalidada`;
+        autoDot.style.background = '#059669';
+      } catch (e) {
+        await gmPostJson(RESULT_URL, { to_number, error: e.message }).catch(() => {});
+        autoDot.textContent = `⚠️ Erro em ${to_number}`;
+        autoDot.style.background = '#cc7700';
       }
     }
   }
@@ -221,14 +255,19 @@
 
   // ── Indicador visual ────────────────────────────────────────────────
   const dot = registerSyncDot('📦 TO Detail', '#475569');
-  dot.title = 'Atende pedidos de detalhe de pacotes de TO vindos do dashboard';
+  dot.title = 'Atende pedidos de detalhe de pacotes de TO vindos do dashboard (clique manual)';
 
   const ruaDot = registerSyncDot('🛣 Rua Detail', '#475569');
   ruaDot.title = 'Atende pedidos de detalhe de TOs/gaiolas de uma rua vindos do dashboard';
 
+  const autoDot = registerSyncDot('🔄 Revalidação', '#475569');
+  autoDot.title = 'Revalida em segundo plano TOs antigas do dashboard (fila separada, não atrasa cliques manuais)';
+
   // ── Run ─────────────────────────────────────────────────────────────
   processPending();
   processRuaPending();
+  processAutoPending();
   setInterval(processPending, POLL_INTERVAL);
   setInterval(processRuaPending, POLL_INTERVAL);
+  setInterval(processAutoPending, AUTO_POLL_INTERVAL);
 })();

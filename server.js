@@ -449,7 +449,7 @@
   // massa do Tampermonkey (que usa a busca "outbound/search", mais sujeita a atraso do que
   // o lookup individual) reinseria a mesma TO no merge minutos depois, desfazendo a remocao.
   const toEvictedSets = { packing: new Map(), packed: new Map() }; // to_number -> evictedAt (ms)
-  const TO_EVICT_TTL_MS = 48 * 60 * 60 * 1000; // 48h — mesmo prazo do corte de idade do dashboard, por consistência
+  const TO_EVICT_TTL_MS = 36 * 60 * 60 * 1000; // 36h — mesmo prazo do corte de idade do dashboard, por consistência
 
   function pruneEvicted(evictedMap) {
     const now = Date.now();
@@ -1055,13 +1055,26 @@
     }
 
     // GET /api/to-detail-pending — to_detail_sync busca quais TOs estao aguardando resposta.
-    // Pedidos "manual" (clique no modal) sempre vem antes dos "auto" (revalidacao em segundo
-    // plano), pra um clique do usuario nao ficar esperando atras de uma leva de 60 automaticos.
+    // Só retorna pedidos "manual" (clique no modal) — os "auto" (revalidação em segundo
+    // plano) têm fila própria em /api/to-detail-pending-auto. Antes eram a mesma fila e um
+    // clique manual ficava preso atrás de uma leva de 60 automáticos já em processamento
+    // (o to_detail_sync busca a lista uma vez e processa tudo em sequência antes de checar
+    // de novo) — separando de vez, o loop manual nunca espera o automático.
     if (urlPath === '/api/to-detail-pending') {
       pruneToDetailRequests();
       const pending = [...toDetailRequests.entries()]
-        .filter(([, r]) => !r.result && !r.error)
-        .sort((a, b) => (a[1].source === 'manual' ? 0 : 1) - (b[1].source === 'manual' ? 0 : 1))
+        .filter(([, r]) => !r.result && !r.error && r.source !== 'auto')
+        .map(([to_number]) => to_number);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ pending }));
+      return;
+    }
+
+    // GET /api/to-detail-pending-auto — fila separada, só pra revalidação em segundo plano
+    if (urlPath === '/api/to-detail-pending-auto') {
+      pruneToDetailRequests();
+      const pending = [...toDetailRequests.entries()]
+        .filter(([, r]) => !r.result && !r.error && r.source === 'auto')
         .map(([to_number]) => to_number);
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify({ pending }));
