@@ -4,6 +4,17 @@
   const crypto = require('crypto');
   const { spawn } = require('child_process');
 
+  // Blindagem: uma excecao nao tratada (ex: dentro de um setInterval, fora do request
+  // handler) derrubava o processo inteiro, e o restart no Render zera TODOS os caches em
+  // memoria (queue, trips, packing, packed etc.) — exatamente o "sumiu tudo do nada" que
+  // ja apareceu varias vezes. Loga o erro mas mantem o processo de pe.
+  process.on('uncaughtException', (err) => {
+    console.error('[uncaughtException] processo continua rodando:', err);
+  });
+  process.on('unhandledRejection', (err) => {
+    console.error('[unhandledRejection] processo continua rodando:', err);
+  });
+
   // Load .env if present (local dev)
   try {
     const envFile = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
@@ -1790,7 +1801,11 @@
     }
   }, 60 * 1000); // roda a cada 1 min
 
-  setInterval(scheduleRevalidation, REVALIDATE_INTERVAL_MS);
-  setTimeout(scheduleRevalidation, 15 * 1000); // primeira leva logo apos o boot, sem esperar 5min
+  function safeScheduleRevalidation() {
+    try { scheduleRevalidation(); }
+    catch (e) { console.error('[revalidate] erro (ignorado):', e.message); }
+  }
+  setInterval(safeScheduleRevalidation, REVALIDATE_INTERVAL_MS);
+  setTimeout(safeScheduleRevalidation, 15 * 1000); // primeira leva logo apos o boot, sem esperar 5min
 
   server.listen(PORT, () => console.log(`Dashboard → http://localhost:${PORT}`));

@@ -531,10 +531,17 @@ function getDestStation(trip) {
 // ── Queue map (fonte secundária) ───────────────────────────────────────
 let queueMap = {}; // trip_number → queue_item
 
+// Alguns itens da queue ainda não têm lh_trip_number (chegaram mas não foram vinculados
+// a uma viagem formal ainda) — usamos o queue_number como identificador alternativo pra
+// não perder esses itens (senão eles somem silenciosamente de toda a tela).
+function queueKey(q) {
+  return q.route_info?.lh_trip_number || q.queue_number || null;
+}
+
 function buildQueueMap(queueList) {
   queueMap = {};
   (queueList || []).forEach(q => {
-    const tn = q.route_info?.lh_trip_number;
+    const tn = queueKey(q);
     if (tn) queueMap[tn] = q;
   });
 }
@@ -830,7 +837,7 @@ async function loadData() {
     // Usar allItems.length>0 como guarda escondia itens reais da queue nesses momentos
     // de baixa atividade, mesmo com a queue tendo dados válidos.
     (qData.list || []).forEach(q => {
-      const tn = q.route_info?.lh_trip_number;
+      const tn = queueKey(q);
       if (!tn || tripNums.has(tn)) return;
       // LT está na queue mas não veio na trips API — adiciona como suplemento
       // _trip_detail é injetado pelo queue_list_sync v1.2 via /api/admin/transportation/trip/detail
