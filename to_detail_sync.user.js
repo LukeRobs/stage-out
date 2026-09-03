@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
@@ -28,6 +28,13 @@
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
     return m ? m[1] : '';
+  }
+
+  // Cache-buster pras chamadas de "pending" (GET) — sem isso, o navegador ou o proprio
+  // Tampermonkey pode servir uma resposta antiga em cache indefinidamente pra essa URL,
+  // fazendo o loop achar que nunca tem nada pendente mesmo com pedidos reais no servidor.
+  function bust(url) {
+    return url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
   }
 
   function gmGetJson(url) {
@@ -86,7 +93,7 @@
 
   async function processPending() {
     let pendingData;
-    try { pendingData = await gmGetJson(PENDING_URL); }
+    try { pendingData = await gmGetJson(bust(PENDING_URL)); }
     catch (e) { return; }
     const pending = pendingData?.pending || [];
     if (!pending.length) {
@@ -122,7 +129,7 @@
 
   async function processAutoPending() {
     let pendingData;
-    try { pendingData = await gmGetJson(AUTO_PENDING_URL); }
+    try { pendingData = await gmGetJson(bust(AUTO_PENDING_URL)); }
     catch (e) { return; }
     const pending = pendingData?.pending || [];
     if (!pending.length) {
@@ -181,7 +188,7 @@
 
   async function processRuaPending() {
     let pendingData;
-    try { pendingData = await gmGetJson(RUA_PENDING_URL); }
+    try { pendingData = await gmGetJson(bust(RUA_PENDING_URL)); }
     catch (e) { return; }
     const pending = pendingData?.pending || [];
     if (!pending.length) {

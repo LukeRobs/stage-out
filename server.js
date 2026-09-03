@@ -1079,7 +1079,7 @@
       const pending = [...toDetailRequests.entries()]
         .filter(([, r]) => !r.result && !r.error && r.source !== 'auto')
         .map(([to_number]) => to_number);
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
       res.end(JSON.stringify({ pending }));
       return;
     }
@@ -1090,7 +1090,7 @@
       const pending = [...toDetailRequests.entries()]
         .filter(([, r]) => !r.result && !r.error && r.source === 'auto')
         .map(([to_number]) => to_number);
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
       res.end(JSON.stringify({ pending }));
       return;
     }
@@ -1137,7 +1137,7 @@
     if (urlPath === '/api/to-detail-result' && req.method === 'GET') {
       const to_number = new URL(req.url, 'http://internal').searchParams.get('to_number');
       const entry = to_number ? toDetailRequests.get(to_number) : null;
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
       if (!entry) { res.end(JSON.stringify({ status: 'unknown' })); return; }
       if (entry.result) { res.end(JSON.stringify({ status: 'done', data: entry.result })); return; }
       if (entry.error)  { res.end(JSON.stringify({ status: 'error', error: entry.error })); return; }
@@ -1178,7 +1178,7 @@
       const pending = [...ruaDetailRequests.entries()]
         .filter(([, r]) => !r.result && !r.error)
         .map(([staging_area_id]) => staging_area_id);
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
       res.end(JSON.stringify({ pending }));
       return;
     }
@@ -1214,7 +1214,7 @@
     if (urlPath === '/api/rua-detail-result' && req.method === 'GET') {
       const staging_area_id = new URL(req.url, 'http://internal').searchParams.get('staging_area_id');
       const entry = staging_area_id ? ruaDetailRequests.get(staging_area_id) : null;
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
       if (!entry) { res.end(JSON.stringify({ status: 'unknown' })); return; }
       if (entry.result) { res.end(JSON.stringify({ status: 'done', data: entry.result })); return; }
       if (entry.error)  { res.end(JSON.stringify({ status: 'error', error: entry.error })); return; }

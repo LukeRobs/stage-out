@@ -536,7 +536,7 @@ async function openToDetailModal(to_number) {
 function pollToDetail(to_number, startedAt) {
   clearTimeout(toDetailPollTimer);
   if (toDetailPollActive !== to_number) return; // modal fechado ou trocou de TO
-  fetch(`/api/to-detail-result?to_number=${encodeURIComponent(to_number)}`)
+  fetch(`/api/to-detail-result?to_number=${encodeURIComponent(to_number)}&_=${Date.now()}`, { cache: 'no-store' })
     .then(r => r.json())
     .then(res => {
       if (toDetailPollActive !== to_number) return;

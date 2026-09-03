@@ -602,7 +602,7 @@ async function openRuaDetailModal(staging_area_id) {
 function pollRuaDetail(staging_area_id, startedAt) {
   clearTimeout(ruaDetailPollTimer);
   if (ruaDetailPollActive !== staging_area_id) return;
-  fetch(`/api/rua-detail-result?staging_area_id=${encodeURIComponent(staging_area_id)}`)
+  fetch(`/api/rua-detail-result?staging_area_id=${encodeURIComponent(staging_area_id)}&_=${Date.now()}`, { cache: 'no-store' })
     .then(r => r.json())
     .then(res => {
       if (ruaDetailPollActive !== staging_area_id) return;
