@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
@@ -97,24 +97,20 @@
     catch (e) { return; }
     const pending = pendingData?.pending || [];
     if (!pending.length) {
-      dot.textContent = '📦 TO Detail · aguardando';
-      dot.style.background = '#475569';
+      setStatus('to', '—');
       return;
     }
 
     for (const to_number of pending) {
-      dot.textContent = `📦 Buscando ${to_number}...`;
-      dot.style.background = '#0ea5e9';
+      setStatus('to', `⏳ ${to_number}`);
       try {
         const data = await fetchToDetail(to_number);
         await gmPostJson(RESULT_URL, { to_number, data });
-        dot.textContent = `✅ ${to_number} (${data.list.length} pac.)`;
-        dot.style.background = '#059669';
+        setStatus('to', `✅ ${to_number}`);
         console.log(`[TO Detail] ${to_number}: ${data.list.length} pacotes enviados`);
       } catch (e) {
         await gmPostJson(RESULT_URL, { to_number, error: e.message }).catch(() => {});
-        dot.textContent = `⚠️ Erro em ${to_number}`;
-        dot.style.background = '#cc7700';
+        setStatus('to', `⚠️ ${to_number}`);
         console.warn(`[TO Detail] erro em ${to_number}:`, e.message);
       }
     }
@@ -133,23 +129,19 @@
     catch (e) { return; }
     const pending = pendingData?.pending || [];
     if (!pending.length) {
-      autoDot.textContent = '🔄 Revalidação · aguardando';
-      autoDot.style.background = '#475569';
+      setStatus('auto', '—');
       return;
     }
 
     for (const to_number of pending) {
-      autoDot.textContent = `🔄 Revalidando ${to_number}...`;
-      autoDot.style.background = '#0ea5e9';
+      setStatus('auto', `⏳ ${to_number}`);
       try {
         const data = await fetchToDetail(to_number);
         await gmPostJson(RESULT_URL, { to_number, data });
-        autoDot.textContent = `✅ ${to_number} revalidada`;
-        autoDot.style.background = '#059669';
+        setStatus('auto', `✅ ${to_number}`);
       } catch (e) {
         await gmPostJson(RESULT_URL, { to_number, error: e.message }).catch(() => {});
-        autoDot.textContent = `⚠️ Erro em ${to_number}`;
-        autoDot.style.background = '#cc7700';
+        setStatus('auto', `⚠️ ${to_number}`);
       }
       // Pequena pausa entre cada item — evita rajada de requisições contra o SPX,
       // que pode estar sendo throttled/limitado do lado deles (ou pela conexao do navegador),
@@ -192,24 +184,20 @@
     catch (e) { return; }
     const pending = pendingData?.pending || [];
     if (!pending.length) {
-      ruaDot.textContent = '🛣 Rua Detail · aguardando';
-      ruaDot.style.background = '#475569';
+      setStatus('rua', '—');
       return;
     }
 
     for (const staging_area_id of pending) {
-      ruaDot.textContent = `🛣 Buscando ${staging_area_id}...`;
-      ruaDot.style.background = '#0ea5e9';
+      setStatus('rua', `⏳ ${staging_area_id}`);
       try {
         const data = await fetchRuaDetail(staging_area_id);
         await gmPostJson(RUA_RESULT_URL, { staging_area_id, data });
-        ruaDot.textContent = `✅ ${staging_area_id} (${data.items.length} itens)`;
-        ruaDot.style.background = '#059669';
+        setStatus('rua', `✅ ${staging_area_id}`);
         console.log(`[Rua Detail] ${staging_area_id}: ${data.items.length} itens enviados`);
       } catch (e) {
         await gmPostJson(RUA_RESULT_URL, { staging_area_id, error: e.message }).catch(() => {});
-        ruaDot.textContent = `⚠️ Erro em ${staging_area_id}`;
-        ruaDot.style.background = '#cc7700';
+        setStatus('rua', `⚠️ ${staging_area_id}`);
         console.warn(`[Rua Detail] erro em ${staging_area_id}:`, e.message);
       }
     }
@@ -266,15 +254,18 @@
     return dot;
   }
 
-  // ── Indicador visual ────────────────────────────────────────────────
-  const dot = registerSyncDot('📦 TO Detail', '#475569');
-  dot.title = 'Atende pedidos de detalhe de pacotes de TO vindos do dashboard (clique manual)';
+  // ── Indicador visual — um único badge combinado (evita empilhar 3 badges no hub) ──
+  const relayDot = registerSyncDot('📦 Relay', '#475569');
+  relayDot.title = 'TO Detail (clique manual) · Rua Detail (clique manual) · Revalidação (segundo plano)';
 
-  const ruaDot = registerSyncDot('🛣 Rua Detail', '#475569');
-  ruaDot.title = 'Atende pedidos de detalhe de TOs/gaiolas de uma rua vindos do dashboard';
-
-  const autoDot = registerSyncDot('🔄 Revalidação', '#475569');
-  autoDot.title = 'Revalida em segundo plano TOs antigas do dashboard (fila separada, não atrasa cliques manuais)';
+  const status = { to: '—', rua: '—', auto: '—' };
+  function setStatus(key, text) {
+    status[key] = text;
+    relayDot.textContent = `📦${status.to} 🛣${status.rua} 🔄${status.auto}`;
+    const anyBusy = Object.values(status).some(s => s.startsWith('⏳'));
+    const anyErr  = Object.values(status).some(s => s.startsWith('⚠️'));
+    relayDot.style.background = anyBusy ? '#0ea5e9' : anyErr ? '#cc7700' : '#475569';
+  }
 
   // ── Run ─────────────────────────────────────────────────────────────
   processPending();
