@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
@@ -22,7 +22,9 @@
   const RUA_RESULT_URL  = SERVER_BASE + '/api/rua-detail-result';
   const RUA_DETAIL_URL  = '/api/in-station/outbound/outbound_staging_area/details';
   const POLL_INTERVAL = 3000; // 3s — precisa ser responsivo, o usuário está esperando o modal abrir
-  const AUTO_POLL_INTERVAL = 4000; // 4s — fila separada da revalidação em segundo plano
+  // O servidor só enfileira uma nova leva de revalidação a cada 10min — checar a cada 4s era
+  // desperdício de conexão/CPU na mesma aba, competindo com os syncs normais (TOs/Trips/Queue).
+  const AUTO_POLL_INTERVAL = 20000; // 20s
   const PAGE_SIZE     = 200;  // cobre TOs com bastante pacotes numa unica pagina
 
   function getCsrf() {
@@ -146,7 +148,7 @@
       // Pequena pausa entre cada item — evita rajada de requisições contra o SPX,
       // que pode estar sendo throttled/limitado do lado deles (ou pela conexao do navegador),
       // atrasando ate os pedidos manuais que ficam presos na fila propria.
-      await sleep(400);
+      await sleep(1000);
     }
   }
 
