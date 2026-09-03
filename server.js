@@ -521,8 +521,11 @@
   // reverificação via o mesmo relay de detalhe — e evicta sozinho quando o status não bate.
   const toDetailExpectations = new Map(); // to_number -> { kind, expectedStatus }
   const lastRevalidatedAt    = new Map(); // to_number -> ms (evita reverificar a mesma TO toda hora)
-  const REVALIDATE_BATCH_SIZE    = 60;
-  const REVALIDATE_INTERVAL_MS   = 90 * 1000;      // a cada 90s — precisa varrer o backlog rapido
+  // 60 a cada 90s (2400/h) se mostrou agressivo demais: pedidos manuais (clique no modal)
+  // pararam de responder mesmo com fila propria, sugerindo throttling do lado do SPX ou do
+  // navegador na mesma origem. Reduzido bem mais — prioriza estabilidade sobre velocidade.
+  const REVALIDATE_BATCH_SIZE    = 12;
+  const REVALIDATE_INTERVAL_MS   = 3 * 60 * 1000;  // a cada 3min (240/h)
   const REVALIDATE_COOLDOWN_MS   = 30 * 60 * 1000; // nao reverifica a mesma TO em menos de 30min
 
   function scheduleRevalidation() {

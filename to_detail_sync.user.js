@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
@@ -118,6 +118,8 @@
   // segurar um pedido manual (clique no modal) atrás dela (o loop antigo buscava a lista uma
   // vez e processava tudo em sequência antes de checar de novo, então um clique manual podia
   // ficar preso minutos atrás de uma leva de 60 automáticos).
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
   async function processAutoPending() {
     let pendingData;
     try { pendingData = await gmGetJson(AUTO_PENDING_URL); }
@@ -142,6 +144,10 @@
         autoDot.textContent = `⚠️ Erro em ${to_number}`;
         autoDot.style.background = '#cc7700';
       }
+      // Pequena pausa entre cada item — evita rajada de requisições contra o SPX,
+      // que pode estar sendo throttled/limitado do lado deles (ou pela conexao do navegador),
+      // atrasando ate os pedidos manuais que ficam presos na fila propria.
+      await sleep(400);
     }
   }
 
