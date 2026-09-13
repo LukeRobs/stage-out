@@ -1,0 +1,2471 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inbound Staging Area Dashboard · Recife 04</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Dark (default) ── */
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --accent: #22c55e;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --orange: #ee4d2d;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ── Light mode ── */
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
+  --shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+  transition: background .2s, color .2s;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: var(--shadow);
+}
+.header-icon {
+  width: 34px; height: 34px; background: var(--accent);
+  border-radius: 8px; display: flex; align-items: center;
+  justify-content: center; font-size: 17px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 14px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink:0; }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+.theme-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  font-size: 14px; color: var(--muted); transition: all .15s; line-height: 1;
+}
+.theme-btn:hover { border-color: var(--border2); color: var(--text); }
+
+/* ── Zone tabs ── */
+.zone-tabs {
+  padding: 0 24px; display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); background: var(--surface);
+}
+.zone-tab {
+  background: transparent; border: none; color: var(--muted);
+  padding: 9px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.zone-tab:hover { color: var(--text); }
+.zone-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.zone-tab .tab-count {
+  background: var(--surface2); color: var(--muted);
+  font-size: 10px; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border);
+}
+.zone-tab.active .tab-count {
+  background: rgba(34,197,94,.12); color: var(--accent); border-color: rgba(34,197,94,.25);
+}
+
+/* ── KPIs ── */
+.stats {
+  display: grid; grid-template-columns: repeat(6,1fr);
+  gap: 10px; padding: 14px 24px;
+}
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+}
+.stat.clickable { cursor: pointer; transition: border-color .15s, background .15s; }
+.stat.clickable:hover { border-color: var(--blue); background: rgba(59,130,246,.06); }
+.stat.pct-active { border-color: var(--blue) !important; background: rgba(59,130,246,.10) !important; box-shadow: 0 0 0 2px rgba(59,130,246,.25); }
+.stat.pct-active .stat-sub::after { content: ' ✕'; font-size:10px; opacity:.6; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+/* Banner de filtro ativo */
+.pct-filter-banner { display:flex; align-items:center; gap:10px; padding:6px 12px; background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.3); border-radius:8px; font-size:11px; margin-bottom:8px; }
+.pct-filter-banner strong { color:var(--blue); }
+.pct-filter-clear { cursor:pointer; padding:2px 8px; border-radius:10px; background:rgba(59,130,246,.2); border:none; color:var(--blue); font-size:10px; }
+/* TO linha destacada na subtabela */
+.to-match { background: rgba(59,130,246,.12) !important; }
+.to-match td:nth-child(2) { font-weight:800; color:var(--blue) !important; }
+
+/* ── Visão por Zona ── */
+.section { padding: 0 24px 14px; }
+.section-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 600; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-label::before {
+  content: ''; width: 8px; height: 8px; border-radius: 2px;
+  background: var(--accent); display: inline-block;
+}
+
+/* Zone summary cards */
+.zone-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 10px; margin-bottom: 14px; }
+.zone-card  {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; border-top: 3px solid;
+}
+.zone-card-label { font-size: 10px; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; margin-bottom: 4px; }
+.zone-card-value { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 5px; }
+.zone-card-meta  { font-size: 11px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+.zone-card-meta strong { color: var(--text); }
+.zc-linear   { border-top-color: #3b82f6; }
+.zc-linear   .zone-card-label { color: #60a5fa; }
+.zc-linear   .zone-card-value { color: #3b82f6; }
+.zc-volumoso { border-top-color: #22c55e; }
+.zc-volumoso .zone-card-label { color: #4ade80; }
+.zc-volumoso .zone-card-value { color: #22c55e; }
+.zc-cop      { border-top-color: #f59e0b; }
+.zc-cop      .zone-card-label { color: #fbbf24; }
+.zc-cop      .zone-card-value { color: #f59e0b; }
+.zc-other    { border-top-color: #8b5cf6; }
+.zc-other    .zone-card-label { color: #a78bfa; }
+.zc-other    .zone-card-value { color: #8b5cf6; }
+
+/* Cross-tab */
+.crosstab-wrap { overflow-x: auto; }
+table.crosstab {
+  width: 100%; border-collapse: collapse; min-width: 500px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+table.crosstab th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 600;
+  background: var(--surface2);
+}
+table.crosstab th.col-total { text-align: right; }
+table.crosstab th.col-zone  { text-align: center; }
+table.crosstab .sub { display: block; font-size: 9px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+table.crosstab td {
+  padding: 8px 14px; border-bottom: 1px solid rgba(42,45,62,.4);
+  vertical-align: middle; font-family: monospace; font-size: 12px;
+}
+[data-theme="light"] table.crosstab td { border-bottom-color: rgba(226,232,240,.8); }
+table.crosstab tr:last-child td { border-bottom: none; }
+table.crosstab td.faixa { font-family: 'Segoe UI',sans-serif; font-size: 11px; color: var(--muted); font-weight: 500; }
+table.crosstab td.zone-cell { text-align: center; }
+table.crosstab td.total-cell { text-align: right; font-weight: 700; color: var(--text); }
+table.crosstab tr.row-total td { background: var(--surface2); font-weight: 700; border-top: 1px solid var(--border); }
+table.crosstab tr.row-total td.faixa { color: var(--text); }
+.cell-inner { display: inline-block; padding: 2px 8px; border-radius: 4px; min-width: 52px; text-align: center; }
+.cell-zero  { color: var(--muted); }
+
+/* ── Panels row ── */
+.panel-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+.panel-title { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 12px; font-weight: 600; }
+.top5-table { width: 100%; border-collapse: collapse; }
+.top5-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 4px 8px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.top5-table td { padding: 8px 8px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
+[data-theme="light"] .top5-table td { border-bottom-color: rgba(226,232,240,.8); }
+.top5-table tr:last-child td { border-bottom: none; }
+.rank-num { color: var(--muted); font-size: 11px; margin-right: 5px; }
+.occ-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.occ-label { font-size: 11px; color: var(--muted); min-width: 70px; }
+.occ-track { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 0 10px; }
+.occ-fill  { height: 100%; border-radius: 4px; }
+.occ-val   { font-size: 11px; font-family: monospace; min-width: 44px; text-align: right; }
+.occ-low  { background: var(--green); }
+.occ-mid  { background: var(--yellow); }
+.occ-high { background: var(--red); }
+
+/* ── Detail table ── */
+.section-header { display: flex; align-items: center; gap: 12px; padding: 0 24px 10px; }
+.section-title  { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
+.table-wrap { padding: 0 24px 32px; overflow-x: auto; }
+table.main-table { width: 100%; border-collapse: collapse; min-width: 700px; }
+table.main-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
+table.main-table th:hover { color: var(--text); }
+table.main-table th.sorted { color: var(--accent); }
+table.main-table td { padding: 8px 12px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; }
+[data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
+table.main-table tr:hover td { background: rgba(0,0,0,.02); }
+table.main-table tr:last-child td { border-bottom: none; }
+
+.area-name { font-weight: 600; font-size: 13px; }
+.zone-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+.zone-linear   { background: rgba(59,130,246,.15);  color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.zone-volumoso { background: rgba(34,197,94,.15);   color: #4ade80; border: 1px solid rgba(34,197,94,.25); }
+.zone-cop      { background: rgba(245,158,11,.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.zone-other    { background: rgba(139,92,246,.15);  color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.occ-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.occ-bar  { width: 60px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.occ-fill2 { height: 100%; border-radius: 3px; }
+.aging-val  { font-family: monospace; font-size: 12px; }
+.aging-ok   { color: var(--muted); }
+.aging-warn { color: var(--yellow); }
+.aging-hot  { color: var(--orange); }
+.aging-crit { color: var(--red); font-weight: 700; }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
+  text-align: left; line-height: 1.8;
+}
+
+@media (max-width: 1100px) { .stats { grid-template-columns: repeat(3,1fr); } }
+/* Donut chart */
+.donut-wrap { display:flex; align-items:center; gap:18px; flex:1; }
+.donut-svg-wrap { position:relative; flex-shrink:0; }
+.donut-center {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  text-align:center; pointer-events:none; line-height:1;
+}
+.donut-center-val { font-size:15px; font-weight:800; }
+.donut-center-lbl { font-size:9px; color:var(--muted); margin-top:2px; }
+.donut-legend-item {
+  display:flex; align-items:center; gap:8px; margin-bottom:9px;
+}
+.donut-swatch { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+.donut-legend-name { font-weight:700; font-size:13px; }
+.donut-legend-pct  { color:var(--muted); font-size:11px; margin-left:4px; }
+.donut-legend-val  { font-family:monospace; font-size:12px; font-weight:600; margin-left:auto; }
+/* ── Table toolbar ── */
+.table-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
+.search-wrap { position: relative; min-width: 200px; max-width: 300px; }
+.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.filter-pills { display: flex; gap: 5px; flex-wrap: wrap; }
+.fpill {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.fpill:hover { border-color: var(--border2); color: var(--text); }
+.fpill.active { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); color: var(--accent); }
+.aging-sort-btn {
+  display: flex; align-items: center; gap: 5px; margin-left: auto;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.aging-sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.aging-sort-btn.desc { background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.25); color: var(--red); }
+.aging-sort-btn.asc  { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.25); color: var(--accent); }
+
+/* ── Pagination ── */
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  padding: 12px 24px; border-top: 1px solid var(--border);
+}
+.pag-info { font-size: 12px; color: var(--muted); }
+.pag-pages { display: flex; align-items: center; gap: 4px; }
+.pag-btn {
+  min-width: 32px; height: 32px; padding: 0 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 7px; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all .15s; display: flex; align-items: center; justify-content: center;
+}
+.pag-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.pag-btn:disabled { opacity: .35; cursor: default; }
+.pag-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pag-ellipsis { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.pag-size { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.pag-size select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 8px; border-radius: 7px; font-size: 12px; cursor: pointer; outline: none;
+}
+.pag-size select:focus { border-color: var(--accent); }
+
+/* ── VOLUMOSO specific ── */
+.vol-row { display:flex; align-items:center; gap:10px; padding:6px 4px; border-bottom:1px solid var(--border); border-radius:6px; cursor:pointer; transition:background .15s; }
+.vol-row:last-child { border-bottom:none; }
+.vol-row:hover { background:rgba(255,255,255,.04); }
+.vol-row.vol-active { background:rgba(59,130,246,.13); border-bottom-color:transparent; box-shadow:inset 2px 0 0 var(--blue); }
+.vol-label { min-width:60px; font-size:12px; font-weight:600; color:var(--muted); }
+.vol-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:10px; overflow:hidden; }
+.vol-bar { height:100%; border-radius:4px; background:var(--green); transition:width .4s ease; }
+.vol-val { min-width:110px; text-align:right; font-family:monospace; font-size:12px; font-weight:700; }
+.vol-pct { color:var(--muted); font-weight:400; font-size:11px; }
+.vol-hist-label { min-width:72px; font-size:11px; color:var(--muted); flex-shrink:0; }
+.vol-turno-row { display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--border); border-radius:6px; cursor:pointer; transition:background .15s; }
+.vol-turno-row:last-child { border-bottom:none; }
+.vol-turno-row:hover { background:rgba(255,255,255,.04); }
+.vol-turno-row.vol-active { background:rgba(59,130,246,.13); border-bottom-color:transparent; box-shadow:inset 2px 0 0 var(--blue); }
+/* Aging histogram row clicável */
+.vol-aging-row { cursor:pointer; border-radius:8px; transition:box-shadow .15s; }
+.vol-aging-row:hover { box-shadow:0 0 0 1px rgba(255,255,255,.1); }
+.vol-aging-row.vol-active { box-shadow:0 0 0 2px var(--blue); }
+
+/* ── Expandable TO rows ── */
+.area-row { cursor: pointer; }
+.area-row:hover td { background: rgba(34,197,94,.04); }
+.expand-chevron { font-size: 9px; color: var(--muted); margin-right: 5px; display: inline-block; transition: transform .18s; }
+.expand-chevron.open { transform: rotate(90deg); color: var(--accent); }
+.expand-row td { padding: 0 !important; background: var(--surface2); border-bottom: 1px solid var(--border) !important; }
+.expand-inner { padding: 10px 12px 10px 44px; }
+.tos-subtable { width: 100%; border-collapse: collapse; }
+.tos-subtable th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted);
+  padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.tos-subtable td { padding: 6px 10px; border-bottom: 1px solid rgba(42,45,62,.3); font-size: 12px; }
+[data-theme="light"] .tos-subtable td { border-bottom-color: rgba(226,232,240,.6); }
+.tos-subtable tr:last-child td { border-bottom: none; }
+.turno-tag {
+  display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10px; font-weight: 700;
+}
+.t-t1 { background: rgba(59,130,246,.15); color: #60a5fa; }
+.t-t2 { background: rgba(245,158,11,.15); color: #fbbf24; }
+.t-t3 { background: rgba(34,197,94,.15);  color: #4ade80; }
+.t-other { background: rgba(139,92,246,.15); color: #a78bfa; }
+
+.perfil-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 8px;
+  font-size: 10px; font-weight: 700; font-family: monospace;
+  margin: 1px 3px 1px 0; white-space: nowrap;
+}
+
+@media (max-width: 900px)  { .panel-row { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .panel-row { grid-template-columns: 1fr; }
+  .header-right .meta-tag { display: none; }
+}
+
+/* ── Aging Criticality Panel ──────────────────────────────────── */
+.aging-crit-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.aging-crit-hdr {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.aging-crit-hdr-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .7px; color: var(--muted);
+}
+.aging-alert-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 11px; border-radius: 20px; font-size: 10px;
+  font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  cursor: default; flex-shrink: 0;
+}
+.aging-alert-pill.red   { background:rgba(239,68,68,.18);  color:var(--red);   border:1px solid rgba(239,68,68,.35);  animation:blink-pill 1.8s infinite; }
+.aging-alert-pill.amber { background:rgba(245,158,11,.18); color:var(--amber); border:1px solid rgba(245,158,11,.35); animation:blink-pill 2.4s infinite; }
+@keyframes blink-pill { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+.aging-col-hdr {
+  display: grid; grid-template-columns: 100px 130px 1fr 64px 108px;
+  gap: 14px; padding: 6px 16px;
+  font-size: 9px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 600;
+  border-bottom: 1px solid var(--border); background: var(--surface2);
+}
+.aging-band-row {
+  display: grid; grid-template-columns: 100px 130px 1fr 64px 108px;
+  align-items: center; gap: 14px; padding: 11px 16px;
+  border-bottom: 1px solid rgba(42,45,62,.45);
+  border-left: 3px solid transparent; transition: filter .15s;
+}
+.aging-band-row:last-child { border-bottom: none; }
+.aging-band-row:hover { filter: brightness(1.07); cursor: default; }
+.abr-ok     { border-left-color: var(--green); }
+.abr-warn   { border-left-color: var(--amber); background: rgba(245,158,11,.035); }
+.abr-crit   { border-left-color: var(--red);   background: rgba(239,68,68,.04);  }
+.abr-danger { border-left-color: var(--red);   background: rgba(239,68,68,.09);  animation: row-flicker 2.5s infinite; }
+@keyframes row-flicker { 0%,100%{background:rgba(239,68,68,.09)} 50%{background:rgba(239,68,68,.17)} }
+[data-theme="light"] .abr-warn   { background: rgba(245,158,11,.07); }
+[data-theme="light"] .abr-crit   { background: rgba(239,68,68,.06); }
+[data-theme="light"] .abr-danger { background: rgba(239,68,68,.11); }
+
+.aging-band-lbl  { font-size: 12px; font-weight: 700; font-family: monospace; }
+.aging-band-pkgs { font-size: 16px; font-weight: 800; font-family: monospace; line-height: 1.1; }
+.aging-band-sub  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+.aging-bar-outer { background: var(--border2); border-radius: 4px; height: 8px; overflow: hidden; }
+.aging-bar-inner { height: 100%; border-radius: 4px; transition: width .45s ease; }
+.aging-pct { font-size: 14px; font-weight: 800; font-family: monospace; text-align: right; }
+.aging-status-tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+}
+.ast-ok     { background:rgba(34,197,94,.12);  color:var(--green); border:1px solid rgba(34,197,94,.22); }
+.ast-warn   { background:rgba(245,158,11,.12); color:var(--amber); border:1px solid rgba(245,158,11,.22); }
+.ast-crit   { background:rgba(239,68,68,.12);  color:var(--red);   border:1px solid rgba(239,68,68,.22); }
+.ast-danger { background:rgba(239,68,68,.22);  color:var(--red);   border:1px solid rgba(239,68,68,.45); animation:blink-pill 1.8s infinite; }
+.abr-active { box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); filter: brightness(1.12); }
+
+/* ── Aba Operacional ── */
+.op-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 20px 24px 40px;
+  min-height: calc(100vh - 128px);
+  align-items: start;
+}
+.op-zone-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  border-top: 4px solid var(--accent);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: transform .2s, box-shadow .2s;
+}
+.op-zone-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.op-zone-card.op-crit { animation: op-crit-pulse 2.5s infinite; }
+@keyframes op-crit-pulse {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50%      { box-shadow: 0 0 0 3px rgba(239,68,68,.25), 0 0 30px rgba(239,68,68,.12); }
+}
+.op-zone-card.op-warn { border-color: rgba(245,158,11,.45); }
+.op-zone-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px;
+}
+.op-zone-name { font-size: 20px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
+.op-zone-pill {
+  font-size: 10px; font-weight: 700; padding: 3px 10px;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: .5px;
+}
+.op-kpis-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+.op-kpi {
+  padding: 14px 14px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.op-kpi:nth-child(3n) { border-right: none; }
+.op-kpi:nth-last-child(-n+3) { border-bottom: none; }
+.op-kpi-val { font-size: 26px; font-weight: 800; line-height: 1; font-family: monospace; }
+.op-kpi-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-top: 5px; font-weight: 600; }
+.op-occ-wrap { padding: 10px 18px 6px; }
+.op-occ-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.op-occ-fill  { height: 100%; border-radius: 3px; transition: width .5s ease; }
+.op-fifo-list {
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+}
+.op-fifo-list-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  font-size: 9px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--muted); font-weight: 700;
+}
+.op-fifo-row {
+  display: grid; grid-template-columns: 22px 1fr auto;
+  align-items: center; gap: 10px;
+  padding: 7px 14px; border-bottom: 1px solid rgba(42,45,62,.35);
+}
+.op-fifo-row:last-child { border-bottom: none; }
+.op-fifo-rank  { font-size: 10px; color: var(--muted); text-align: right; font-family: monospace; align-self: start; padding-top: 3px; }
+.op-fifo-info  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.op-fifo-rua   { font-weight: 700; font-size: 13px; font-family: monospace; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.op-fifo-area  { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 5px; white-space: nowrap; letter-spacing: .3px; flex-shrink: 0; }
+.op-fifo-sub   { display: flex; gap: 8px; flex-wrap: wrap; }
+.op-fifo-sub span { font-size: 10px; color: var(--muted); font-family: monospace; white-space: nowrap; }
+.op-fifo-sub strong { color: var(--text); font-weight: 600; }
+.op-fifo-aging { font-family: monospace; font-size: 13px; font-weight: 800; align-self: start; padding-top: 3px; }
+.tab-op-btn    { border-left: 1px solid var(--border); margin-left: 8px; padding-left: 20px; }
+@media (min-width: 1600px) {
+  .op-grid { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; padding: 24px 32px 48px; }
+  .op-zone-name { font-size: 26px; }
+  .op-kpi-val   { font-size: 34px; }
+  .op-fifo-val  { font-size: 18px; }
+}
+@media (max-width: 600px) {
+  .op-grid { grid-template-columns: 1fr; padding: 12px 16px 32px; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">📥</div>
+  <div class="header-title">
+    <h1>Inbound Staging Area</h1>
+    <p>SPX EXPRESS · SoC_PE_Recife_04 · GERENCIAMENTO DE STAGING INBOUND</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">—</span>
+    <button class="theme-btn" id="themeBtn" title="Alternar tema" onclick="toggleTheme()">☀️</button>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<div class="zone-tabs" id="zoneTabs"></div>
+
+<div id="operacionalView" style="display:none">
+  <div class="op-grid" id="opGrid"></div>
+</div>
+
+<div id="defaultView">
+<!-- KPIs -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-label">Total TOs</div>
+    <div class="stat-value" id="sTOs" style="color:var(--accent)">—</div>
+    <div class="stat-sub">em staging agora</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Total Pacotes</div>
+    <div class="stat-value" id="sTotalPacotes" style="color:var(--purple)">—</div>
+    <div class="stat-sub">da planilha Report</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Ruas Ativas</div>
+    <div class="stat-value" id="sRuas" style="color:var(--blue)">—</div>
+    <div class="stat-sub">com TOs alocados</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Maior Aging</div>
+    <div class="stat-value" id="sMaxAging" style="color:var(--red)">—</div>
+    <div class="stat-sub" id="sMaxAgingRua">—</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Média Aging</div>
+    <div class="stat-value" id="sAvgAging" style="color:var(--yellow)">—</div>
+    <div class="stat-sub">nas ruas ativas</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Média por TO</div>
+    <div class="stat-value" id="sAvgTO" style="color:var(--purple)">—</div>
+    <div class="stat-sub" id="sAvgTOSub">pacotes / TO</div>
+  </div>
+</div>
+
+<!-- Visão por Zona -->
+<div class="section" id="zonaSection" style="display:none">
+  <div class="section-label">Visão por Zona · Distribuição de Pacotes</div>
+  <div class="zone-cards" id="zoneCards"></div>
+  <div class="crosstab-wrap">
+    <table class="crosstab" id="crosstabTable"></table>
+  </div>
+</div>
+
+<!-- Visão por Perfil de Pacote -->
+<div class="section" id="perfilSection" style="display:none">
+  <div class="section-label">Visão por Perfil de Pacote</div>
+  <div id="perfilNoData" style="display:none;color:var(--muted);font-size:12px;padding:14px 0">
+    Esta zona não possui classificação de perfil de pacote (PP/P/M/G/Bulky) na planilha de origem.
+  </div>
+  <div class="zone-cards" id="perfilCards"></div>
+  <div class="crosstab-wrap">
+    <table class="crosstab" id="perfilCrosstabTable"></table>
+  </div>
+</div>
+
+<!-- Visão SPP · Todas as zonas (somente aba TODAS) -->
+<div id="sppView" style="display:none;padding:0 24px 14px">
+  <div class="section-label" style="margin-bottom:10px">Distribuição por SPP · Todas as Zonas</div>
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:10px;align-items:start">
+    <div class="panel">
+      <div class="panel-title" style="display:flex;align-items:baseline;justify-content:space-between">
+        <span>Faixas de SPP</span>
+        <span style="font-size:10px;color:var(--muted);font-weight:400;letter-spacing:.3px">clique para filtrar</span>
+      </div>
+      <div id="sppDistrib"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">SPP Médio por Zona</div>
+      <div id="sppByZone"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Top 5 + Ocupação -->
+<div class="panel-row">
+  <div class="panel">
+    <div class="panel-title">Top 5 Ruas por Aging</div>
+    <table class="top5-table">
+      <thead>
+        <tr><th>Rua</th><th>Zona</th><th style="text-align:center">TOs</th><th style="text-align:center">Pacotes</th><th>Aging</th></tr>
+      </thead>
+      <tbody id="top5Body">
+        <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <div class="panel-title">Ocupação por Zona</div>
+    <div id="occByZone">
+      <div style="color:var(--muted);text-align:center;padding:20px">—</div>
+    </div>
+  </div>
+
+  <div class="panel" style="display:flex;flex-direction:column">
+    <div class="panel-title">Turno Endereçou</div>
+    <div class="donut-wrap">
+      <div class="donut-svg-wrap">
+        <svg viewBox="0 0 100 100" width="128" height="128" id="turnoSvg" style="display:block">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="var(--surface2)" stroke-width="17"/>
+        </svg>
+        <div class="donut-center">
+          <div class="donut-center-val" id="turnoTotal">—</div>
+          <div class="donut-center-lbl">pacotes</div>
+        </div>
+      </div>
+      <div id="turnoLegend" style="flex:1">
+        <div style="color:var(--muted);font-size:11px">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end #defaultView -->
+
+<div id="volumosoView" style="display:none">
+  <!-- header row: título + botão copiar report -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <span style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase">Zona Volumoso</span>
+    <button id="btnCopyVolReport" onclick="copyVolReport()" style="display:flex;align-items:center;gap:6px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--blue);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s">
+      📋 Copiar Report
+    </button>
+  </div>
+  <!-- 7 KPI cards -->
+  <div class="stats" style="grid-template-columns:repeat(7,1fr)">
+    <div class="stat"><div class="stat-label">Total TOs</div><div class="stat-value" id="vTOs" style="color:var(--accent)">—</div><div class="stat-sub">na VOLUMOSO</div></div>
+    <div class="stat"><div class="stat-label">Total Pacotes</div><div class="stat-value" id="vPacotes" style="color:var(--purple)">—</div><div class="stat-sub">soma geral</div></div>
+    <div class="stat clickable" id="statLt20"><div class="stat-label" id="lblLt30">TOs &lt; 30 pcts</div><div class="stat-value" id="vLt30" style="color:var(--accent)">—</div><div class="stat-sub">leve</div></div>
+    <div class="stat clickable" id="statEq20"><div class="stat-label" id="lblEq30">TOs = 30 pcts</div><div class="stat-value" id="vEq30" style="color:var(--blue)">—</div><div class="stat-sub">exato</div></div>
+    <div class="stat clickable" id="statGt20"><div class="stat-label" id="lblGt30">TOs &gt; 30 pcts</div><div class="stat-value" id="vGt30" style="color:var(--red)">—</div><div class="stat-sub">pesado</div></div>
+    <div class="stat"><div class="stat-label">Média por TO</div><div class="stat-value" id="vMedia" style="color:var(--yellow)">—</div><div class="stat-sub">pacotes/TO</div></div>
+    <div class="stat"><div class="stat-label">Maior TO</div><div class="stat-value" id="vMaior" style="color:var(--orange)">—</div><div class="stat-sub">pacotes</div></div>
+  </div>
+
+  <!-- 3 panels: Distribuição | Turno Ofensor | Top 5 -->
+  <div class="panel-row" style="grid-template-columns:1fr 1fr 1.5fr">
+    <div class="panel">
+      <div class="panel-title">Distribuição por Faixa de Pacotes</div>
+      <div id="vDistrib"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" id="vTurnoOfensorTitle">Turno Ofensor</div>
+      <div id="vTurnoOfensor"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title" id="vTop5Title">Top 5 TOs com Maior Volume</div>
+      <div id="vTop5"></div>
+    </div>
+  </div>
+
+  <!-- Aging histogram (full width) -->
+  <div class="section">
+    <div class="section-label">Histograma por Faixa de Aging</div>
+    <div id="vAgingHist" style="padding:8px 0"></div>
+  </div>
+
+  <!-- Perfil de pacote · Zona Volumoso -->
+  <div class="section" id="vPerfilSection" style="display:none">
+    <div class="section-label">Perfil de Pacote · Zona Volumoso</div>
+    <div class="zone-cards" id="vPerfilCards"></div>
+  </div>
+</div>
+
+<div id="detailSection">
+<!-- Aging Criticality Panel -->
+<div id="agingCritSection" style="padding:0 24px 14px;display:none"></div>
+
+<!-- Detail table -->
+<div id="pctFilterBanner" style="display:none" class="pct-filter-banner">
+  <span>🔍 Filtro ativo:</span>
+  <strong id="pctFilterLabel">—</strong>
+  <span id="pctFilterDesc" style="color:var(--muted)">— mostrando ruas com TOs correspondentes</span>
+  <button class="pct-filter-clear" onclick="clearFilter()">Limpar filtro</button>
+</div>
+<div class="section-header">
+  <span class="section-title">Detalhamento por Rua</span>
+  <span id="tableCount" style="font-size:11px;color:var(--muted)"></span>
+</div>
+<div class="table-toolbar">
+  <div class="search-wrap">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar rua, operador...">
+  </div>
+  <div class="filter-pills" id="tableZonePills"></div>
+  <button class="aging-sort-btn desc" id="agingSortBtn">↓ Aging mais antigo</button>
+</div>
+<div class="table-wrap">
+  <div class="empty" id="emptyMsg">
+    <h2>⏳ Aguardando sincronização</h2>
+    <p>O Tampermonkey ainda não enviou dados do Inbound Staging.</p>
+    <code>
+      1. Instale o script <b>stage_in_sync.user.js</b> no Tampermonkey<br>
+      2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
+      3. Aguarde o badge <b>✅ Stage In</b> aparecer
+    </code>
+  </div>
+  <table class="main-table" id="mainTable" style="display:none">
+    <thead>
+      <tr>
+        <th data-col="area_name">Rua <span class="sa"></span></th>
+        <th data-col="staging_group_name">Zona <span class="sa"></span></th>
+        <th data-col="area_label">Área <span class="sa"></span></th>
+        <th data-col="to_quantity" style="text-align:center">TOs <span class="sa"></span></th>
+        <th data-col="pacotes" style="text-align:center">Pacotes <span class="sa"></span></th>
+        <th data-col="spp" style="text-align:center">SPP <span class="sa"></span></th>
+        <th data-col="capacity" style="text-align:center">Cap. <span class="sa"></span></th>
+        <th data-col="occupy_pct">Ocupação <span class="sa"></span></th>
+        <th data-col="staging_duration_time" class="sorted">Aging <span class="sa">↓</span></th>
+        <th data-col="operator">Operador <span class="sa"></span></th>
+      </tr>
+    </thead>
+    <tbody id="mainBody"></tbody>
+  </table>
+  <div class="pagination-bar" id="paginationBar" style="display:none">
+    <span class="pag-info" id="pagInfo"></span>
+    <div class="pag-pages" id="pagPages"></div>
+    <div class="pag-size">
+      Por página:
+      <select id="pagSizeSelect">
+        <option value="10" selected>10</option>
+        <option value="24">24</option>
+        <option value="50">50</option>
+      </select>
+    </div>
+  </div>
+</div>
+</div><!-- end #detailSection -->
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────────
+(function () {
+  const saved = localStorage.getItem('siTheme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
+function toggleTheme() {
+  const html    = document.documentElement;
+  const isLight = html.getAttribute('data-theme') === 'light';
+  const next    = isLight ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  document.getElementById('themeBtn').textContent = next === 'light' ? '🌙' : '☀️';
+  localStorage.setItem('siTheme', next);
+}
+
+// Set initial icon
+document.addEventListener('DOMContentLoaded', () => {
+  const t = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = t === 'light' ? '🌙' : '☀️';
+});
+
+// ── Helpers ────────────────────────────────────────────────────────────
+function fmtDur(s) {
+  if (!s || s <= 0) return '—';
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+function agingClass(s) {
+  if (!s || s <= 0) return 'aging-ok';
+  const h = s / 3600;
+  if (h < 4)  return 'aging-ok';
+  if (h < 7)  return 'aging-warn';
+  if (h < 13) return 'aging-hot';
+  return 'aging-crit';
+}
+function parseOcc(s)  { return parseFloat((s || '0').replace(/\s*%/, '')) || 0; }
+function occClass(p)  { return p < 60 ? 'occ-low' : p < 85 ? 'occ-mid' : 'occ-high'; }
+function zoneKey(name) {
+  if (!name) return 'other';
+  const n = name.toLowerCase();
+  if (n.includes('linear'))   return 'linear';
+  if (n.includes('volumoso')) return 'volumoso';
+  if (n.includes('cop'))      return 'cop';
+  return 'other';
+}
+function zoneCardClass(name) { return 'zc-' + zoneKey(name); }
+function zonePillClass(name) { return 'zone-' + zoneKey(name); }
+function zoneShort(name)     { return (name || '').replace('ZONA ', '').trim() || '—'; }
+// Normaliza nome de zona para comparação entre planilhas que usam grafias
+// diferentes (ex: "ZONA LMH" no staging vs "LMH" na planilha de perfil).
+function normZoneName(name)  { return (name || '').replace(/^ZONA\s+/i, '').trim().toUpperCase(); }
+function cleanOp(s) {
+  return (s || '—').replace(/\[ops\d+\]/i,'').replace(/@shopee\.com\.br/i,'').replace(/@shopee\.com/i,'').trim() || '—';
+}
+
+// ── Area label (sub-classification within zone) ────────────────────────
+function getAreaLabel(a) {
+  const name = (a.area_name || '').trim();
+  const zone = (a.staging_group_name || '').toLowerCase();
+  // COP → mostra a própria zona como área
+  if (zone.includes('cop')) return { label: 'COP', color: '#f59e0b', bg: 'rgba(245,158,11,.15)' };
+
+  // LMH → mostra a própria zona como área
+  if (zone.includes('lmh')) return { label: 'LMH', color: '#8b5cf6', bg: 'rgba(139,92,246,.15)' };
+
+  if (!zone.includes('volumoso')) return null;
+  // Ruas com V no final: IN-01V … IN-35V
+  const m = name.match(/^IN-(\d+)V$/i);
+  if (m) {
+    const n = parseInt(m[1]);
+    if (n >= 1  && n <= 16) return { label: 'Buffer Termoplástica', color: '#22c55e',  bg: 'rgba(34,197,94,.15)'  };
+    if (n >= 17 && n <= 35) return { label: 'HS VOLUMOSO',     color: '#3b82f6',  bg: 'rgba(59,130,246,.15)' };
+  }
+  // LN- → Buffer Linear
+  if (/^LN-/i.test(name)) return { label: 'Buffer Linear', color: '#14b8a6', bg: 'rgba(20,184,166,.15)' };
+  // VOLUMOSO sem V → Buffer LMH
+  return { label: 'Buffer LMH', color: '#8b5cf6', bg: 'rgba(139,92,246,.15)' };
+}
+
+// Lookup report zone: exact match only (trimmed).
+// Each staging zone maps only to its exact counterpart in the report sheet.
+// ZONA LINEAR shows its own data when the report has it; BUFFER zones never
+// inherit data from ZONA VOLUMOSO etc.
+function getReportZone(stagingName) {
+  if (!reportData) return null;
+  return reportData.byZone[(stagingName || '').trim()] || null;
+}
+
+// ── Zone cell colors ───────────────────────────────────────────────────
+const ZONE_RGBA = {
+  linear:   [59,  130, 246],
+  volumoso: [34,  197, 94],
+  cop:      [245, 158, 11],
+  other:    [139, 92,  246],
+};
+
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '15000'; // SoC_PE_Recife_04
+
+// ── State ──────────────────────────────────────────────────────────────
+let allAreas       = [];
+let reportData     = null;
+let profileData    = null;
+let activeZone     = 'all';
+let sortCol        = 'staging_duration_time'; // default: aging mais antigo
+let sortAsc        = false;                    // false = decrescente (maior aging primeiro)
+let lastAt         = null;
+let tableSearch    = '';
+let tableZoneFilter = '';
+let expandedAreas  = new Set();
+let currentPage    = 1;
+let pageSize       = 10;
+
+// ── Histogram bins ─────────────────────────────────────────────────────
+const BINS = [
+  { label: '0–4h',   min: 0,       max: 14400   },
+  { label: '4–7h',   min: 14400,   max: 25200   },
+  { label: '7–10h',  min: 25200,   max: 36000   },
+  { label: '10–13h', min: 36000,   max: 46800   },
+  { label: '13–16h', min: 46800,   max: 57600   },
+  { label: '16–21h', min: 57600,   max: 75600   },
+  { label: '21–25h', min: 75600,   max: 90000   },
+  { label: '1–2d',   min: 90000,   max: 172800  },
+  { label: '2–3d',   min: 172800,  max: 259200  },
+  { label: '3–4d',   min: 259200,  max: 345600  },
+  { label: '>4d',    min: 345600,  max: Infinity },
+];
+
+const VOL_BINS = [
+  { label: '0–4h',   min: 0,       max: 14400   },
+  { label: '4–7h',   min: 14400,   max: 25200   },
+  { label: '7–10h',  min: 25200,   max: 36000   },
+  { label: '10–13h', min: 36000,   max: 46800   },
+  { label: '13–16h', min: 46800,   max: 57600   },
+  { label: '16–21h', min: 57600,   max: 75600   },
+  { label: '21–24h', min: 75600,   max: 86400   },
+  { label: '1–2d',   min: 86400,   max: 172800  },
+  { label: '2–3d',   min: 172800,  max: 259200  },
+  { label: '3–4d',   min: 259200,  max: 345600  },
+  { label: '>4d',    min: 345600,  max: Infinity },
+];
+
+// ── Zone tabs ──────────────────────────────────────────────────────────
+function buildZoneTabs() {
+  const zoneMap = {};
+  allAreas.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    zoneMap[z] = (zoneMap[z] || 0) + (a.to_quantity || 0);
+  });
+
+  const tabs = [];
+  let totalCount = 0;
+  Object.entries(zoneMap).sort((a, b) => b[1] - a[1]).forEach(([z, tos]) => {
+    const rd    = getReportZone(z);
+    const count = rd ? rd.pacotes : tos;
+    totalCount += count;
+    tabs.push({ key: z, label: zoneShort(z), count });
+  });
+  tabs.unshift({ key: 'all', label: 'Todas', count: totalCount });
+  tabs.push({ key: '__op__', label: '📺 Operacional', count: null });
+
+  const container = document.getElementById('zoneTabs');
+  container.innerHTML = tabs.map(t => {
+    const isOp = t.key === '__op__';
+    return `<button class="zone-tab${t.key === activeZone ? ' active' : ''}${isOp ? ' tab-op-btn' : ''}" data-zone="${t.key}">
+      ${t.label}${!isOp ? `<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>` : ''}
+    </button>`;
+  }).join('');
+  container.querySelectorAll('.zone-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prevZone = activeZone;
+      activeZone = btn.dataset.zone;
+      currentPage = 1;
+      if (!btn.dataset.zone.toLowerCase().includes('volumoso')) expandedAreas.clear();
+      // Limpa filtro sppband ao sair da aba TODAS, e filtros volumoso ao sair de volumoso
+      if (prevZone !== activeZone) {
+        if (activeVolFilter.type === 'sppband' && activeZone !== 'all') {
+          activeVolFilter = { type: null, value: null };
+          document.getElementById('pctFilterBanner').style.display = 'none';
+        }
+        if (['pct','distrib','turno','aging'].includes(activeVolFilter.type) && !activeZone.toLowerCase().includes('volumoso')) {
+          activeVolFilter = { type: null, value: null };
+          document.getElementById('pctFilterBanner').style.display = 'none';
+          ['statLt20','statEq20','statGt20'].forEach(id =>
+            document.getElementById(id)?.classList.remove('pct-active'));
+        }
+      }
+      render();
+    });
+  });
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────────
+function updateStats(areas) {
+  const active   = areas.filter(a => a.to_quantity > 0);
+  const totalTOs = active.reduce((s, a) => s + a.to_quantity, 0);
+  const maxArea  = active.reduce((b, a) => (!b || a.staging_duration_time > b.staging_duration_time) ? a : b, null);
+  const avgAging = active.length ? active.reduce((s, a) => s + a.staging_duration_time, 0) / active.length : 0;
+
+  document.getElementById('sTOs').textContent         = totalTOs;
+  document.getElementById('sRuas').textContent        = active.length;
+  document.getElementById('sMaxAging').textContent    = maxArea ? fmtDur(maxArea.staging_duration_time) : '—';
+  document.getElementById('sMaxAgingRua').textContent = maxArea ? maxArea.area_name : '—';
+  document.getElementById('sAvgAging').textContent    = avgAging ? fmtDur(Math.round(avgAging)) : '—';
+
+  if (reportData) {
+    const zoneFilter = activeZone !== 'all' ? activeZone : null;
+    const totalPac = zoneFilter
+      ? (getReportZone(zoneFilter)?.pacotes || 0)
+      : Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
+    document.getElementById('sTotalPacotes').textContent = totalPac.toLocaleString('pt-BR');
+
+    const avgTO = totalTOs > 0 ? Math.round(totalPac / totalTOs) : null;
+    document.getElementById('sAvgTO').textContent    = avgTO !== null ? avgTO.toLocaleString('pt-BR') : '—';
+    document.getElementById('sAvgTOSub').textContent = avgTO !== null ? `${totalPac.toLocaleString('pt-BR')} pkgs ÷ ${totalTOs} TOs` : 'pacotes / TO';
+  }
+}
+
+// ── Visão por Zona ─────────────────────────────────────────────────────
+function buildZonaSection(areas) {
+  const active = areas.filter(a => a.to_quantity > 0);
+  if (!active.length) { document.getElementById('zonaSection').style.display = 'none'; return; }
+  document.getElementById('zonaSection').style.display = '';
+
+  // Aggregate per zone (from staging API)
+  const zones = {};
+  active.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { name: z, tos: 0, agings: [], cap: 0 };
+    zones[z].tos  += a.to_quantity;
+    zones[z].cap  += a.capacity || 0;
+    if (a.staging_duration_time > 0) zones[z].agings.push(a.staging_duration_time);
+  });
+
+  // Zone cards — quando aba específica ativa, exibe apenas aquela zona
+  const zoneFilter  = activeZone !== 'all' ? activeZone : null;
+  const zoneValues  = Object.values(zones).sort((a, b) => {
+    const rdA = getReportZone(a.name);
+    const rdB = getReportZone(b.name);
+    return (rdB ? rdB.pacotes : b.tos) - (rdA ? rdA.pacotes : a.tos);
+  }).filter(z => !zoneFilter || z.name === zoneFilter);
+
+  // SPP por rua → max/min por zona
+  const zoneSPPRange = {};
+  if (reportData?.byArea) {
+    const sMap = {};
+    active.forEach(a => { sMap[a.area_name] = a.to_quantity; });
+    Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+      if (!ad.zona) return;
+      const tos = sMap[rua] || 0;
+      if (tos === 0) return;
+      const s = ad.pacotes / tos;
+      if (!zoneSPPRange[ad.zona]) zoneSPPRange[ad.zona] = [];
+      zoneSPPRange[ad.zona].push(s);
+    });
+  }
+
+  const cardHtml = zoneValues.map(z => {
+    const avg  = z.agings.length ? z.agings.reduce((s, v) => s + v, 0) / z.agings.length : 0;
+    const pico = z.agings.length ? Math.max(...z.agings) : 0;
+    const rd   = getReportZone(z.name);
+    const mainVal   = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
+    const mainLabel = rd ? 'pacotes' : 'TOs';
+    const tosLine   = rd ? `<span>${z.tos} TOs</span>` : '';
+    const spp       = (rd && z.tos > 0) ? Math.round(rd.pacotes / z.tos) : null;
+    const sppLine   = spp !== null ? `<span>SPP: <strong>${spp}</strong></span>` : '';
+    const sppVals   = zoneSPPRange[z.name] || [];
+    const sppMax    = sppVals.length ? Math.round(Math.max(...sppVals)) : null;
+    const sppMin    = sppVals.length ? Math.round(Math.min(...sppVals)) : null;
+    const sppMaxLine = sppMax !== null ? `<span>max <strong>${sppMax}</strong></span>` : '';
+    const sppMinLine = sppMin !== null ? `<span>min <strong>${sppMin}</strong></span>` : '';
+    return `
+      <div class="zone-card ${zoneCardClass(z.name)}">
+        <div class="zone-card-label">${zoneShort(z.name)}</div>
+        <div class="zone-card-value">${mainVal}</div>
+        <div class="zone-card-meta">
+          <span>${mainLabel}</span>${tosLine}${sppLine}${sppMaxLine}${sppMinLine}
+          ${avg  ? `<span>avg <strong>${fmtDur(Math.round(avg))}</strong></span>` : ''}
+          ${pico ? `<span>pico <strong>${fmtDur(pico)}</strong></span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+  document.getElementById('zoneCards').innerHTML = cardHtml;
+
+  // Cross-tab: itera diretamente do reportData.byArea para não perder nenhum pacote.
+  // Usa staging_duration_time da API para o bin; fallback = max aging_h dos TOs da rua.
+  // Zonas vêm do campo `zona` do byArea (report), não da staging API.
+  const stagingMap = {};
+  allAreas.forEach(a => { stagingMap[a.area_name] = a; });
+
+  // Coleta zonas do report (byArea.zona) para as colunas do cross-tab
+  const reportZoneSet = new Set();
+  if (reportData?.byArea) {
+    Object.values(reportData.byArea).forEach(ad => { if (ad.zona) reportZoneSet.add(ad.zona); });
+  }
+  // Mantém zonas da staging API sem dados de report (para exibir TOs)
+  Object.keys(zones).forEach(z => { if (!getReportZone(z)) reportZoneSet.add(z); });
+
+  // Filtra colunas do cross-tab pela zona ativa (se não for "Todas")
+  let zoneNames = [...reportZoneSet].sort();
+  if (zoneFilter) zoneNames = zoneNames.filter(z => z === zoneFilter || z.toLowerCase().includes(zoneFilter.toLowerCase().replace('zona ', '')));
+  const counts = BINS.map(() => {
+    const row = {};
+    zoneNames.forEach(z => { row[z] = 0; });
+    return row;
+  });
+
+  if (reportData?.byArea) {
+    Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+      const z = ad.zona;
+      if (!z) return;
+      // Aging: usa staging_duration_time se disponível, senão max aging_h dos TOs da planilha
+      const staging = stagingMap[rua];
+      let duration  = staging?.staging_duration_time || 0;
+      if (!duration) {
+        const tos = reportData.byAreaTOs?.[rua] || [];
+        duration  = tos.length ? Math.max(...tos.map(t => t.aging_h * 3600)) : 0;
+      }
+      const idx = BINS.findIndex(b => duration >= b.min && duration < b.max);
+      if (idx < 0) return;
+      counts[idx][z] = (counts[idx][z] || 0) + ad.pacotes;
+    });
+  }
+  // Staging areas sem dados de report: usa TOs como fallback
+  active.forEach(a => {
+    const z  = (a.staging_group_name || 'OUTRAS').trim();
+    if (reportData?.byArea?.[a.area_name] || getReportZone(z)) return; // já contabilizado
+    const s   = a.staging_duration_time || 0;
+    const idx = BINS.findIndex(b => s >= b.min && s < b.max);
+    if (idx < 0) return;
+    counts[idx][z] = (counts[idx][z] || 0) + a.to_quantity;
+  });
+
+  // SPP por faixa de aging: Sacas Por Prateleira = pacotes / TOs
+  // Denominador correto = soma de to_quantity das áreas no bin
+  const hasTOData = !!(reportData?.byAreaTOs && Object.keys(reportData.byAreaTOs).length > 0);
+  const tosBins   = BINS.map(() => 0); // soma de to_quantity por bin
+  if (reportData?.byArea) {
+    Object.entries(reportData.byArea).forEach(([rua, areaData]) => {
+      const staging = stagingMap[rua];
+      let duration  = staging?.staging_duration_time || 0;
+      if (!duration && hasTOData) {
+        const tos = reportData.byAreaTOs?.[rua] || [];
+        duration  = tos.length ? Math.max(...tos.map(t => t.aging_h * 3600)) : 0;
+      }
+      const idx = BINS.findIndex(b => duration >= b.min && duration < b.max);
+      if (idx < 0) return;
+      tosBins[idx] += (staging?.to_quantity || areaData?.to_quantity || 0); // soma TOs da área
+    });
+  }
+
+  const colMax = {};
+  zoneNames.forEach(z => { colMax[z] = Math.max(...counts.map(r => r[z] || 0), 1); });
+
+  const colTotals = {};
+  zoneNames.forEach(z => {
+    colTotals[z] = counts.reduce((s, r) => s + (r[z] || 0), 0);
+  });
+
+  const zoneHeaders = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    const rdZ = getReportZone(z);
+    const sub = rdZ
+      ? `${rdZ.pacotes.toLocaleString('pt-BR')} pcts`
+      : `${(colTotals[z]||0).toLocaleString('pt-BR')} TOs`;
+    return `<th class="col-zone" style="color:rgb(${rgb.join(',')})">
+      ${zoneShort(z)}<span class="sub">(${sub})</span>
+    </th>`;
+  }).join('');
+
+  const rows = BINS.map((b, i) => {
+    const rowTotal = zoneNames.reduce((s, z) => s + (counts[i][z] || 0), 0);
+    if (rowTotal === 0) return '';
+    const cells = zoneNames.map(z => {
+      const v   = counts[i][z] || 0;
+      const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+      const bg  = v > 0 ? `background:rgba(${rgb.join(',')},${(v / colMax[z] * 0.55 + 0.06).toFixed(2)})` : '';
+      return `<td class="zone-cell">
+        <span class="cell-inner ${v === 0 ? 'cell-zero' : ''}" style="${bg}">
+          ${v > 0 ? v.toLocaleString('pt-BR') : '—'}
+        </span>
+      </td>`;
+    }).join('');
+    const sppCell = hasTOData
+      ? `<td class="total-cell">${tosBins[i] > 0 ? Math.round(rowTotal / tosBins[i]) : '—'}</td>`
+      : '';
+    return `<tr><td class="faixa">${b.label}</td>${cells}<td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td>${sppCell}</tr>`;
+  }).join('');
+
+  const grandTotal  = zoneNames.reduce((s, z) => s + (colTotals[z] || 0), 0);
+  const totalCells  = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<td class="zone-cell" style="color:rgb(${rgb.join(',')});font-weight:800;text-align:center">
+      ${(colTotals[z]||0).toLocaleString('pt-BR')}
+    </td>`;
+  }).join('');
+
+  document.getElementById('crosstabTable').innerHTML = `
+    <thead><tr><th>Faixa Aging</th>${zoneHeaders}<th class="col-total">Total</th>${hasTOData ? '<th class="col-total">SPP</th>' : ''}</tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td>${hasTOData ? (() => { const gt = tosBins.reduce((s,v) => s+v, 0); return `<td class="total-cell">${gt > 0 ? Math.round(grandTotal / gt) : '—'}</td>`; })() : ''}</tr></tfoot>`;
+}
+
+// ── Visão por Perfil de Pacote ──────────────────────────────────────────
+const PERFIL_ORDER = [
+  { key: 'sem_perfil',  label: 'Sem Perfil',  color: '#6b7280' },
+  { key: 'pp',          label: 'PP',          color: '#3b82f6' },
+  { key: 'p',           label: 'P',           color: '#22c55e' },
+  { key: 'm',           label: 'M',           color: '#f59e0b' },
+  { key: 'g',           label: 'G',           color: '#ee4d2d' },
+  { key: 'bulky',       label: 'Bulky',       color: '#8b5cf6' },
+  { key: 'ultra_bulky', label: 'Ultra Bulky', color: '#ef4444' },
+];
+
+function buildPerfilSection() {
+  const section = document.getElementById('perfilSection');
+  const recsAll = profileData?.byTO ? Object.values(profileData.byTO) : [];
+  if (!recsAll.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  // Respeita a aba de zona ativa (mesmo filtro usado na Visão por Zona)
+  const zoneFilter = activeZone !== 'all' ? activeZone : null;
+  const recs = zoneFilter ? recsAll.filter(r => normZoneName(r.group_name) === normZoneName(zoneFilter)) : recsAll;
+
+  // Zona sem classificação de perfil na planilha de origem (ex: LMH) — mostra aviso em vez de cards zerados
+  const noData = zoneFilter && !recs.length;
+  document.getElementById('perfilNoData').style.display = noData ? '' : 'none';
+  document.getElementById('perfilCards').style.display   = noData ? 'none' : '';
+  document.getElementById('perfilCrosstabTable').closest('.crosstab-wrap').style.display = noData ? 'none' : '';
+  if (noData) return;
+
+  // KPI cards — perfil geral (ou da zona filtrada)
+  const totals = {};
+  PERFIL_ORDER.forEach(d => { totals[d.key] = 0; });
+  recs.forEach(r => PERFIL_ORDER.forEach(d => { totals[d.key] += (r[d.key] || 0); }));
+  const grandTotal = PERFIL_ORDER.reduce((s, d) => s + totals[d.key], 0);
+
+  document.getElementById('perfilCards').innerHTML = PERFIL_ORDER.map(d => {
+    const v   = totals[d.key];
+    const pct = grandTotal ? (v / grandTotal * 100).toFixed(1) : '0.0';
+    return `
+      <div class="zone-card" style="border-top-color:${d.color}">
+        <div class="zone-card-label" style="color:${d.color}">${d.label}</div>
+        <div class="zone-card-value" style="color:${d.color}">${v.toLocaleString('pt-BR')}</div>
+        <div class="zone-card-meta"><span>${pct}% do total</span></div>
+      </div>`;
+  }).join('');
+
+  // Crosstab: linhas = perfil, colunas = zonas
+  const zoneNames = [...new Set(recs.map(r => r.group_name).filter(Boolean))].sort();
+  const counts = PERFIL_ORDER.map(() => {
+    const row = {};
+    zoneNames.forEach(z => { row[z] = 0; });
+    return row;
+  });
+  const colTotals = {};
+  zoneNames.forEach(z => { colTotals[z] = 0; });
+  recs.forEach(r => {
+    const z = r.group_name;
+    if (!z) return;
+    PERFIL_ORDER.forEach((d, i) => {
+      const v = r[d.key] || 0;
+      counts[i][z]  += v;
+      colTotals[z]  += v;
+    });
+  });
+  const colMax = {};
+  zoneNames.forEach(z => { colMax[z] = Math.max(...counts.map(row => row[z] || 0), 1); });
+
+  const zoneHeaders = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<th class="col-zone" style="color:rgb(${rgb.join(',')})">
+      ${zoneShort(z)}<span class="sub">(${(colTotals[z]||0).toLocaleString('pt-BR')} pcts)</span>
+    </th>`;
+  }).join('');
+
+  const rows = PERFIL_ORDER.map((d, i) => {
+    const rowTotal = zoneNames.reduce((s, z) => s + (counts[i][z] || 0), 0);
+    const cells = zoneNames.map(z => {
+      const v   = counts[i][z] || 0;
+      const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+      const bg  = v > 0 ? `background:rgba(${rgb.join(',')},${(v / colMax[z] * 0.55 + 0.06).toFixed(2)})` : '';
+      return `<td class="zone-cell">
+        <span class="cell-inner ${v === 0 ? 'cell-zero' : ''}" style="${bg}">
+          ${v > 0 ? v.toLocaleString('pt-BR') : '—'}
+        </span>
+      </td>`;
+    }).join('');
+    return `<tr><td class="faixa" style="color:${d.color};font-weight:600">${d.label}</td>${cells}<td class="total-cell">${rowTotal.toLocaleString('pt-BR')}</td></tr>`;
+  }).join('');
+
+  const totalCells = zoneNames.map(z => {
+    const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+    return `<td class="zone-cell" style="color:rgb(${rgb.join(',')});font-weight:800;text-align:center">
+      ${(colTotals[z]||0).toLocaleString('pt-BR')}
+    </td>`;
+  }).join('');
+
+  document.getElementById('perfilCrosstabTable').innerHTML = `
+    <thead><tr><th>Perfil</th>${zoneHeaders}<th class="col-total">Total</th></tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr class="row-total"><td class="faixa">Total</td>${totalCells}<td class="total-cell">${grandTotal.toLocaleString('pt-BR')}</td></tr></tfoot>`;
+}
+
+// ── Top 5 ──────────────────────────────────────────────────────────────
+function buildTop5(areas) {
+  const top = [...areas]
+    .filter(a => a.to_quantity > 0)
+    .sort((a, b) => b.staging_duration_time - a.staging_duration_time)
+    .slice(0, 5);
+  document.getElementById('top5Body').innerHTML = top.length
+    ? top.map((a, i) => {
+        const pac = reportData?.byArea?.[a.area_name]?.pacotes;
+        return `<tr>
+          <td><span class="rank-num">${i+1}</span><span style="font-weight:600">${a.area_name}</span></td>
+          <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+          <td style="font-family:monospace;text-align:center">${a.to_quantity}</td>
+          <td style="font-family:monospace;text-align:center;font-weight:600">${pac != null ? pac.toLocaleString('pt-BR') : '—'}</td>
+          <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Nenhuma rua ativa</td></tr>';
+}
+
+// ── Turno Donut ────────────────────────────────────────────────────────
+const TURNO_COLORS = { T1: '#3b82f6', T2: '#f59e0b', T3: '#22c55e' };
+const TURNO_EXTRA  = ['#8b5cf6','#14b8a6','#ec4899'];
+
+function buildTurnoDonut() {
+  if (!reportData?.byTurno) return;
+
+  const R    = 38;
+  const C    = 2 * Math.PI * R; // ≈ 238.76
+  const turnos = Object.entries(reportData.byTurno).sort((a, b) => b[1].pacotes - a[1].pacotes);
+  const total  = turnos.reduce((s, [, v]) => s + v.pacotes, 0);
+
+  let cumulPct = 0;
+  const segs = turnos.map(([name, val], i) => {
+    const color  = TURNO_COLORS[name] || TURNO_EXTRA[i % TURNO_EXTRA.length];
+    const pct    = total > 0 ? val.pacotes / total : 0;
+    const dash   = pct * C;
+    const gap    = C - dash;
+    const offset = C * (0.25 - cumulPct); // 0.25 = start at 12 o'clock
+    cumulPct    += pct;
+    return { name, val, color, pct, dash, gap, offset };
+  });
+
+  // SVG
+  const svgInner = `<circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--surface2)" stroke-width="17"/>` +
+    segs.map(s =>
+      `<circle cx="50" cy="50" r="${R}" fill="none"
+        stroke="${s.color}" stroke-width="17"
+        stroke-dasharray="${s.dash.toFixed(3)} ${s.gap.toFixed(3)}"
+        stroke-dashoffset="${s.offset.toFixed(3)}"/>`
+    ).join('');
+  document.getElementById('turnoSvg').innerHTML = svgInner;
+  document.getElementById('turnoTotal').textContent = total.toLocaleString('pt-BR');
+
+  // Legend
+  document.getElementById('turnoLegend').innerHTML = segs.map(s => `
+    <div class="donut-legend-item">
+      <div class="donut-swatch" style="background:${s.color}"></div>
+      <div>
+        <span class="donut-legend-name">${s.name}</span>
+        <span class="donut-legend-pct">${(s.pct * 100).toFixed(1)}%</span>
+      </div>
+      <div class="donut-legend-val">${s.val.pacotes.toLocaleString('pt-BR')}</div>
+    </div>`).join('');
+}
+
+// ── Ocupação por Zona ─────────────────────────────────────────────────
+function buildOccByZone(areas) {
+  // Log first area keys once so we can verify the status field name in console
+  if (areas.length && !buildOccByZone._logged) {
+    buildOccByZone._logged = true;
+    console.log('[OccByZone] sample area keys:', Object.keys(areas[0]));
+  }
+
+  // status 1 = Available, status 2 = Occupied (SPX WFM API)
+  const hasStatusField = areas.some(a => 'status' in a);
+  const avail = hasStatusField
+    ? areas.filter(a => a.status === 1)
+    : areas;
+
+  const zones = {};
+  avail.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zones[z]) zones[z] = { tos: 0, cap: 0 };
+    zones[z].tos += a.to_quantity || 0;
+    zones[z].cap += a.capacity    || 0;
+  });
+  const rows = Object.entries(zones)
+    .sort((a, b) => b[1].tos - a[1].tos)
+    .map(([z, v]) => {
+      const pct = v.cap > 0 ? (v.tos / v.cap * 100) : 0;
+      const oc  = occClass(pct);
+      const rgb = ZONE_RGBA[zoneKey(z)] || [139,92,246];
+      return `<div class="occ-row">
+        <span class="occ-label" style="color:rgb(${rgb.join(',')})">${zoneShort(z)}</span>
+        <div class="occ-track"><div class="occ-fill ${oc}" style="width:${Math.min(pct,100).toFixed(1)}%"></div></div>
+        <span class="occ-val">${pct.toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+  document.getElementById('occByZone').innerHTML = rows ||
+    '<div style="color:var(--muted);text-align:center;padding:20px">—</div>';
+}
+
+// ── Filtered / sorted areas ────────────────────────────────────────────
+function filteredAreas() {
+  let base = activeZone === 'all' ? allAreas
+    : allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone);
+
+  if (activeVolFilter.type === 'sppband') {
+    // Filtro por faixa de SPP da rua (aba TODAS) — opera no nível de área
+    if (activeZone === 'all') {
+      base = base.filter(a => {
+        const pac = reportData?.byArea?.[a.area_name]?.pacotes;
+        const tos = a.to_quantity || 0;
+        if (pac == null || tos === 0) return false;
+        const spp = Math.round(pac / tos);
+        const { key } = activeVolFilter.value;
+        return key === 'b1' ? spp <= 30
+             : key === 'b2' ? spp > 30 && spp <= 70
+             : key === 'b3' ? spp > 70 && spp <= 150
+             :                spp > 150;
+      });
+    }
+  } else if (activeVolFilter.type) {
+    // Filtro global volumoso: mantém só ruas com pelo menos 1 TO correspondente
+    base = base.filter(a => {
+      const tos = reportData?.byAreaTOs?.[a.area_name];
+      return tos?.some(t => matchesVolFilter(t));
+    });
+  }
+  return base;
+}
+
+function sortedAreas(areas) {
+  return [...areas].sort((a, b) => {
+    let av, bv;
+    if (sortCol === 'occupy_pct') { av = parseOcc(a.occupy_percentage); bv = parseOcc(b.occupy_percentage); }
+    else if (sortCol === 'pacotes') {
+      av = reportData?.byArea?.[a.area_name]?.pacotes || 0;
+      bv = reportData?.byArea?.[b.area_name]?.pacotes || 0;
+    } else if (sortCol === 'spp') {
+      const apac = reportData?.byArea?.[a.area_name]?.pacotes; const atos = a.to_quantity || 0;
+      const bpac = reportData?.byArea?.[b.area_name]?.pacotes; const btos = b.to_quantity || 0;
+      av = (apac != null && atos > 0) ? apac / atos : 0;
+      bv = (bpac != null && btos > 0) ? bpac / btos : 0;
+    } else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
+      av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
+      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    } else { av = a[sortCol] || 0; bv = b[sortCol] || 0; }
+    return sortAsc ? av - bv : bv - av;
+  });
+}
+
+// ── Zone filter pills (table) ──────────────────────────────────────────
+function buildTableZonePills() {
+  const el = document.getElementById('tableZonePills');
+  // Se uma zona específica está selecionada nos tabs, os pills de zona na tabela
+  // são redundantes — esconde para não poluir a interface
+  if (activeZone !== 'all') { el.innerHTML = ''; tableZoneFilter = ''; return; }
+  const zones = [...new Set(allAreas.map(a => (a.staging_group_name || 'OUTRAS').trim()))];
+  const pills = [{ key: '', label: 'Todas' }, ...zones.map(z => ({ key: z, label: zoneShort(z) }))];
+  el.innerHTML = pills.map(p => `
+    <button class="fpill${p.key === tableZoneFilter ? ' active' : ''}" data-zone="${p.key}">${p.label}</button>
+  `).join('');
+  document.querySelectorAll('.fpill').forEach(btn => {
+    btn.addEventListener('click', () => { tableZoneFilter = btn.dataset.zone; currentPage = 1; buildMainTable(filteredAreas()); });
+  });
+}
+
+// ── Turno tag helper ───────────────────────────────────────────────────
+function turnoTag(t) {
+  const cls = t === 'T1' ? 't-t1' : t === 'T2' ? 't-t2' : t === 'T3' ? 't-t3' : 't-other';
+  return `<span class="turno-tag ${cls}">${t || '—'}</span>`;
+}
+
+// ── Perfil de pacote (aba "db") ──────────────────────────────────────────
+const PERFIL_DEFS = [
+  { key: 'pp',          label: 'PP', color: '#3b82f6' },
+  { key: 'p',           label: 'P',  color: '#22c55e' },
+  { key: 'm',           label: 'M',  color: '#f59e0b' },
+  { key: 'g',           label: 'G',  color: '#ee4d2d' },
+  { key: 'bulky',       label: 'BK', color: '#8b5cf6' },
+  { key: 'ultra_bulky', label: 'UB', color: '#ef4444' },
+  { key: 'sem_perfil',  label: 'SP', color: '#6b7280' },
+];
+function renderPerfilBadges(to) {
+  const rec = profileData?.byTO?.[to];
+  if (!rec) return '<span style="color:var(--muted);font-size:10px">—</span>';
+  const parts = PERFIL_DEFS
+    .filter(d => (rec[d.key] || 0) > 0)
+    .map(d => `<span class="perfil-badge" style="background:${d.color}22;color:${d.color};border:1px solid ${d.color}44">${d.label} ${rec[d.key]}</span>`);
+  return parts.length ? parts.join('') : '<span style="color:var(--muted);font-size:10px">—</span>';
+}
+
+// ── Expanded TOs sub-table ─────────────────────────────────────────────
+function renderTosSub(areaName) {
+  const tos = reportData?.byAreaTOs?.[areaName];
+  if (!tos?.length) return `<div class="expand-inner" style="color:var(--muted);font-size:12px">Nenhum TO na planilha para esta rua.</div>`;
+
+  // Quando filtro ativo: TOs correspondentes primeiro, depois aging desc
+  const sorted = [...tos].sort((a, b) => {
+    if (activeVolFilter.type) {
+      const aM = matchesVolFilter(a) ? 1 : 0;
+      const bM = matchesVolFilter(b) ? 1 : 0;
+      if (bM !== aM) return bM - aM;
+    }
+    return b.aging_h - a.aging_h;
+  });
+
+  const rows = sorted.map(t => {
+    const isMatch = activeVolFilter.type ? matchesVolFilter(t) : false;
+    return `<tr class="${isMatch ? 'to-match' : ''}">
+      <td style="font-family:monospace;font-size:11px">${t.to}</td>
+      <td style="font-family:monospace;text-align:center">${t.pacotes}</td>
+      <td style="font-family:monospace">${fmtDurH(t.aging_h)}</td>
+      <td style="color:var(--muted)">${t.hora_end}</td>
+      <td>${turnoTag(t.turno)}</td>
+      <td>${renderPerfilBadges(t.to)}</td>
+    </tr>`;
+  }).join('');
+
+  const matchCount = activeVolFilter.type ? sorted.filter(t => matchesVolFilter(t)).length : 0;
+  const matchNote  = activeVolFilter.type
+    ? `<div style="font-size:10px;color:var(--blue);margin-bottom:6px">🔍 ${matchCount} TO(s) do filtro ativo · destacados e ordenados primeiro</div>`
+    : '';
+
+  return `<div class="expand-inner">
+    ${matchNote}
+    <table class="tos-subtable">
+      <thead><tr><th>TO</th><th style="text-align:center">Pacotes</th><th>Aging</th><th>Hora End.</th><th>Turno</th><th>Perfil</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function fmtDurH(h) {
+  return fmtDur(Math.round(h * 3600));
+}
+
+// ── Pagination helper ───────────────────────────────────────────────────
+function buildPaginationBar(total, page, size) {
+  const bar   = document.getElementById('paginationBar');
+  const info  = document.getElementById('pagInfo');
+  const pages = document.getElementById('pagPages');
+  if (total === 0) { bar.style.display = 'none'; return; }
+  bar.style.display = '';
+
+  const totalPages = Math.ceil(total / size);
+  const from = (page - 1) * size + 1;
+  const to   = Math.min(page * size, total);
+  info.textContent = `Mostrando ${from}–${to} de ${total} ruas`;
+
+  // Build page number buttons (max 7 visible: prev ... 1 2 3 ... next)
+  let btns = '';
+  const mkBtn = (label, p, active = false, disabled = false) =>
+    `<button class="pag-btn${active ? ' active' : ''}" data-page="${p}" ${disabled ? 'disabled' : ''}>${label}</button>`;
+
+  btns += mkBtn('‹', page - 1, false, page === 1);   // prev
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) btns += mkBtn(i, i, i === page);
+  } else {
+    btns += mkBtn(1, 1, page === 1);
+    if (page > 3) btns += `<span class="pag-ellipsis">…</span>`;
+    const start = Math.max(2, page - 1);
+    const end   = Math.min(totalPages - 1, page + 1);
+    for (let i = start; i <= end; i++) btns += mkBtn(i, i, i === page);
+    if (page < totalPages - 2) btns += `<span class="pag-ellipsis">…</span>`;
+    btns += mkBtn(totalPages, totalPages, page === totalPages);
+  }
+  btns += mkBtn('›', page + 1, false, page === totalPages);  // next
+
+  pages.innerHTML = btns;
+  pages.querySelectorAll('.pag-btn[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPage = parseInt(btn.dataset.page);
+      buildMainTable(filteredAreas());
+    });
+  });
+}
+
+// ── Main table ──────────────────────────────────────────────────────────
+function buildMainTable(areas) {
+  if (allAreas.length === 0) {
+    document.getElementById('mainTable').style.display      = 'none';
+    document.getElementById('emptyMsg').style.display       = '';
+    document.getElementById('paginationBar').style.display  = 'none';
+    return;
+  }
+  document.getElementById('mainTable').style.display = '';
+  document.getElementById('emptyMsg').style.display  = 'none';
+
+  // Apply table-level filters
+  const q = tableSearch.toLowerCase();
+  let vis = sortedAreas(areas);
+  // Apenas ruas com status Available (status=1) — se o campo existir
+  if (vis.some(a => 'status' in a)) vis = vis.filter(a => a.status === 1);
+  if (q)             vis = vis.filter(a => a.area_name.toLowerCase().includes(q) || (a.staging_group_name||'').toLowerCase().includes(q) || cleanOp(a.operator).toLowerCase().includes(q));
+  if (tableZoneFilter) vis = vis.filter(a => (a.staging_group_name||'').trim() === tableZoneFilter);
+
+  const total = vis.length;
+  // Clamp currentPage to valid range after filtering
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  document.getElementById('tableCount').textContent = `${total} ruas`;
+
+  // Slice to current page
+  const start = (currentPage - 1) * pageSize;
+  const page  = vis.slice(start, start + pageSize);
+
+  document.getElementById('mainBody').innerHTML = page.map(a => {
+    const occ = parseOcc(a.occupy_percentage);
+    const pac = reportData?.byArea?.[a.area_name]?.pacotes;
+    const tos = a.to_quantity || 0;
+    const spp = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
+    const isExp = expandedAreas.has(a.area_name);
+    const areaInfo  = getAreaLabel(a);
+    const areaCell  = areaInfo
+      ? `<span style="display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;color:${areaInfo.color};background:${areaInfo.bg};border:1px solid ${areaInfo.color}33;white-space:nowrap">${areaInfo.label}</span>`
+      : `<span style="color:var(--muted);font-size:11px">—</span>`;
+    const expandRow = isExp ? `<tr class="expand-row"><td colspan="10">${renderTosSub(a.area_name)}</td></tr>` : '';
+    return `<tr class="area-row" data-area="${a.area_name}">
+      <td class="area-name"><span class="expand-chevron${isExp?' open':''}">▶</span>${a.area_name}</td>
+      <td><span class="zone-pill ${zonePillClass(a.staging_group_name)}">${zoneShort(a.staging_group_name)}</span></td>
+      <td>${areaCell}</td>
+      <td style="font-family:monospace;text-align:center;font-weight:${tos>0?'700':'400'}">${tos}</td>
+      <td style="font-family:monospace;text-align:center;font-weight:600;color:${pac>0?'var(--text)':'var(--muted)'}">${pac!=null?pac.toLocaleString('pt-BR'):'—'}</td>
+      <td style="font-family:monospace;text-align:center;color:${spp!=null?'var(--text)':'var(--muted)'}">${spp!=null?spp:'—'}</td>
+      <td style="font-family:monospace;text-align:center;color:var(--muted)">${a.capacity||0}</td>
+      <td>
+        <div class="occ-bar-wrap">
+          <div class="occ-bar"><div class="occ-fill2 ${occClass(occ)}" style="width:${Math.min(occ,100).toFixed(1)}%"></div></div>
+          <span style="font-size:11px;font-family:monospace">${a.occupy_percentage||'0 %'}</span>
+        </div>
+      </td>
+      <td><span class="aging-val ${agingClass(a.staging_duration_time)}">${fmtDur(a.staging_duration_time)}</span></td>
+      <td style="font-size:11px;color:var(--muted)">${cleanOp(a.operator)}</td>
+    </tr>${expandRow}`;
+  }).join('');
+
+  buildPaginationBar(total, currentPage, pageSize);
+
+  // Expand click
+  document.querySelectorAll('.area-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const name = row.dataset.area;
+      if (expandedAreas.has(name)) expandedAreas.delete(name);
+      else expandedAreas.add(name);
+      buildMainTable(filteredAreas());
+    });
+  });
+}
+
+// ── Sort headers ────────────────────────────────────────────────────────
+document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = false; }
+    document.querySelectorAll('table.main-table th').forEach(t => {
+      t.classList.remove('sorted');
+      t.querySelector('.sa').textContent = '';
+    });
+    th.classList.add('sorted');
+    th.querySelector('.sa').textContent = sortAsc ? '↑' : '↓';
+    updateAgingSortBtn();
+    currentPage = 1;
+    buildMainTable(filteredAreas());
+  });
+});
+
+// ── Search input ───────────────────────────────────────────────────────
+document.getElementById('tableSearch').addEventListener('input', e => {
+  tableSearch = e.target.value;
+  currentPage = 1;
+  buildMainTable(filteredAreas());
+});
+
+// ── Page size selector ─────────────────────────────────────────────────
+document.getElementById('pagSizeSelect').addEventListener('change', e => {
+  pageSize    = parseInt(e.target.value);
+  currentPage = 1;
+  buildMainTable(filteredAreas());
+});
+
+// ── Clique nos cards PCT ────────────────────────────────────────────────
+document.getElementById('statLt20')?.addEventListener('click', () => setVolFilter('pct','lt'));
+document.getElementById('statEq20')?.addEventListener('click', () => setVolFilter('pct','eq'));
+document.getElementById('statGt20')?.addEventListener('click', () => setVolFilter('pct','gt'));
+
+// ── Aging sort toggle ──────────────────────────────────────────────────
+function updateAgingSortBtn() {
+  const btn = document.getElementById('agingSortBtn');
+  if (!btn) return;
+  if (sortCol !== 'staging_duration_time') return; // managed by column headers
+  if (sortAsc) {
+    btn.textContent = '↑ Aging mais novo';
+    btn.className   = 'aging-sort-btn asc';
+  } else {
+    btn.textContent = '↓ Aging mais antigo';
+    btn.className   = 'aging-sort-btn desc';
+  }
+}
+
+document.getElementById('agingSortBtn').addEventListener('click', () => {
+  sortCol = 'staging_duration_time';
+  sortAsc = !sortAsc;
+  currentPage = 1;
+  updateAgingSortBtn();
+  buildMainTable(filteredAreas());
+});
+
+// ── VOLUMOSO helpers ────────────────────────────────────────────────────────
+function isVolumoso() {
+  return activeZone.toLowerCase().includes('volumoso');
+}
+
+function getVolumosoTOs() {
+  if (!reportData?.byArea) return [];
+  const result = [];
+  Object.entries(reportData.byArea).forEach(([rua, ad]) => {
+    if (!(ad.zona || '').toLowerCase().includes('volumoso')) return;
+    (reportData.byAreaTOs?.[rua] || []).forEach(t => result.push({ ...t, rua }));
+  });
+  return result;
+}
+
+const PCT_THRESHOLD = 40;
+
+// ── Filtro global único (single source of truth) ──────────────────────────
+// type: 'pct' | 'distrib' | 'turno' | 'aging' | null
+// value: 'lt'/'eq'/'gt' | {min,max,label} | 'T1'/'T2'/'T3' | {min,max,label}
+let activeVolFilter = { type: null, value: null };
+
+function matchesVolFilter(t) {
+  if (!activeVolFilter.type) return true;
+  const { type, value } = activeVolFilter;
+  if (type === 'pct') {
+    return value === 'lt' ? t.pacotes < PCT_THRESHOLD :
+           value === 'eq' ? t.pacotes === PCT_THRESHOLD :
+                            t.pacotes > PCT_THRESHOLD;
+  }
+  if (type === 'distrib') {
+    return t.pacotes >= value.min && t.pacotes < value.max;
+  }
+  if (type === 'turno') {
+    return (t.turno || '') === value;
+  }
+  if (type === 'aging') {
+    const secs = t.aging_h * 3600;
+    return secs >= value.min && secs < value.max;
+  }
+  return true;
+}
+
+function getFilteredVolumosoTOs() {
+  const all = getVolumosoTOs();
+  return activeVolFilter.type ? all.filter(matchesVolFilter) : all;
+}
+
+function filterLabel() {
+  const { type, value } = activeVolFilter;
+  if (type === 'pct')     return value === 'lt' ? `TOs < ${PCT_THRESHOLD} pacotes` :
+                                 value === 'eq' ? `TOs = ${PCT_THRESHOLD} pacotes` :
+                                                  `TOs > ${PCT_THRESHOLD} pacotes`;
+  if (type === 'distrib') return `Faixa ${value.label} pacotes`;
+  if (type === 'turno')   return `Turno ${value}`;
+  if (type === 'aging')   return `Aging ${value.label}`;
+  if (type === 'sppband') return `SPP ${value.label} pacotes/TO`;
+  return '';
+}
+
+function setVolFilter(type, value) {
+  // Toggle: mesmo clique remove
+  const same = activeVolFilter.type === type &&
+               JSON.stringify(activeVolFilter.value) === JSON.stringify(value);
+  activeVolFilter = same ? { type: null, value: null } : { type, value };
+
+  // Atualiza cards PCT
+  ['statLt20','statEq20','statGt20'].forEach(id =>
+    document.getElementById(id)?.classList.remove('pct-active'));
+  if (activeVolFilter.type === 'pct') {
+    const map = { lt:'statLt20', eq:'statEq20', gt:'statGt20' };
+    document.getElementById(map[activeVolFilter.value])?.classList.add('pct-active');
+  }
+
+  // Banner
+  const banner  = document.getElementById('pctFilterBanner');
+  const label   = document.getElementById('pctFilterLabel');
+  const descEl  = document.getElementById('pctFilterDesc');
+  if (activeVolFilter.type) {
+    label.textContent = filterLabel();
+    if (descEl) descEl.textContent = activeVolFilter.type === 'sppband'
+      ? '— mostrando ruas por faixa de SPP'
+      : '— mostrando ruas com TOs correspondentes';
+    banner.style.display = '';
+  } else {
+    banner.style.display = 'none';
+  }
+
+  // Reconstrói tudo
+  expandedAreas.clear();
+  currentPage = 1;
+  if (isVolumoso()) buildVolumoso();
+  buildSPPView();
+  buildAgingCrit();
+  buildMainTable(filteredAreas());
+}
+
+// Alias para o onclick inline dos cards PCT
+function setPctFilter(v) { setVolFilter('pct', v); }
+
+// Limpa qualquer filtro ativo (botão do banner)
+function clearFilter() {
+  activeVolFilter = { type: null, value: null };
+  ['statLt20','statEq20','statGt20'].forEach(id =>
+    document.getElementById(id)?.classList.remove('pct-active'));
+  document.getElementById('pctFilterBanner').style.display = 'none';
+  expandedAreas.clear();
+  currentPage = 1;
+  if (isVolumoso()) buildVolumoso();
+  buildSPPView();
+  buildAgingCrit();
+  buildMainTable(filteredAreas());
+}
+
+// ── Copiar report Volumoso para SeaTalk ─────────────────────────────────────
+function copyVolReport() {
+  const tos   = getVolumosoTOs();   // sempre usa todos, sem filtro ativo
+  const total = tos.length;
+  const gt20  = tos.filter(t => t.pacotes > PCT_THRESHOLD).length;
+  const avgH  = total ? tos.reduce((s, t) => s + (t.aging_h || 0), 0) / total : 0;
+  const hh    = Math.floor(avgH);
+  const mm    = Math.round((avgH - hh) * 60);
+  const agingStr = hh > 0 ? `${hh}h ${mm}min` : `${mm}min`;
+
+  const text = [
+    `Report SPP Volumoso:`,
+    `Total TO's: ${total}`,
+    `TO's > ${PCT_THRESHOLD}: ${gt20}`,
+    `Aging Médio: ${agingStr}`,
+    ``,
+    `Link para acompanhamento: https://stage-out.onrender.com/stage_in.html`,
+  ].join('\n');
+
+  const btn  = document.getElementById('btnCopyVolReport');
+  const orig = btn.innerHTML;
+
+  const ok = () => {
+    btn.innerHTML = '✅ Copiado!';
+    btn.style.background = 'rgba(34,197,94,.2)';
+    btn.style.borderColor = 'rgba(34,197,94,.4)';
+    btn.style.color = '#4ade80';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }, 2500);
+  };
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(() => fallback(text, ok));
+  } else {
+    fallback(text, ok);
+  }
+
+  function fallback(t, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); cb(); } catch (_) {}
+    document.body.removeChild(ta);
+  }
+}
+
+// ── Visão SPP · Aba TODAS ──────────────────────────────────────────────
+function buildSPPView() {
+  const el = document.getElementById('sppView');
+  if (!el) return;
+  if (activeZone !== 'all') { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const distribEl = document.getElementById('sppDistrib');
+  const zoneEl    = document.getElementById('sppByZone');
+
+  if (!reportData?.byArea) {
+    if (distribEl) distribEl.innerHTML = '<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">Aguardando dados do report...</div>';
+    if (zoneEl)    zoneEl.innerHTML    = '';
+    return;
+  }
+
+  const T      = PCT_THRESHOLD;
+  const areas  = allAreas.filter(a => a.to_quantity > 0);
+
+  // Calcula SPP por rua
+  const areasSpp = areas.map(a => {
+    const pac = reportData.byArea[a.area_name]?.pacotes;
+    const tos = a.to_quantity || 0;
+    const spp = (pac != null && tos > 0) ? pac / tos : null;
+    return { ...a, spp, pac: pac ?? 0 };
+  }).filter(a => a.spp !== null);
+
+  const bands = [
+    { label: `≤ 30`,          key: 'b1', color: 'var(--green)',  min: 0,   max: 30  },
+    { label: `> 30 e ≤ 70`,   key: 'b2', color: 'var(--blue)',   min: 31,  max: 70  },
+    { label: `> 70 e ≤ 150`,  key: 'b3', color: 'var(--yellow)', min: 71,  max: 150 },
+    { label: `> 150`,         key: 'b4', color: 'var(--red)',    min: 151, max: Infinity },
+  ];
+
+  const bandData = bands.map(b => {
+    const matched = areasSpp.filter(a => {
+      const s = Math.round(a.spp);
+      return s >= b.min && s <= b.max;
+    });
+    return {
+      ...b,
+      count:    matched.length,
+      totalPac: matched.reduce((s, a) => s + a.pac, 0),
+      areas:    matched,
+    };
+  });
+
+  const maxCount   = Math.max(...bandData.map(b => b.count), 1);
+  const totalAreas = areasSpp.length;
+
+  // Barras de distribuição clicáveis
+  if (distribEl) {
+    distribEl.innerHTML = bandData.map(b => {
+      const pct      = totalAreas ? Math.round(b.count / totalAreas * 100) : 0;
+      const barW     = (b.count / maxCount * 100).toFixed(1);
+      const isActive = activeVolFilter.type === 'sppband' && activeVolFilter.value?.key === b.key;
+      const valStr   = JSON.stringify({ key: b.key, label: b.label }).replace(/"/g, '&quot;');
+      const pkgInfo  = b.totalPac > 0 ? `· ${b.totalPac.toLocaleString('pt-BR')} pcts` : '';
+      return `<div class="vol-row${isActive ? ' vol-active' : ''}" onclick="setVolFilter('sppband',${valStr})"
+        title="${b.count} ruas ${pkgInfo}">
+        <span class="vol-label" style="min-width:52px;color:${b.color};font-size:13px;font-weight:700">${b.label}</span>
+        <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${b.color}"></div></div>
+        <span class="vol-val">${b.count} ruas <span class="vol-pct">(${pct}%)</span></span>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);text-align:center;padding:12px;font-size:12px">Sem dados SPP</div>';
+  }
+
+  // SPP médio por zona
+  if (zoneEl) {
+    const zoneSpp = {};
+    areasSpp.forEach(a => {
+      const z = (a.staging_group_name || 'OUTRAS').trim();
+      if (!zoneSpp[z]) zoneSpp[z] = { tos: 0, pac: 0 };
+      zoneSpp[z].tos += a.to_quantity;
+      zoneSpp[z].pac += a.pac;
+    });
+
+    const zoneRows = Object.entries(zoneSpp)
+      .sort((a, b) => (b[1].pac / b[1].tos) - (a[1].pac / a[1].tos))
+      .map(([z, v], i, arr) => {
+        const sppZ    = v.tos > 0 ? v.pac / v.tos : 0;
+        const sppR    = Math.round(sppZ);
+        const color   = sppR <= 30  ? 'var(--green)'
+                       : sppR <= 70  ? 'var(--blue)'
+                       : sppR <= 150 ? 'var(--yellow)'
+                       :               'var(--red)';
+        const rgb     = ZONE_RGBA[zoneKey(z)] || [139, 92, 246];
+        const barPct  = Math.min(sppZ / 200 * 100, 100).toFixed(1);
+        const border  = i < arr.length - 1 ? 'border-bottom:1px solid rgba(42,45,62,.35);' : '';
+        return `<div style="display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:10px;padding:7px 0;${border}">
+          <span style="font-size:11px;font-weight:700;color:rgb(${rgb.join(',')});letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${zoneShort(z)}</span>
+          <div style="background:var(--surface2);border-radius:3px;height:7px;overflow:hidden">
+            <div style="background:${color};width:${barPct}%;height:100%;border-radius:3px;transition:width .35s ease"></div>
+          </div>
+          <span style="font-size:13px;font-family:monospace;font-weight:700;color:${color};text-align:right;line-height:1">${sppR}</span>
+        </div>`;
+      }).join('');
+
+    zoneEl.innerHTML = zoneRows ||
+      '<div style="color:var(--muted);text-align:center;padding:12px;font-size:12px">—</div>';
+  }
+}
+
+function buildVolumoso() {
+  // TOs filtrados = fonte de verdade para todos os componentes
+  const tos    = getFilteredVolumosoTOs();
+  const allTos = getVolumosoTOs(); // total sem filtro (para denominador das barras de distrib)
+  const total    = tos.length;
+  const totalPac = tos.reduce((s, t) => s + t.pacotes, 0);
+  const lt20 = tos.filter(t => t.pacotes < PCT_THRESHOLD).length;
+  const eq20 = tos.filter(t => t.pacotes === PCT_THRESHOLD).length;
+  const gt20 = tos.filter(t => t.pacotes > PCT_THRESHOLD).length;
+  const media = total ? (totalPac / total).toFixed(1) : '0';
+  const maior = total ? Math.max(...tos.map(t => t.pacotes)) : 0;
+
+  // KPIs — refletem o filtro ativo
+  document.getElementById('lblLt30').textContent  = `TOs < ${PCT_THRESHOLD} pcts`;
+  document.getElementById('lblEq30').textContent  = `TOs = ${PCT_THRESHOLD} pcts`;
+  document.getElementById('lblGt30').textContent  = `TOs > ${PCT_THRESHOLD} pcts`;
+  document.getElementById('vTOs').textContent     = total.toLocaleString('pt-BR');
+  document.getElementById('vPacotes').textContent = totalPac.toLocaleString('pt-BR');
+  document.getElementById('vLt30').textContent    = lt20.toLocaleString('pt-BR');
+  document.getElementById('vEq30').textContent    = eq20.toLocaleString('pt-BR');
+  document.getElementById('vGt30').textContent    = gt20.toLocaleString('pt-BR');
+  document.getElementById('vMedia').textContent   = media;
+  document.getElementById('vMaior').textContent   = maior.toLocaleString('pt-BR');
+
+  // ── Distribuição por faixa de pacotes (clicável → filtro real) ────────
+  const distBands = [
+    { label: '0–9',   min: 0,  max: 10,     color: 'var(--accent)' },
+    { label: '10–19', min: 10, max: 20,     color: 'var(--blue)'   },
+    { label: '20–29', min: 20, max: 30,     color: 'var(--yellow)' },
+    { label: `30–${PCT_THRESHOLD-1}`,   min: 30, max: PCT_THRESHOLD,   color: 'var(--orange)' },
+    { label: `= ${PCT_THRESHOLD}`,      min: PCT_THRESHOLD, max: PCT_THRESHOLD+1,     color: 'var(--purple)' },
+    { label: `> ${PCT_THRESHOLD}`,      min: PCT_THRESHOLD+1, max: 999999, color: 'var(--red)'    },
+  ];
+  // Conta nos TOs originais (sem filtro) para os totais das barras fazerem sentido
+  const dCounts = distBands.map(b => allTos.filter(t => t.pacotes >= b.min && t.pacotes < b.max).length);
+  const dMax    = Math.max(...dCounts, 1);
+  const allTotal = allTos.length;
+  document.getElementById('vDistrib').innerHTML = distBands.map((b, i) => {
+    const pct     = allTotal ? Math.round(dCounts[i] / allTotal * 100) : 0;
+    const barW    = (dCounts[i] / dMax * 100).toFixed(1);
+    const isActive = activeVolFilter.type === 'distrib' &&
+                     activeVolFilter.value?.label === b.label;
+    const val = JSON.stringify({ min: b.min, max: b.max, label: b.label }).replace(/"/g, '&quot;');
+    return `<div class="vol-row${isActive?' vol-active':''}" onclick="setVolFilter('distrib',${val})">
+      <span class="vol-label">${b.label}</span>
+      <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${b.color}"></div></div>
+      <span class="vol-val">${dCounts[i].toLocaleString('pt-BR')} <span class="vol-pct">(${pct}%)</span></span>
+    </div>`;
+  }).join('');
+
+  // ── Turno Ofensor — sempre restrito aos TOs pesados (> PCT_THRESHOLD pcts), ─
+  // independente de qual outro filtro esteja ativo, pois é isso que os torna "ofensores"
+  document.getElementById('vTurnoOfensorTitle').textContent   = `Turno Ofensor (TOs > ${PCT_THRESHOLD} pcts)`;
+  document.getElementById('vTop5Title').textContent           = `Top 5 TOs com Maior Volume (> ${PCT_THRESHOLD} pcts)`;
+  const heavyTos = tos.filter(t => t.pacotes > PCT_THRESHOLD);
+  const byTurno = {};
+  heavyTos.forEach(t => { const k = t.turno || '?'; byTurno[k] = (byTurno[k] || 0) + 1; });
+  const turnoSorted = Object.entries(byTurno).sort((a, b) => b[1] - a[1]);
+  const turnoTotal  = heavyTos.length;
+  document.getElementById('vTurnoOfensor').innerHTML = turnoSorted.length
+    ? turnoSorted.map(([turno, cnt]) => {
+        const pct    = turnoTotal ? Math.round(cnt / turnoTotal * 100) : 0;
+        const barW   = pct;
+        const tColor = turno==='T1' ? 'var(--blue)' : turno==='T2' ? 'var(--yellow)' : turno==='T3' ? 'var(--accent)' : 'var(--muted)';
+        const isActive = activeVolFilter.type === 'turno' && activeVolFilter.value === turno;
+        return `<div class="vol-turno-row${isActive?' vol-active':''}" onclick="setVolFilter('turno','${turno}')">
+          <span class="turno-tag ${turno==='T1'?'t-t1':turno==='T2'?'t-t2':turno==='T3'?'t-t3':'t-other'}">${turno}</span>
+          <div class="vol-bar-wrap"><div class="vol-bar" style="width:${barW}%;background:${tColor}"></div></div>
+          <span class="vol-val">${cnt} TOs <span class="vol-pct">(${pct}%)</span></span>
+        </div>`;
+      }).join('')
+    : `<div style="color:var(--muted);font-size:12px;text-align:center;padding:20px">Nenhum TO no filtro atual</div>`;
+
+  // ── Top 5 TOs com maior volume (sempre entre os TOs > PCT_THRESHOLD pcts) ──
+  const top5 = [...heavyTos].sort((a, b) => b.pacotes - a.pacotes).slice(0, 5);
+  document.getElementById('vTop5').innerHTML = top5.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--muted);font-size:11px">
+          <th style="text-align:left;padding:4px 6px">#</th>
+          <th style="text-align:left;padding:4px 6px">TO</th>
+          <th style="text-align:left;padding:4px 6px">Rua</th>
+          <th style="text-align:center;padding:4px 6px">Pacotes</th>
+          <th style="text-align:left;padding:4px 6px">Aging</th>
+          <th style="text-align:left;padding:4px 6px">Turno</th>
+        </tr></thead>
+        <tbody>${top5.map((t, i) => `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:5px 6px"><span class="rank-num">${i+1}</span></td>
+          <td style="padding:5px 6px;font-family:monospace;font-size:11px">${t.to}</td>
+          <td style="padding:5px 6px;font-weight:600">${t.rua}</td>
+          <td style="padding:5px 6px;text-align:center;font-weight:800;color:var(--red)">${t.pacotes}</td>
+          <td style="padding:5px 6px">${fmtDurH(t.aging_h)}</td>
+          <td style="padding:5px 6px">${turnoTag(t.turno)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`
+    : `<div style="color:var(--muted);text-align:center;padding:24px;font-size:12px">Nenhum TO no filtro atual</div>`;
+
+  // ── Histograma de Aging (clicável) ─────────────────────────────────────
+  const hCounts  = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).length);
+  const hPacotes = VOL_BINS.map(b => tos.filter(t => { const s = t.aging_h * 3600; return s >= b.min && s < b.max; }).reduce((s, t) => s + t.pacotes, 0));
+  const hMax    = Math.max(...hCounts, 1);
+  const HIST_COLORS = ['#22c55e','#4ade80','#a3e635','#facc15','#fbbf24','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c','#7f1d1d'];
+  document.getElementById('vAgingHist').innerHTML =
+    `<div style="display:flex;flex-direction:column;gap:7px;padding:4px 0">` +
+    VOL_BINS.map((b, i) => {
+      const pct    = total ? Math.round(hCounts[i] / total * 100) : 0;
+      const barW   = (hCounts[i] / hMax * 100).toFixed(1);
+      const color  = HIST_COLORS[i] || '#7f1d1d';
+      const inside = parseFloat(barW) > 28;
+      const isActive = activeVolFilter.type === 'aging' &&
+                       activeVolFilter.value?.label === b.label;
+      const val = JSON.stringify({ min: b.min, max: b.max, label: b.label }).replace(/"/g, '&quot;');
+      return `<div class="vol-aging-row${isActive?' vol-active':''}"
+        style="display:grid;grid-template-columns:72px 1fr 56px 48px;align-items:center;gap:10px"
+        onclick="setVolFilter('aging',${val})">
+        <span style="font-size:11px;font-weight:700;color:var(--muted);text-align:right;letter-spacing:.3px">${b.label}</span>
+        <div style="position:relative;background:var(--surface2);border-radius:8px;height:32px;overflow:hidden">
+          <div style="width:${barW}%;background:${color};height:100%;border-radius:8px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:10px">
+            ${inside && hCounts[i] > 0 ? `<span style="font-size:13px;font-weight:800;color:rgba(0,0,0,.75);white-space:nowrap">${hCounts[i].toLocaleString('pt-BR')}</span>` : ''}
+          </div>
+          ${!inside && hCounts[i] > 0 ? `<span style="position:absolute;left:calc(${barW}% + 8px);top:50%;transform:translateY(-50%);font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">${hCounts[i].toLocaleString('pt-BR')}</span>` : ''}
+          ${hCounts[i] === 0 ? `<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--muted)">—</span>` : ''}
+        </div>
+        <span style="font-size:12px;font-weight:600;color:${hCounts[i]>0?color:'var(--muted)'};text-align:right;font-family:monospace">${hCounts[i] > 0 ? (hPacotes[i] / hCounts[i]).toLocaleString('pt-BR', {minimumFractionDigits:1,maximumFractionDigits:1}) : '—'}</span>
+        <span style="font-size:12px;font-weight:600;color:${pct>0?color:'var(--muted)'};text-align:right">${pct > 0 ? pct+'%' : '—'}</span>
+      </div>`;
+    }).join('') + `</div>`;
+
+  buildVolPerfilCards();
+}
+
+// ── Perfil de pacote · Zona Volumoso ────────────────────────────────────
+function buildVolPerfilCards() {
+  const section = document.getElementById('vPerfilSection');
+  const recs = (profileData?.byTO ? Object.values(profileData.byTO) : [])
+    .filter(r => zoneKey(r.group_name) === 'volumoso');
+  if (!recs.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const totals = {};
+  PERFIL_ORDER.forEach(d => { totals[d.key] = 0; });
+  recs.forEach(r => PERFIL_ORDER.forEach(d => { totals[d.key] += (r[d.key] || 0); }));
+  const grandTotal = PERFIL_ORDER.reduce((s, d) => s + totals[d.key], 0);
+
+  document.getElementById('vPerfilCards').innerHTML = PERFIL_ORDER.map(d => {
+    const v   = totals[d.key];
+    const pct = grandTotal ? (v / grandTotal * 100).toFixed(1) : '0.0';
+    return `
+      <div class="zone-card" style="border-top-color:${d.color}">
+        <div class="zone-card-label" style="color:${d.color}">${d.label}</div>
+        <div class="zone-card-value" style="color:${d.color}">${v.toLocaleString('pt-BR')}</div>
+        <div class="zone-card-meta"><span>${pct}% do total</span></div>
+      </div>`;
+  }).join('');
+}
+
+// ── Aging Criticality Panel ───────────────────────────────────────────
+function buildAgingCrit() {
+  const el = document.getElementById('agingCritSection');
+  if (!el) return;
+
+  if (isVolumoso() || !reportData?.byAreaTOs || !Object.keys(reportData.byAreaTOs).length) {
+    el.style.display = 'none'; return;
+  }
+
+  // Aggregate TOs — filter by active zone when not "all"
+  let areaKeys = Object.keys(reportData.byAreaTOs);
+  if (activeZone !== 'all') {
+    const zoneSet = new Set(
+      allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === activeZone)
+              .map(a => a.area_name)
+    );
+    areaKeys = areaKeys.filter(k => zoneSet.has(k));
+  }
+
+  const allTOs    = areaKeys.flatMap(k => reportData.byAreaTOs[k] || []);
+  const totalPkgs = allTOs.reduce((s, t) => s + t.pacotes, 0);
+  if (!allTOs.length || totalPkgs === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = '';
+
+  // Band definitions (aging_h thresholds)
+  const BANDS = [
+    { key:'b1', label:'0 – 1 dia',   min:0,  max:24,       tip:'Backlog dentro do SLA operacional. Faixa saudável.' },
+    { key:'b2', label:'1 – 2 dias',  min:24, max:48,       tip:'Pacotes com 1–2 dias de aging. Requer rotação ativa para evitar envelhecimento.' },
+    { key:'b3', label:'2 – 3 dias',  min:48, max:72,       tip:'Próximo ao limite de SLA. Escalar para supervisão imediatamente.' },
+    { key:'b4', label:'> 3 dias',    min:72, max:Infinity, tip:'⚠️ VIOLAÇÃO DE SLA. Pacotes com mais de 3 dias em staging. Ação imediata obrigatória.' },
+  ];
+
+  const bands = BANDS.map(b => {
+    const tos   = allTOs.filter(t => t.aging_h >= b.min && t.aging_h < b.max);
+    const pkgs  = tos.reduce((s, t) => s + t.pacotes, 0);
+    const pct   = totalPkgs > 0 ? pkgs / totalPkgs * 100 : 0;
+    const count = tos.length;
+
+    // Severity: 0-1d is always ok; 1-2d always amber; older bands escalate by % threshold
+    let sev, statusLabel;
+    if (b.key === 'b1') {
+      sev = 'ok'; statusLabel = 'Saudável';
+    } else if (b.key === 'b2') {
+      sev         = 'warn';            // always amber — condizente com Atenção
+      statusLabel = 'Atenção';
+    } else if (b.key === 'b3') {
+      sev         = pct <= 1 ? 'warn' : pct <= 3 ? 'crit' : 'danger';
+      statusLabel = pct <= 1 ? 'Controlado' : pct <= 3 ? 'Crítico' : 'RISCO SLA';
+    } else {
+      sev         = pct <= 1 ? 'crit' : 'danger';
+      statusLabel = pct <= 1 ? 'Crítico' : 'PERIGO';
+    }
+
+    const color = sev === 'ok' ? 'var(--green)' : sev === 'warn' ? 'var(--amber)' : 'var(--red)';
+    return { ...b, pkgs, pct, count, sev, statusLabel, color };
+  });
+
+  // Global alert: any band >= 2d with pct > 3%
+  const alertLevel = bands.some(b => b.key === 'b4' && b.pct > 3) ? 'red'
+                   : bands.some(b => b.key === 'b3' && b.pct > 3) ? 'amber'
+                   : null;
+  const alertText  = alertLevel === 'red'
+    ? '🚨 RISCO SLA — Backlog acima de 3 dias > 3% do total'
+    : alertLevel === 'amber'
+    ? '⚠️ AGING CRÍTICO — Acúmulo em 2–3 dias acima do limite'
+    : null;
+
+  const maxPkgs = Math.max(...bands.map(b => b.pkgs), 1);
+
+  const rowsHtml = bands.map(b => {
+    const barW    = (b.pkgs / maxPkgs * 100).toFixed(1);
+    const isActive = activeVolFilter.type === 'aging' && activeVolFilter.value?.label === b.label;
+    // Convert hours → seconds for the existing aging filter (uses t.aging_h * 3600)
+    const minSec  = b.min * 3600;
+    const maxSec  = b.max === Infinity ? 999999999 : b.max * 3600;
+    const fVal    = JSON.stringify({ min: minSec, max: maxSec, label: b.label }).replace(/"/g, '&quot;');
+    return `<div class="aging-band-row abr-${b.sev}${isActive ? ' abr-active' : ''}"
+      title="${b.tip}" style="cursor:pointer"
+      onclick="setVolFilter('aging',${fVal})">
+      <span class="aging-band-lbl" style="color:${b.color}">${b.label}</span>
+      <div>
+        <div class="aging-band-pkgs" style="color:${b.color}">${b.pkgs.toLocaleString('pt-BR')}</div>
+        <div class="aging-band-sub">${b.count} TO${b.count !== 1 ? 's' : ''}</div>
+      </div>
+      <div>
+        <div class="aging-bar-outer">
+          <div class="aging-bar-inner" style="width:${barW}%;background:${b.color}"></div>
+        </div>
+      </div>
+      <span class="aging-pct" style="color:${b.color}">${b.pct.toFixed(1)}%</span>
+      <span class="aging-status-tag ast-${b.sev}">${b.statusLabel}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="aging-crit-panel">
+    <div class="aging-crit-hdr">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.5" style="flex-shrink:0">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span class="aging-crit-hdr-title">Criticidade de Aging · Backlog por Tempo em Staging</span>
+      <span style="margin-left:8px;font-size:13px;font-weight:700;color:var(--text)">
+        ${totalPkgs.toLocaleString('pt-BR')}
+        <span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:2px">pacotes</span>
+      </span>
+      ${alertText
+        ? `<span class="aging-alert-pill ${alertLevel}" style="margin-left:auto">${alertText}</span>`
+        : `<span style="margin-left:auto;font-size:10px;color:var(--green)">✅ Aging dentro dos limites operacionais</span>`
+      }
+    </div>
+    <div class="aging-col-hdr">
+      <span>Faixa</span><span>Pacotes</span><span>Distribuição</span>
+      <span style="text-align:right">% Total</span><span style="text-align:center">Status</span>
+    </div>
+    ${rowsHtml}
+  </div>`;
+}
+
+// ── Operacional View ─────────────────────────────────────────────────────
+const OP_ZONE_COLORS = {
+  linear:   { color: '#3b82f6', glow: 'rgba(59,130,246,',  bg: 'rgba(59,130,246,.08)' },
+  volumoso: { color: '#22c55e', glow: 'rgba(34,197,94,',   bg: 'rgba(34,197,94,.08)'  },
+  cop:      { color: '#f59e0b', glow: 'rgba(245,158,11,',  bg: 'rgba(245,158,11,.08)' },
+  lmh:      { color: '#8b5cf6', glow: 'rgba(139,92,246,',  bg: 'rgba(139,92,246,.08)' },
+  other:    { color: '#8b5cf6', glow: 'rgba(139,92,246,',  bg: 'rgba(139,92,246,.08)' },
+};
+
+function opZoneColor(name) {
+  const k = zoneKey(name);
+  const n = (name || '').toLowerCase();
+  if (n.includes('lmh')) return OP_ZONE_COLORS.lmh;
+  return OP_ZONE_COLORS[k] || OP_ZONE_COLORS.other;
+}
+
+function buildOperacional() {
+  const active = allAreas.filter(a => a.to_quantity > 0);
+  if (!active.length) {
+    document.getElementById('opGrid').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted);font-size:15px">Nenhuma zona ativa</div>';
+    return;
+  }
+
+  const zoneMap = {};
+  active.forEach(a => {
+    const z = (a.staging_group_name || 'OUTRAS').trim();
+    if (!zoneMap[z]) zoneMap[z] = { name: z, areas: [] };
+    zoneMap[z].areas.push(a);
+  });
+
+  const cards = Object.values(zoneMap)
+    .sort((a, b) => {
+      const mA = Math.max(...a.areas.map(x => x.staging_duration_time || 0));
+      const mB = Math.max(...b.areas.map(x => x.staging_duration_time || 0));
+      return mB - mA;
+    })
+    .map(z => {
+      const areas      = z.areas;
+      const col        = opZoneColor(z.name);
+      const totalTOs   = areas.reduce((s, a) => s + (a.to_quantity || 0), 0);
+      const ruasAtivas = areas.length;
+      // Capacidade total = todas as ruas da zona (inclusive as vazias)
+      const allZoneAreas = allAreas.filter(a => (a.staging_group_name || 'OUTRAS').trim() === z.name);
+      const totalCap     = allZoneAreas.reduce((s, a) => s + (a.capacity || 0), 0);
+      const ocupPct      = totalCap > 0 ? (totalTOs / totalCap * 100) : 0;
+
+      const rz       = getReportZone(z.name);
+      const totalPac = rz ? rz.pacotes : areas.reduce((s, a) => {
+        const ad = reportData?.byArea?.[a.area_name];
+        return s + (ad ? ad.pacotes : 0);
+      }, 0);
+      const spp = (totalTOs > 0 && totalPac > 0) ? Math.round(totalPac / totalTOs) : null;
+
+      const agings   = areas.map(a => a.staging_duration_time || 0).filter(v => v > 0);
+      const avgAging = agings.length ? agings.reduce((s, v) => s + v, 0) / agings.length : 0;
+      const pico     = agings.length ? Math.max(...agings) : 0;
+
+      // Top 10 FIFO: ruas ordenadas por aging desc
+      const fifoList = [...areas]
+        .filter(a => a.staging_duration_time > 0)
+        .sort((a, b) => b.staging_duration_time - a.staging_duration_time)
+        .slice(0, 10);
+
+      const isCrit = pico > 86400;
+      const isWarn = !isCrit && pico > 25200;
+
+      const occColor = ocupPct >= 85 ? 'var(--red)' : ocupPct >= 60 ? 'var(--yellow)' : 'var(--green)';
+
+      const glowStyle = isCrit
+        ? `box-shadow:0 0 0 1px ${col.color}66,0 0 24px ${col.glow}0.15);`
+        : isWarn ? `box-shadow:0 0 0 1px rgba(245,158,11,.3);` : '';
+
+      const fifoRows = fifoList.map((a, i) => {
+        const ac        = agingClass(a.staging_duration_time);
+        const areaInfo  = getAreaLabel(a);
+        const areaBadge = areaInfo
+          ? `<span class="op-fifo-area" style="background:${areaInfo.bg};color:${areaInfo.color};border:1px solid ${areaInfo.color}44">${areaInfo.label}</span>`
+          : '';
+        const tos  = a.to_quantity || 0;
+        const cap  = a.capacity    || 0;
+        const pac  = reportData?.byArea?.[a.area_name]?.pacotes ?? null;
+        const spp  = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
+        const occ  = parseOcc(a.occupy_percentage);
+        const occColor = occ >= 85 ? 'var(--red)' : occ >= 60 ? 'var(--yellow)' : 'var(--green)';
+        return `<div class="op-fifo-row">
+          <span class="op-fifo-rank">${i + 1}</span>
+          <div class="op-fifo-info">
+            <div class="op-fifo-rua">${a.area_name}${areaBadge}</div>
+            <div class="op-fifo-sub">
+              <span><strong>${tos}</strong> TOs</span>
+              <span><strong>${pac != null ? pac.toLocaleString('pt-BR') : '—'}</strong> pcts</span>
+              <span>SPP <strong>${spp != null ? spp : '—'}</strong></span>
+              <span>Cap <strong>${cap}</strong></span>
+              <span style="color:${occColor};font-weight:700">${occ.toFixed(0)}%</span>
+            </div>
+          </div>
+          <span class="op-fifo-aging aging-val ${ac}">${fmtDur(a.staging_duration_time)}</span>
+        </div>`;
+      }).join('');
+
+      return `<div class="op-zone-card${isCrit ? ' op-crit' : isWarn ? ' op-warn' : ''}" style="border-top-color:${col.color};${glowStyle}">
+        <div class="op-zone-hdr" style="background:${col.bg};border-bottom:1px solid ${col.color}33">
+          <span class="op-zone-name" style="color:${col.color}">${zoneShort(z.name)}</span>
+          <span class="op-zone-pill" style="background:${col.glow}0.15);color:${col.color};border:1px solid ${col.color}33">
+            ${ruasAtivas} rua${ruasAtivas !== 1 ? 's' : ''}
+          </span>
+        </div>
+        <div class="op-kpis-grid">
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:${col.color}">${totalTOs.toLocaleString('pt-BR')}</div>
+            <div class="op-kpi-lbl">Total TOs</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:var(--purple)">${totalPac > 0 ? totalPac.toLocaleString('pt-BR') : '—'}</div>
+            <div class="op-kpi-lbl">Pacotes</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:var(--blue)">${spp != null ? spp : '—'}</div>
+            <div class="op-kpi-lbl">SPP</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val aging-val ${agingClass(Math.round(avgAging))}">${avgAging > 0 ? fmtDur(Math.round(avgAging)) : '—'}</div>
+            <div class="op-kpi-lbl">Aging Médio</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val aging-val ${agingClass(pico)}">${pico > 0 ? fmtDur(pico) : '—'}</div>
+            <div class="op-kpi-lbl">Pico Aging</div>
+          </div>
+          <div class="op-kpi">
+            <div class="op-kpi-val" style="color:${occColor}">${ocupPct.toFixed(0)}%</div>
+            <div class="op-kpi-lbl">Ocupação</div>
+          </div>
+        </div>
+        <div class="op-occ-wrap">
+          <div class="op-occ-track">
+            <div class="op-occ-fill" style="width:${Math.min(ocupPct,100).toFixed(1)}%;background:${occColor}"></div>
+          </div>
+        </div>
+        <div class="op-fifo-list">
+          <div class="op-fifo-list-hdr">⚡ FIFO — Próximas Ruas</div>
+          ${fifoRows || '<div style="padding:10px 14px;color:var(--muted);font-size:12px">Nenhuma rua ativa</div>'}
+        </div>
+      </div>`;
+    }).join('');
+
+  document.getElementById('opGrid').innerHTML = cards;
+}
+
+// ── Render ──────────────────────────────────────────────────────────────
+function render() {
+  const areas = filteredAreas();
+  buildZoneTabs();
+  const vol = isVolumoso();
+  const op  = activeZone === '__op__';
+  document.getElementById('defaultView').style.display     = (!op && !vol) ? '' : 'none';
+  document.getElementById('volumosoView').style.display    = vol ? '' : 'none';
+  document.getElementById('operacionalView').style.display = op ? '' : 'none';
+  document.getElementById('detailSection').style.display   = op ? 'none' : '';
+  if (op) {
+    buildOperacional();
+  } else if (vol) {
+    buildVolumoso();
+  } else {
+    updateStats(areas);
+    buildZonaSection(areas);
+    buildPerfilSection();
+    buildSPPView();
+    buildTop5(areas);
+    buildOccByZone(areas);
+    buildTurnoDonut();
+  }
+  if (!op) {
+    buildAgingCrit();
+    buildTableZonePills();
+    buildMainTable(areas);
+  }
+}
+
+// ── Load data ──────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const [stageRes, reportRes, profileRes] = await Promise.all([
+      fetch(`/api/stage-in?station=${STATION}`),
+      fetch('/api/report-data').catch(() => null),
+      fetch('/api/profile-data').catch(() => null),
+    ]);
+
+    if (!stageRes.ok) return;
+    const data = await stageRes.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return;
+    lastAt   = data.fetchedAt;
+    allAreas = data.list || [];
+
+    if (reportRes?.ok) {
+      const rd = await reportRes.json().catch(() => null);
+      // Só usa o resultado se tiver dados reais (rowCount > 0)
+      // Evita sobrescrever dados válidos com resultado vazio durante recálculo da planilha
+      if (rd && !rd.error && (rd.rowCount ?? 1) > 0) reportData = rd;
+    }
+
+    if (profileRes?.ok) {
+      const pd = await profileRes.json().catch(() => null);
+      if (pd && !pd.error && (pd.rowCount ?? 1) > 0) profileData = pd;
+    }
+
+    const ts = new Date(data.fetchedAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('lastUpdated').textContent = ts;
+    document.getElementById('liveDot').className       = 'live-dot on';
+    document.getElementById('metaTag').textContent     = `inbound · ${allAreas.length} ruas · ${ts}`;
+
+    render();
+  } catch (e) {}
+}
+
+loadData();
+setInterval(loadData, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TO's Packed Dashboard · Recife 04</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161920;
+  --surface2: #1e2130;
+  --border: #2a2d3e;
+  --border2: #353849;
+  --text: #e2e8f0;
+  --muted: #6b7280;
+  --orange: #ee4d2d;
+  --green: #22c55e;
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --accent: #22c55e;
+  --radius: 10px;
+}
+
+html.light {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --text: #1e293b;
+  --muted: #64748b;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── Tab bar ── */
+.tab-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; gap: 0;
+  position: sticky; top: 65px; z-index: 99;
+}
+.tab-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 13px; font-weight: 600;
+  padding: 12px 18px; border-bottom: 2px solid transparent;
+  transition: all .15s; display: flex; align-items: center; gap: 6px;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-bar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.theme-toggle {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); padding: 5px 10px; border-radius: 8px;
+  font-size: 14px; cursor: pointer; transition: all .15s;
+}
+.theme-toggle:hover { border-color: var(--border2); color: var(--text); }
+
+/* ── Stats ── */
+.stats {
+  display: grid; grid-template-columns: repeat(4,1fr);
+  gap: 12px; padding: 16px 24px;
+}
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-size: 28px; font-weight: 700; line-height: 1; }
+.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* ── Toolbar ── */
+.toolbar { padding: 0 24px 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-wrap input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); padding: 7px 12px 7px 34px; border-radius: 8px;
+  font-size: 12px; outline: none; transition: border-color .15s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.sort-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.sort-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 5px; transition: all .15s; white-space: nowrap;
+}
+.sort-btn:hover { border-color: var(--border2); color: var(--text); }
+.sort-btn.active { background: rgba(34,197,94,.12); border-color: var(--accent); color: var(--accent); }
+.sort-btn .arrow { font-size: 9px; }
+.count-info { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+/* ── List ── */
+.dest-list { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Destination card ── */
+.dest-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .15s; }
+.dest-card:hover { border-color: var(--border2); }
+.dest-card.expanded { border-color: var(--accent); }
+
+.dest-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; user-select: none; }
+.dest-id {
+  background: var(--accent); color: #000;
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 6px;
+  min-width: 44px; text-align: center; flex-shrink: 0;
+}
+.dest-name { font-weight: 600; font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dest-badges { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-blue   { background: rgba(59,130,246,.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,.2); }
+.badge-purple { background: rgba(139,92,246,.12); color: #a78bfa; border: 1px solid rgba(139,92,246,.2); }
+.badge-yellow { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+.badge-green  { background: rgba(34,197,94,.12);  color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+
+.chevron { color: var(--muted); font-size: 14px; transition: transform .2s; flex-shrink: 0; margin-left: 4px; }
+.dest-card.expanded .chevron { transform: rotate(180deg); }
+
+/* ── TOs table ── */
+.tos-wrap { display: none; border-top: 1px solid var(--border); padding: 0 16px 12px; }
+.dest-card.expanded .tos-wrap { display: block; }
+
+.tos-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.tos-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 6px 10px; text-align: left;
+  border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.tos-table td { padding: 7px 10px; border-bottom: 1px solid rgba(42,45,62,.6); vertical-align: middle; }
+.tos-table tr:last-child td { border-bottom: none; }
+.tos-table tr:hover td { background: rgba(255,255,255,.02); }
+
+.to-num { font-family: monospace; font-weight: 700; font-size: 11px; color: var(--text); letter-spacing: .3px; }
+.op-name { font-size: 11px; color: var(--muted); }
+.pack-pill {
+  display: inline-block; padding: 1px 7px; border-radius: 10px;
+  font-size: 10px; font-weight: 600;
+}
+.pack-saca    { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.25); }
+.pack-scuttle { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.pack-other   { background: rgba(139,92,246,.15); color: #a78bfa; border: 1px solid rgba(139,92,246,.25); }
+.dur { font-family: monospace; font-size: 11px; }
+.dur.warn { color: var(--yellow); }
+.dur.crit { color: var(--red); }
+
+/* ── Empty ── */
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
+  text-align: left; line-height: 1.8;
+}
+
+/* ── Report Tab ── */
+.report-wrap { padding: 20px 24px 40px; }
+
+.report-ts-bar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px; font-size: 12px; color: var(--muted);
+}
+.report-ts-bar .ts-label { font-weight: 600; color: var(--text); }
+.report-ts-badge {
+  background: var(--surface2); border: 1px solid var(--border);
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  color: var(--blue);
+}
+
+.report-kpis {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 28px;
+}
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px 22px; position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.kpi-card.kpi-blue::before   { background: var(--blue); }
+.kpi-card.kpi-purple::before { background: var(--purple); }
+.kpi-card.kpi-yellow::before { background: var(--yellow); }
+.kpi-card.kpi-green::before  { background: var(--green); }
+.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 8px; }
+.kpi-value { font-size: 40px; font-weight: 800; line-height: 1; }
+.kpi-card.kpi-blue   .kpi-value { color: var(--blue); }
+.kpi-card.kpi-purple .kpi-value { color: var(--purple); }
+.kpi-card.kpi-yellow .kpi-value { color: var(--yellow); }
+.kpi-card.kpi-green  .kpi-value { color: var(--green); }
+.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+.report-section { margin-bottom: 28px; }
+.report-section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Farol ── */
+.farol-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  transition: box-shadow .3s, border-color .3s;
+}
+.farol-wrap.has-crit {
+  border-color: rgba(239,68,68,.5);
+  box-shadow: 0 0 20px rgba(239,68,68,.15), 0 0 40px rgba(239,68,68,.06);
+}
+.farol-table { width: 100%; border-collapse: collapse; }
+.farol-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); padding: 10px 16px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.farol-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.farol-table tr:last-child td { border-bottom: none; }
+.farol-dot {
+  width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+}
+.farol-dot.crit-dot   { background: var(--red); animation: pulseDot 1.2s ease-in-out infinite; }
+.farol-dot.urgente-dot { background: #f97316; }
+.farol-dot.atencao-dot { background: var(--yellow); }
+.farol-dot.ok-dot      { background: var(--green); }
+@keyframes pulseDot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.35);opacity:.7} }
+
+.farol-level {
+  display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px;
+}
+.farol-level.crit-label   { color: var(--red); }
+.farol-level.urgente-label { color: #f97316; }
+.farol-level.atencao-label { color: var(--yellow); }
+.farol-level.ok-label      { color: var(--green); }
+.farol-count { font-size: 22px; font-weight: 800; font-family: monospace; }
+.farol-count.crit-val   { color: var(--red); }
+.farol-count.urgente-val { color: #f97316; }
+.farol-count.atencao-val { color: var(--yellow); }
+.farol-count.ok-val      { color: var(--green); }
+.farol-pct { font-size: 12px; color: var(--muted); font-family: monospace; }
+.farol-table tr.farol-crit-row { background: rgba(239,68,68,.04); }
+.farol-table tr.farol-urgente-row { background: rgba(249,115,22,.03); }
+.farol-table tbody tr { cursor: pointer; transition: background .15s; }
+.farol-table tbody tr:hover td { background: rgba(255,255,255,.04); }
+.farol-table tbody tr.farol-row-active td { background: rgba(59,130,246,.1); box-shadow: inset 3px 0 0 var(--blue); }
+
+/* ── Top 10 table ── */
+.top10-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.top10-table { width: 100%; border-collapse: collapse; }
+.top10-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); padding: 10px 14px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border); font-weight: 500;
+}
+.top10-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 12px; }
+.top10-table tr:last-child td { border-bottom: none; }
+.top10-table tr:hover td { background: rgba(255,255,255,.015); }
+.top10-table tr.row-warn td { background: rgba(245,158,11,.04); }
+.top10-table tr.row-crit td { background: rgba(239,68,68,.05); }
+.top10-rank {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+}
+.top10-rank.rank-1 { background: rgba(245,158,11,.15); color: #fbbf24; border-color: rgba(245,158,11,.3); }
+.top10-rank.rank-2 { background: rgba(148,163,184,.1); color: #94a3b8; border-color: rgba(148,163,184,.25); }
+.top10-rank.rank-3 { background: rgba(180,120,60,.12); color: #cd853f; border-color: rgba(180,120,60,.25); }
+
+/* ── Turno cards ── */
+.turno-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.turno-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; position: relative; overflow: hidden;
+}
+.turno-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+}
+.turno-card.t1::before { background: #3b82f6; }
+.turno-card.t2::before { background: #f59e0b; }
+.turno-card.t3::before { background: #8b5cf6; }
+.turno-label { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.turno-label.t1 { color: #3b82f6; }
+.turno-label.t2 { color: #f59e0b; }
+.turno-label.t3 { color: #8b5cf6; }
+.turno-time { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+.turno-stat { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+.turno-meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.turno-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.turno-bar { height: 100%; border-radius: 2px; }
+.turno-bar.t1 { background: #3b82f6; }
+.turno-bar.t2 { background: #f59e0b; }
+.turno-bar.t3 { background: #8b5cf6; }
+.turno-pac { font-size: 11px; color: var(--muted); }
+
+/* ── Hourly chart ── */
+.hour-chart {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 12px 8px;
+  display: flex; align-items: flex-end; gap: 3px; height: 180px;
+  overflow: hidden;
+}
+.hour-col {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end; min-width: 0;
+}
+.hour-bar-val { font-size: 9px; color: var(--muted); margin-bottom: 3px; text-align: center; }
+.hour-bar {
+  width: 100%; border-radius: 3px 3px 0 0;
+  min-height: 3px; background: rgba(59,130,246,.5);
+}
+.hour-bar.peak { background: #f59e0b; }
+.hour-lbl { font-size: 9px; color: var(--muted); margin-top: 4px; text-align: center; }
+
+/* ── Print ── */
+@media print {
+  .tab-bar, .toolbar, .header-right { display: none; }
+  .tab-content { display: block !important; }
+  #dashTab { display: none !important; }
+}
+
+@media (max-width: 700px) {
+  .stats { grid-template-columns: repeat(2,1fr); }
+  .report-kpis { grid-template-columns: repeat(2,1fr); }
+  .dest-badges .badge:nth-child(n+3) { display: none; }
+  .header-right .meta-tag { display: none; }
+}
+
+/* ── All TOs table ── */
+.tos-all-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tos-all-table th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  font-weight: 500; white-space: nowrap; position: sticky; top: 0; z-index: 1;
+}
+.tos-all-table td { padding: 6px 12px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.tos-all-table tr:last-child td { border-bottom: none; }
+.tos-all-table tbody tr:hover td { background: rgba(255,255,255,.025); }
+.tos-all-table .row-idx { color: var(--muted); font-size: 11px; min-width: 28px; }
+.tos-all-table th[data-sk]:not([data-sk=""]) { cursor: pointer; user-select: none; }
+.tos-all-table th[data-sk]:not([data-sk=""]):hover { color: var(--text); }
+
+/* ── TO Number clicável ── */
+.to-num-clickable { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.to-num-clickable:hover { color: var(--accent); }
+
+/* ── TO Detail Modal ── */
+.to-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px); }
+.to-modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%; max-width: 760px; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.to-modal-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); gap: 12px; }
+.to-modal-title { font-family: monospace; font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: .3px; }
+.to-modal-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.to-modal-close { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); width: 30px; height: 30px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+.to-modal-close:hover { color: var(--text); border-color: var(--border2); }
+.to-modal-body { padding: 16px 20px 20px; }
+.to-modal-empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+.to-modal-empty .emoji { font-size: 30px; margin-bottom: 10px; }
+.to-modal-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+.to-mkpi { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.to-mkpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); margin-bottom: 3px; }
+.to-mkpi-val { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.to-modal-table-wrap { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.to-modal-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.to-modal-table th { position: sticky; top: 0; background: var(--surface2); padding: 8px 10px; text-align: left; text-transform: uppercase; font-size: 9px; letter-spacing: .4px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.to-modal-table td { padding: 6px 10px; border-bottom: 1px solid rgba(42,45,62,.5); vertical-align: middle; }
+.to-modal-table tr:last-child td { border-bottom: none; }
+.to-modal-retry { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 16px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-top: 14px; }
+.to-modal-retry:hover { border-color: var(--border2); }
+@media (max-width: 700px) { .to-modal-kpis { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">&#x2705;</div>
+  <div class="header-title">
+    <h1>TO's Packed Dashboard</h1>
+    <p>SPX EXPRESS &middot; SoC_PE_Recife_04 &middot; ORDENS EMBALADAS SEM STAGING AREA</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">&mdash;</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="dashTab" id="tabDash">
+    &#x1F4CA; Dashboard
+  </button>
+  <button class="tab-btn" data-tab="reportTab" id="tabReport">
+    &#x1F4CB; Report
+  </button>
+  <div class="tab-bar-right">
+    <button class="theme-toggle" id="themeToggle" title="Alternar tema">&#x2600;&#xFE0F;</button>
+  </div>
+</div>
+
+<!-- Dashboard tab -->
+<div id="dashTab" class="tab-content">
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Destinos</div>
+      <div class="stat-value" id="sDest" style="color:var(--accent)">&mdash;</div>
+      <div class="stat-sub">destinos &uacute;nicos</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Total de TOs</div>
+      <div class="stat-value" id="sTOs" style="color:var(--blue)">&mdash;</div>
+      <div class="stat-sub">sem staging area</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Pacotes</div>
+      <div class="stat-value" id="sPacotes" style="color:var(--purple)">&mdash;</div>
+      <div class="stat-sub">total de volumes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Peso Total</div>
+      <div class="stat-value" id="sPeso" style="color:var(--yellow)">&mdash;</div>
+      <div class="stat-sub">kg processados</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="Buscar por destino ou TO...">
+    </div>
+    <div class="sort-btns">
+      <button class="sort-btn active" data-sort="duracao">Dura&ccedil;&atilde;o <span class="arrow">&#x2193;</span></button>
+      <button class="sort-btn" data-sort="tos">TOs <span class="arrow">&#x2195;</span></button>
+      <button class="sort-btn" data-sort="pacotes">Pacotes <span class="arrow">&#x2195;</span></button>
+      <button class="sort-btn" data-sort="peso">Peso <span class="arrow">&#x2195;</span></button>
+    </div>
+    <span class="count-info" id="countInfo"></span>
+  </div>
+
+  <div class="dest-list" id="destList">
+    <div class="empty">
+      <h2>&#x23F3; Aguardando sincroniza&ccedil;&atilde;o</h2>
+      <p>O Tampermonkey ainda n&atilde;o enviou dados de Packed.</p>
+      <code>
+        1. Instale o script <b>tos_sync.user.js</b> no Tampermonkey<br>
+        2. Acesse qualquer p&aacute;gina do SPX<br>
+        3. Aguarde o badge <b>&#x2705; TOs Sync</b> aparecer
+      </code>
+    </div>
+  </div>
+</div>
+
+<!-- Report tab -->
+<div id="reportTab" class="tab-content" style="display:none">
+  <div class="report-wrap" id="reportWrap">
+    <div class="empty">
+      <h2>&#x23F3; Aguardando dados</h2>
+      <p>Carregando informa&ccedil;&otilde;es do relat&oacute;rio...</p>
+    </div>
+  </div>
+</div>
+
+<!-- TO Detail Modal -->
+<div class="to-modal-overlay" id="toDetailModal" style="display:none" onclick="if(event.target===this)closeToDetailModal()">
+  <div class="to-modal-box" id="toDetailModalBox"></div>
+</div>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────────
+function fmtDur(s) {
+  if (!s || s <= 0) return '—';
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h${String(m).padStart(2,'0')}m` : `${m}m`;
+}
+function durClass(s) {
+  if (s > 7200) return 'crit';
+  if (s > 1800) return 'warn';
+  return '';
+}
+function fmtTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+function fmtWeight(g) {
+  const kg = g / 1000;
+  return kg >= 1000 ? `${(kg / 1000).toFixed(1)}t` : `${kg.toFixed(1)}kg`;
+}
+function cleanOp(s) {
+  return (s || '—').replace(/\[Ops\d+\]/i, '').replace(/@shopee\.com/i, '').trim() || '—';
+}
+function packClass(name) {
+  if (!name) return 'pack-other';
+  const n = name.toLowerCase();
+  if (n === 'saca')    return 'pack-saca';
+  if (n === 'scuttle') return 'pack-scuttle';
+  return 'pack-other';
+}
+
+// ── TO Detail Modal (sob demanda via to_detail_sync.user.js) ───────────
+// O dashboard nao tem sessao no SPX, entao pede pro servidor, que enfileira
+// o pedido; o Tampermonkey (numa aba aberta do SPX) atende e devolve o
+// resultado; aqui a gente fica consultando ate a resposta chegar.
+let toDetailPollTimer  = null;
+let toDetailPollActive = null; // to_number sendo consultado agora (evita poll cruzado)
+const TO_DETAIL_TIMEOUT_MS = 25000;
+const TO_DETAIL_POLL_MS    = 1500;
+
+async function openToDetailModal(to_number) {
+  toDetailPollActive = to_number;
+  document.getElementById('toDetailModal').style.display = 'flex';
+  renderToDetailLoading(to_number);
+  try {
+    await fetch('/api/to-detail-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to_number }),
+    });
+  } catch (e) { /* segue tentando via poll mesmo assim */ }
+  pollToDetail(to_number, Date.now());
+}
+
+function pollToDetail(to_number, startedAt) {
+  clearTimeout(toDetailPollTimer);
+  if (toDetailPollActive !== to_number) return; // modal fechado ou trocou de TO
+  fetch(`/api/to-detail-result?to_number=${encodeURIComponent(to_number)}&_=${Date.now()}`, { cache: 'no-store' })
+    .then(r => r.json())
+    .then(res => {
+      if (toDetailPollActive !== to_number) return;
+      if (res.status === 'done')  { renderToDetailResult(to_number, res.data); return; }
+      if (res.status === 'error') { renderToDetailError(to_number, res.error); return; }
+      if (Date.now() - startedAt > TO_DETAIL_TIMEOUT_MS) { renderToDetailTimeout(to_number); return; }
+      toDetailPollTimer = setTimeout(() => pollToDetail(to_number, startedAt), TO_DETAIL_POLL_MS);
+    })
+    .catch(() => {
+      if (toDetailPollActive !== to_number) return;
+      if (Date.now() - startedAt > TO_DETAIL_TIMEOUT_MS) { renderToDetailTimeout(to_number); return; }
+      toDetailPollTimer = setTimeout(() => pollToDetail(to_number, startedAt), TO_DETAIL_POLL_MS);
+    });
+}
+
+function closeToDetailModal() {
+  document.getElementById('toDetailModal').style.display = 'none';
+  toDetailPollActive = null;
+  clearTimeout(toDetailPollTimer);
+}
+
+function toDetailHeader(to_number, sub) {
+  return `<div class="to-modal-header">
+    <div>
+      <div class="to-modal-title">${to_number}</div>
+      ${sub ? `<div class="to-modal-sub">${sub}</div>` : ''}
+    </div>
+    <button class="to-modal-close" onclick="closeToDetailModal()">✕</button>
+  </div>`;
+}
+
+function renderToDetailLoading(to_number) {
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${toDetailHeader(to_number)}
+    <div class="to-modal-body">
+      <div class="to-modal-empty">
+        <div class="emoji">⏳</div>
+        Buscando pacotes no SPX...<br>
+        <span style="font-size:11px">precisa de uma aba do SPX aberta com o Tampermonkey ativo</span>
+      </div>
+    </div>`;
+}
+
+function renderToDetailTimeout(to_number) {
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${toDetailHeader(to_number)}
+    <div class="to-modal-body">
+      <div class="to-modal-empty">
+        <div class="emoji">⚠️</div>
+        Nenhuma aba do SPX respondeu a tempo.<br>
+        <span style="font-size:11px">Verifique se o script <b>to_detail_sync.user.js</b> está instalado e se há uma aba do SPX aberta.</span>
+        <div><button class="to-modal-retry" onclick="openToDetailModal('${to_number}')">Tentar de novo</button></div>
+      </div>
+    </div>`;
+}
+
+function renderToDetailError(to_number, error) {
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${toDetailHeader(to_number)}
+    <div class="to-modal-body">
+      <div class="to-modal-empty">
+        <div class="emoji">❌</div>
+        Erro ao buscar essa TO no SPX.<br>
+        <span style="font-size:11px;color:var(--red)">${error || 'erro desconhecido'}</span>
+        <div><button class="to-modal-retry" onclick="openToDetailModal('${to_number}')">Tentar de novo</button></div>
+      </div>
+    </div>`;
+}
+
+// O merge acumulado no servidor so remove um item por idade (nunca sabe sozinho que uma
+// TO ja mudou de status/foi endereçada). O lookup ao vivo do modal e uma oportunidade
+// gratis de verificar isso: se o status real ja nao e mais "Packed" OU se ela ja tem uma
+// staging_area_id de verdade (endereçada), essa TO nao deveria mais estar nesse dashboard
+// — avisa o servidor pra tirar ela do cache e some ela da tela na hora.
+function evictIfStale(to_number, data) {
+  const statusMudou = data.status && data.status !== 'Packed';
+  const jaEndereçada = data.staging_area_id && data.staging_area_id !== '-' && data.staging_area_id !== '';
+  if (!statusMudou && !jaEndereçada) return false;
+  fetch('/api/to-evict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ to_number, kind: 'packed' }),
+  }).catch(() => {});
+  groups = groups
+    .map(g => ({ ...g, tos: g.tos.filter(t => t.to_number !== to_number) }))
+    .filter(g => g.tos.length > 0);
+  render();
+  if (document.getElementById('reportTab')?.style.display !== 'none') renderReport();
+  return jaEndereçada ? 'staging' : 'status';
+}
+
+function renderToDetailResult(to_number, data) {
+  const list  = data.list || [];
+  const stale = evictIfStale(to_number, data);
+  const rows = list.map(p => {
+    const dir = p.transfer_direction === 1
+      ? `<span style="color:var(--green)">➡ Forward</span>`
+      : `<span style="color:var(--yellow)">⬅ Return</span>`;
+    const tags = [
+      p.is_hd ? '<span class="tag-prio" title="Alta prioridade">HD</span>' : '',
+      p.is_fast_shipping ? '<span class="tag-yes" title="Fast shipping">FS</span>' : '',
+    ].filter(Boolean).join(' ');
+    return `<tr>
+      <td class="to-num" style="font-size:11px">${p.fleet_order_id || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${p.third_party_sorting_code || '—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(p.ctime)}</td>
+      <td style="font-size:11px">${dir}</td>
+      <td style="font-size:11px">${tags || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${p.remark || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const staleMsg = stale === 'staging'
+    ? `Essa TO já foi endereçada no SPX (rua <b>${data.staging_area_id}</b>) e foi removida deste dashboard.`
+    : stale === 'status'
+    ? `Essa TO já mudou de status no SPX (agora é <b>${data.status}</b>) e foi removida deste dashboard.`
+    : '';
+
+  document.getElementById('toDetailModalBox').innerHTML = `
+    ${toDetailHeader(to_number, `${data.sender || '—'} → ${data.receiver || '—'}`)}
+    <div class="to-modal-body">
+      ${stale ? `<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow);border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px">⚠️ ${staleMsg}</div>` : ''}
+      <div class="to-modal-kpis">
+        <div class="to-mkpi"><div class="to-mkpi-label">Pacotes</div><div class="to-mkpi-val" style="color:var(--purple)">${data.quantity ?? list.length}</div></div>
+        <div class="to-mkpi"><div class="to-mkpi-label">Peso</div><div class="to-mkpi-val" style="color:var(--yellow)">${fmtWeight(data.weight || 0)}</div></div>
+        <div class="to-mkpi"><div class="to-mkpi-label">Tipo</div><div class="to-mkpi-val">${data.pack_name || '—'}</div></div>
+        <div class="to-mkpi"><div class="to-mkpi-label">Status</div><div class="to-mkpi-val" style="color:var(--green)">${data.status || '—'}</div></div>
+      </div>
+      ${list.length ? `
+      <div class="to-modal-table-wrap">
+        <table class="to-modal-table">
+          <thead>
+            <tr>
+              <th>SPX Tracking</th><th>Sorting Code</th><th>Scan Time</th><th>Direção</th><th>Tags</th><th>Obs</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>` : `<div class="to-modal-empty" style="padding:24px"><div class="emoji">📭</div>Nenhum pacote encontrado.</div>`}
+    </div>`;
+}
+
+// ── All-TOs table helpers ───────────────────────────────────────────────
+function getSortVal(to, key, now) {
+  switch (key) {
+    case 'to_number':     return to.to_number || '';
+    case 'operator':      return cleanOp(to.operator);
+    case 'pack_name':     return to.pack_name || '';
+    case 'quantity':      return to.quantity || 0;
+    case 'weight':        return to.weight || 0;
+    case 'complete_time': return to.complete_time || 0;
+    case 'tproc':         return (to.complete_time || 0) - to.ctime;
+    case 'tpack':         return to.complete_time ? now - to.complete_time : 0;
+    case 'fanout':        return to._fanout || '';
+    case 'ruas':          return stagingMap ? (stagingMap[to._fanout] || []).length : 0;
+    default:              return 0;
+  }
+}
+
+async function loadStagingMap() {
+  try {
+    const res = await fetch(`/api/stage-out?station=${STATION}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    const list = data.list || [];
+    // DEBUG — remove after confirming names match
+    if (list.length) {
+      const sample = list[0];
+      console.log('[StagingMap] sample row keys:', Object.keys(sample));
+      console.log('[StagingMap] sample to_destination:', sample.to_destination);
+      console.log('[StagingMap] sample staging_area_name:', sample.staging_area_name);
+      console.log('[StagingMap] sample occupancy_percentage:', sample.occupancy_percentage);
+    }
+    const map = {};
+    list.forEach(r => {
+      const m = (r.to_destination || '').match(/^\[\d+\](.*)/);
+      const name = (m ? m[1] : r.to_destination || '').trim();
+      if (!name) return;
+      const pct = parseFloat((r.occupancy_percentage || '0').replace('%', '').trim()) || 0;
+      if (pct >= 100) return;
+      if (!map[name]) map[name] = [];
+      if (r.staging_area_name) map[name].push(r.staging_area_name);
+    });
+    console.log('[StagingMap] map keys sample:', Object.keys(map).slice(0, 5));
+    // log a sample _fanout to compare
+    if (allTOsData.length) console.log('[StagingMap] _fanout sample:', allTOsData[0]._fanout);
+    stagingMap = map;
+    if (document.getElementById('allTOsBody')) filterAllTOs();
+  } catch (e) { console.error('[StagingMap] error:', e); }
+}
+
+function sortAllTOs(key) {
+  allTOsSortAsc = allTOsSortKey === key ? !allTOsSortAsc : false;
+  allTOsSortKey = key;
+  filterAllTOs();
+}
+
+function filterAllTOs() {
+  const q = (document.getElementById('allToSearch')?.value || '').trim().toLowerCase();
+  const tbody = document.getElementById('allTOsBody');
+  if (!tbody) return;
+  const now = Math.floor(Date.now() / 1000);
+
+  let filtered = allTOsData.filter(to =>
+    !q || [to.to_number, to._fanout, cleanOp(to.operator), to.pack_name || '']
+      .some(v => (v || '').toLowerCase().includes(q))
+  );
+
+  filtered.sort((a, b) => {
+    const va = getSortVal(a, allTOsSortKey, now);
+    const vb = getSortVal(b, allTOsSortKey, now);
+    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+    return allTOsSortAsc ? cmp : -cmp;
+  });
+
+  let count = 0;
+  tbody.innerHTML = filtered.map(to => {
+    count++;
+    const packSec = (to.complete_time || 0) - to.ctime;
+    const waitSec = to.complete_time ? now - to.complete_time : 0;
+    const ruas = stagingMap ? (stagingMap[to._fanout] || []) : null;
+    const ruasCell = ruas === null
+      ? `<span style="color:var(--muted);font-size:10px">…</span>`
+      : ruas.length === 0
+      ? `<span style="color:var(--red);font-size:10px;font-weight:600">CHEIO</span>`
+      : `<span style="font-size:10px;font-family:monospace;color:var(--teal);line-height:1.6">${ruas.join(', ')}</span>`;
+    return `<tr>
+      <td class="row-idx">${count}</td>
+      <td><span class="to-num to-num-clickable" onclick="openToDetailModal('${to.to_number}')" title="Ver pacotes desta TO">${to.to_number}</span></td>
+      <td class="op-name">${cleanOp(to.operator)}</td>
+      <td><span class="pack-pill ${packClass(to.pack_name)}">${to.pack_name || '—'}</span></td>
+      <td style="text-align:right;font-family:monospace">${to.quantity || 0}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtWeight(to.weight || 0)}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(to.complete_time)}</td>
+      <td style="font-family:monospace;font-size:11px">${fmtDur(packSec)}</td>
+      <td><span class="dur ${durClass(waitSec)}">${fmtDur(waitSec)}</span></td>
+      <td style="font-size:11px;color:var(--blue)">${to._fanout || '—'}</td>
+      <td>${ruasCell}</td>
+    </tr>`;
+  }).join('');
+
+  const el = document.getElementById('allTOsCount');
+  if (el) el.textContent = `${filtered.length} de ${allTOsData.length} TOs`;
+
+  document.querySelectorAll('.tos-all-table th[data-sk]').forEach(th => {
+    const sk = th.dataset.sk;
+    if (!sk) return;
+    const base = th.dataset.label;
+    th.textContent = sk === allTOsSortKey ? base + (allTOsSortAsc ? ' ▲' : ' ▼') : base;
+  });
+}
+
+function exportAllTOs() {
+  const now = Math.floor(Date.now() / 1000);
+  const header = ['#','TO Number','Operador','Tipo','Pacotes','Peso (g)','Concluído','T.Proc (s)','T.Pack (s)','Fanout','Ruas Disponíveis'];
+  const rows = allTOsData.map((to, i) => [
+    i + 1, to.to_number, cleanOp(to.operator), to.pack_name || '',
+    to.quantity || 0, to.weight || 0, fmtTime(to.complete_time),
+    (to.complete_time || 0) - to.ctime,
+    to.complete_time ? now - to.complete_time : 0,
+    to._fanout || '',
+    stagingMap ? (stagingMap[to._fanout] || []).join(' | ') || 'CHEIO' : '',
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+  const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tos_packed_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── State ──────────────────────────────────────────────────────────────
+let groups     = [];
+let sortKey    = 'duracao';
+let sortAsc    = false;
+let lastAt     = null;
+let allTOsData    = [];
+let allTOsSortKey = 'tpack';
+let allTOsSortAsc = false;
+let stagingMap    = null; // { destName: ['OUT-92', ...] } — ruas com ocupação < 100%
+let reportFarolFilter = null; // 'crit' | 'urgente' | 'atencao' | 'ok' | null — filtra a tela inteira do Report
+
+// ── Group by destination ───────────────────────────────────────────────
+function buildGroups(list) {
+  const map = {};
+  list.forEach(to => {
+    const id   = to.dest_station_id;
+    const name = to.dest_station_name || to.receiver || '—';
+    if (!map[id]) map[id] = { id, name, tos: [] };
+    map[id].tos.push(to);
+  });
+  return Object.values(map).map(g => ({
+    ...g,
+    totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
+    totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
+    maxDur:     Math.max(...g.tos.map(t => t.complete_time ? Math.floor(Date.now()/1000) - t.complete_time : 0), 0),
+  }));
+}
+
+// ── Sort / filter ──────────────────────────────────────────────────────
+function sortedGroups(g) {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  let filtered = q
+    ? g.filter(d => d.name.toLowerCase().includes(q) ||
+                    String(d.id).includes(q) ||
+                    d.tos.some(t => t.to_number.toLowerCase().includes(q)))
+    : g;
+  const keyMap = { tos: 'tos', pacotes: 'totPacotes', peso: 'totPeso', duracao: 'maxDur' };
+  const key = keyMap[sortKey] || 'maxDur';
+  filtered.sort((a, b) => {
+    const av = key === 'tos' ? a.tos.length : a[key];
+    const bv = key === 'tos' ? b.tos.length : b[key];
+    return sortAsc ? av - bv : bv - av;
+  });
+  return filtered;
+}
+
+// ── Render card ────────────────────────────────────────────────────────
+function renderCard(g, expanded) {
+  const now = Math.floor(Date.now() / 1000);
+  const toRows = g.tos
+    .sort((a, b) => (now - (b.complete_time||now)) - (now - (a.complete_time||now)))
+    .map(to => {
+      const packSec = (to.complete_time || 0) - to.ctime;
+      const waitSec = to.complete_time ? now - to.complete_time : 0;
+      const dc = durClass(waitSec);
+      return `<tr>
+        <td><span class="to-num to-num-clickable" onclick="event.stopPropagation();openToDetailModal('${to.to_number}')" title="Ver pacotes desta TO">${to.to_number}</span></td>
+        <td><span class="op-name">${cleanOp(to.operator)}</span></td>
+        <td><span class="pack-pill ${packClass(to.pack_name)}">${to.pack_name || '—'}</span></td>
+        <td style="text-align:center;font-family:monospace">${to.quantity || 0}</td>
+        <td style="font-family:monospace;font-size:11px">${fmtWeight(to.weight || 0)}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--muted)">${fmtTime(to.complete_time)}</td>
+        <td style="font-family:monospace;font-size:11px">${fmtDur(packSec)}</td>
+        <td><span class="dur ${dc}">${fmtDur(waitSec)}</span></td>
+      </tr>`;
+    }).join('');
+
+  return `
+    <div class="dest-card${expanded ? ' expanded' : ''}" data-id="${g.id}">
+      <div class="dest-header">
+        <span class="dest-id">${g.id}</span>
+        <span class="dest-name" title="${g.name}">${g.name}</span>
+        <div class="dest-badges">
+          <span class="badge badge-blue">${g.tos.length} TO${g.tos.length !== 1 ? 's' : ''}</span>
+          <span class="badge badge-purple">${g.totPacotes} pac.</span>
+          <span class="badge badge-green">${fmtWeight(g.totPeso)}</span>
+        </div>
+        <span class="chevron">&#x25BC;</span>
+      </div>
+      <div class="tos-wrap">
+        <table class="tos-table">
+          <thead>
+            <tr>
+              <th>TO Number</th><th>Operador</th><th>Tipo</th>
+              <th>Pacotes</th><th>Peso</th><th>Conclu&iacute;do</th><th>Tempo de Processamento</th><th>Tempo Pack</th>
+            </tr>
+          </thead>
+          <tbody>${toRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Full render ────────────────────────────────────────────────────────
+const expandedIds = new Set();
+
+function render() {
+  const list      = sortedGroups(groups);
+  const container = document.getElementById('destList');
+  document.getElementById('countInfo').textContent = `${list.length} destinos`;
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty"><p>Nenhum destino encontrado.</p></div>';
+    return;
+  }
+
+  container.innerHTML = list.map(g => renderCard(g, expandedIds.has(String(g.id)))).join('');
+
+  container.querySelectorAll('.dest-header').forEach(hdr => {
+    hdr.addEventListener('click', () => {
+      const card = hdr.closest('.dest-card');
+      const id   = card.dataset.id;
+      if (expandedIds.has(id)) expandedIds.delete(id);
+      else expandedIds.add(id);
+      card.classList.toggle('expanded');
+    });
+  });
+}
+
+// ── Update stats ───────────────────────────────────────────────────────
+function updateStats(data) {
+  const list = data.list || [];
+  document.getElementById('sDest').textContent    = groups.length;
+  document.getElementById('sTOs').textContent     = list.length;
+  document.getElementById('sPacotes').textContent = list.reduce((s, t) => s + (t.quantity || 0), 0);
+
+  const pesoKg = list.reduce((s, t) => s + (t.weight || 0), 0) / 1000;
+  document.getElementById('sPeso').textContent =
+    pesoKg >= 1000 ? `${(pesoKg / 1000).toFixed(1)}t` : `${pesoKg.toFixed(0)}`;
+
+  const t  = new Date(data.fetchedAt);
+  const ts = t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('lastUpdated').textContent = ts;
+  document.getElementById('liveDot').className       = 'live-dot on';
+  document.getElementById('metaTag').textContent     = `packed · ${list.length} TOs · ${ts}`;
+}
+
+// ── Render Report ──────────────────────────────────────────────────────
+function renderReport() {
+  const reportWrap = document.getElementById('reportWrap');
+  const allTOs = groups.flatMap(g => g.tos);
+  const now = Math.floor(Date.now() / 1000);
+
+  if (!allTOs.length) {
+    reportWrap.innerHTML = `<div class="empty"><h2>&#x23F3; Sem dados</h2><p>Nenhuma TO encontrada para o relat&oacute;rio.</p></div>`;
+    return;
+  }
+
+  // Timestamp bar
+  const nowDate = new Date();
+  const hh = String(nowDate.getHours()).padStart(2, '0');
+  const mm = String(nowDate.getMinutes()).padStart(2, '0');
+  const dd = String(nowDate.getDate()).padStart(2, '0');
+  const mo = String(nowDate.getMonth() + 1).padStart(2, '0');
+  const yyyy = nowDate.getFullYear();
+  const tsStr = `${hh}:${mm} · ${dd}/${mo}/${yyyy}`;
+
+  // Farol buckets
+  const farolLevels = [
+    { key: 'crit',    label: 'CRÍTICO',  dotClass: 'crit-dot',    lblClass: 'crit-label',    valClass: 'crit-val',    rowClass: 'farol-crit-row',    cond: s => s > 21600 },
+    { key: 'urgente', label: 'URGENTE',  dotClass: 'urgente-dot', lblClass: 'urgente-label', valClass: 'urgente-val', rowClass: 'farol-urgente-row', cond: s => s > 14400 && s <= 21600 },
+    { key: 'atencao', label: 'ATENÇÃO',  dotClass: 'atencao-dot', lblClass: 'atencao-label', valClass: 'atencao-val', rowClass: '',                  cond: s => s > 7200  && s <= 14400 },
+    { key: 'ok',      label: 'OK',       dotClass: 'ok-dot',      lblClass: 'ok-label',      valClass: 'ok-val',      rowClass: '',                  cond: s => s <= 7200 },
+  ];
+  function farolKeyOf(to) {
+    const waitSec = to.complete_time ? now - to.complete_time : 0;
+    const level = farolLevels.find(l => l.cond(waitSec));
+    return level ? level.key : null;
+  }
+
+  // Contagens do farol sempre sobre o TOTAL (nao filtrado) — e o "menu" de filtro
+  const totalTOs0 = allTOs.length;
+  const farolCounts = {};
+  farolLevels.forEach(l => { farolCounts[l.key] = 0; });
+  allTOs.forEach(to => { const k = farolKeyOf(to); if (k) farolCounts[k]++; });
+  const hasCrit = farolCounts['crit'] > 0;
+
+  // Clicar numa linha do farol filtra a tela inteira do Report por aquele nivel
+  const farolRows = farolLevels.map(l => {
+    const cnt = farolCounts[l.key];
+    const pct = totalTOs0 > 0 ? (cnt / totalTOs0 * 100).toFixed(1) + '%' : '0.0%';
+    const active = reportFarolFilter === l.key;
+    return `<tr class="${l.rowClass}${active ? ' farol-row-active' : ''}" onclick="toggleFarolFilter('${l.key}')" title="Clique para filtrar por ${l.label}">
+      <td>
+        <div class="farol-level ${l.lblClass}">
+          <span class="farol-dot ${l.dotClass}"></span>
+          ${l.label}
+        </div>
+      </td>
+      <td style="color:var(--muted);font-size:12px">
+        ${l.key === 'crit'    ? 'Aguardando h&aacute; mais de 6h' :
+          l.key === 'urgente' ? 'Aguardando entre 4h e 6h' :
+          l.key === 'atencao' ? 'Aguardando entre 2h e 4h' :
+                                'Aguardando menos de 2h'}
+      </td>
+      <td><span class="farol-count ${l.valClass}">${cnt}</span></td>
+      <td><span class="farol-pct">${pct}</span></td>
+    </tr>`;
+  }).join('');
+
+  // A partir daqui, tudo (KPIs, top10, turnos, curva, tabela) reflete o farol selecionado
+  const visibleTOs = reportFarolFilter ? allTOs.filter(to => farolKeyOf(to) === reportFarolFilter) : allTOs;
+
+  // KPI values (sobre o conjunto visivel/filtrado)
+  const totalTOs     = visibleTOs.length;
+  const totalPacotes = visibleTOs.reduce((s, t) => s + (t.quantity || 0), 0);
+  const totalScuttle = visibleTOs.filter(t => (t.pack_name || '').toLowerCase() === 'scuttle').length;
+  const totalSacas   = visibleTOs.filter(t => (t.pack_name || '').toLowerCase() === 'saca').length;
+
+  function regroupByDest(list) {
+    const map = {};
+    list.forEach(to => {
+      const id   = to.dest_station_id;
+      const name = to.dest_station_name || to.receiver || '—';
+      if (!map[id]) map[id] = { id, name, tos: [] };
+      map[id].tos.push(to);
+    });
+    return Object.values(map).map(g => ({
+      ...g,
+      totPacotes: g.tos.reduce((s, t) => s + (t.quantity || 0), 0),
+      totPeso:    g.tos.reduce((s, t) => s + (t.weight   || 0), 0),
+    }));
+  }
+
+  // Top 10 destinations by max waitSec (sobre o conjunto visivel/filtrado)
+  const groupsWithWait = regroupByDest(visibleTOs).map(g => {
+    const tosWait = g.tos.map(to => to.complete_time ? now - to.complete_time : 0);
+    const maxWait = Math.max(...tosWait, 0);
+    const avgWait = tosWait.length ? Math.round(tosWait.reduce((a, b) => a + b, 0) / tosWait.length) : 0;
+    return { ...g, maxWait, avgWait };
+  });
+  groupsWithWait.sort((a, b) => b.maxWait - a.maxWait);
+  const top10 = groupsWithWait.slice(0, 10);
+
+  const top10Rows = top10.map((g, i) => {
+    const rank = i + 1;
+    const rankClass = rank <= 3 ? `rank-${rank}` : '';
+    const avgDc = durClass(g.avgWait);
+    const maxDc = durClass(g.maxWait);
+    const rowCls = g.maxWait > 21600 ? 'row-crit' : g.maxWait > 7200 ? 'row-warn' : '';
+    return `<tr class="${rowCls}">
+      <td><div class="top10-rank ${rankClass}">${rank}</div></td>
+      <td style="font-weight:600;font-size:13px">${g.name}</td>
+      <td style="font-family:monospace;font-weight:700">${g.tos.length}</td>
+      <td style="font-family:monospace">${g.totPacotes}</td>
+      <td><span class="dur ${avgDc}" style="font-size:12px">${fmtDur(g.avgWait)}</span></td>
+      <td><span class="dur ${maxDc}" style="font-size:12px">${fmtDur(g.maxWait)}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Turno classification (complete_time hour)
+  const turnos = {
+    T1: { tos: 0, pac: 0, label: 'T1', time: '06:00 – 13:59', cls: 't1' },
+    T2: { tos: 0, pac: 0, label: 'T2', time: '14:00 – 21:59', cls: 't2' },
+    T3: { tos: 0, pac: 0, label: 'T3', time: '22:00 – 05:59', cls: 't3' },
+  };
+  visibleTOs.forEach(to => {
+    if (!to.complete_time) return;
+    const h = new Date(to.complete_time * 1000).getHours();
+    const key = (h >= 6 && h < 14) ? 'T1' : (h >= 14 && h < 22) ? 'T2' : 'T3';
+    turnos[key].tos++;
+    turnos[key].pac += (to.quantity || 0);
+  });
+  const turnoCards = ['T1', 'T2', 'T3'].map(k => {
+    const t = turnos[k];
+    const pct = totalTOs > 0 ? (t.tos / totalTOs * 100) : 0;
+    return `<div class="turno-card ${t.cls}">
+      <div class="turno-label ${t.cls}">${t.label}</div>
+      <div class="turno-time">${t.time}</div>
+      <div class="turno-stat">${t.tos}</div>
+      <div class="turno-meta">TOs &nbsp;&middot;&nbsp; ${pct.toFixed(1)}% do total</div>
+      <div class="turno-bar-wrap"><div class="turno-bar ${t.cls}" style="width:${pct.toFixed(1)}%"></div></div>
+      <div class="turno-pac">${t.pac.toLocaleString('pt-BR')} pacotes</div>
+    </div>`;
+  }).join('');
+
+  // Hourly curve
+  const hourCounts = Array(24).fill(0);
+  const hourPacs   = Array(24).fill(0);
+  visibleTOs.forEach(to => {
+    if (!to.complete_time) return;
+    const h = new Date(to.complete_time * 1000).getHours();
+    hourCounts[h]++;
+    hourPacs[h] += (to.quantity || 0);
+  });
+  const maxHourCount = Math.max(...hourCounts, 1);
+  const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+  const MAX_BAR_H = 120;
+  const hourBars = hourCounts.map((cnt, h) => {
+    const isPeak = h === peakHour && cnt > 0;
+    const barH   = Math.max(3, Math.round(cnt / maxHourCount * MAX_BAR_H));
+    const lbl    = String(h).padStart(2, '0');
+    return `<div class="hour-col">
+      <div class="hour-bar-val">${cnt > 0 ? cnt : ''}</div>
+      <div class="hour-bar${isPeak ? ' peak' : ''}" style="height:${barH}px"></div>
+      <div class="hour-lbl">${lbl}h</div>
+    </div>`;
+  }).join('');
+
+  reportWrap.innerHTML = `
+    <!-- Timestamp bar -->
+    <div class="report-ts-bar">
+      <span class="ts-label">Gerado em:</span>
+      <span>${tsStr}</span>
+      <span class="report-ts-badge">${totalTOs} TOs</span>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="report-kpis">
+      <div class="kpi-card kpi-blue">
+        <div class="kpi-label">Total de TOs</div>
+        <div class="kpi-value">${totalTOs}</div>
+        <div class="kpi-sub">ordens sem staging</div>
+      </div>
+      <div class="kpi-card kpi-purple">
+        <div class="kpi-label">Total de Pacotes</div>
+        <div class="kpi-value">${totalPacotes}</div>
+        <div class="kpi-sub">volumes totais</div>
+      </div>
+      <div class="kpi-card kpi-yellow">
+        <div class="kpi-label">Total Shuttle / Scuttle</div>
+        <div class="kpi-value">${totalScuttle}</div>
+        <div class="kpi-sub">tipo scuttle</div>
+      </div>
+      <div class="kpi-card kpi-green">
+        <div class="kpi-label">Total Sacas</div>
+        <div class="kpi-value">${totalSacas}</div>
+        <div class="kpi-sub">tipo saca</div>
+      </div>
+    </div>
+
+    <!-- Farol section -->
+    <div class="report-section">
+      <div class="report-section-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Farol de TOs Aguardando Endere&ccedil;amento &mdash; clique numa linha para filtrar a tela</span>
+        ${reportFarolFilter ? `<button onclick="toggleFarolFilter('${reportFarolFilter}')" style="background:rgba(59,130,246,.12);border:1px solid var(--blue);color:var(--blue);padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+          Filtrando: ${farolLevels.find(l => l.key === reportFarolFilter).label} &#x2715;
+        </button>` : ''}
+      </div>
+      <div class="farol-wrap${hasCrit ? ' has-crit' : ''}">
+        <table class="farol-table">
+          <thead>
+            <tr>
+              <th>Farol</th>
+              <th>Mensagem</th>
+              <th>N&ordm; de TOs</th>
+              <th>% do Total</th>
+            </tr>
+          </thead>
+          <tbody>${farolRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Top 10 section -->
+    <div class="report-section">
+      <div class="report-section-title">Top 10 Destinos &mdash; Maior Tempo de Packed</div>
+      <div class="top10-wrap">
+        <table class="top10-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Destino</th>
+              <th>TOs</th>
+              <th>Pacotes</th>
+              <th>Tempo M&eacute;dio</th>
+              <th>TO Mais Antiga</th>
+            </tr>
+          </thead>
+          <tbody>${top10Rows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Turno section -->
+    <div class="report-section">
+      <div class="report-section-title">Responsabilidade por Turno</div>
+      <div class="turno-cards">${turnoCards}</div>
+    </div>
+
+    <!-- Hourly curve -->
+    <div class="report-section">
+      <div class="report-section-title">Curva de TO's Packed por Hora</div>
+      <div class="hour-chart">${hourBars}</div>
+    </div>
+
+    <!-- All TOs table -->
+    <div class="report-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="report-section-title" style="margin-bottom:0">Todas as TOs &mdash; ${totalTOs} registros</div>
+        <button onclick="exportAllTOs()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:8px;font-size:12px;cursor:pointer"
+          onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">&#x2B07; CSV</button>
+      </div>
+      <div style="margin-bottom:10px">
+        <input type="text" id="allToSearch" placeholder="Buscar por TO, operador, fanout, tipo&hellip;"
+          oninput="filterAllTOs()"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box">
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:560px;overflow-y:auto">
+        <table class="tos-all-table">
+          <thead>
+            <tr>
+              <th data-sk="" data-label="#">#</th>
+              <th data-sk="to_number"     data-label="TO Number"        onclick="sortAllTOs('to_number')">TO Number</th>
+              <th data-sk="operator"      data-label="Operador"         onclick="sortAllTOs('operator')">Operador</th>
+              <th data-sk="pack_name"     data-label="Tipo"             onclick="sortAllTOs('pack_name')">Tipo</th>
+              <th data-sk="quantity"      data-label="Pacotes"          onclick="sortAllTOs('quantity')" style="text-align:right">Pacotes</th>
+              <th data-sk="weight"        data-label="Peso"             onclick="sortAllTOs('weight')">Peso</th>
+              <th data-sk="complete_time" data-label="Conclu&#237;do"   onclick="sortAllTOs('complete_time')">Conclu&#237;do</th>
+              <th data-sk="tproc"         data-label="T. Processamento" onclick="sortAllTOs('tproc')">T. Processamento</th>
+              <th data-sk="tpack"         data-label="T. Pack"          onclick="sortAllTOs('tpack')">T. Pack ▼</th>
+              <th data-sk="fanout"        data-label="Fanout"           onclick="sortAllTOs('fanout')">Fanout</th>
+              <th data-sk="ruas"          data-label="Ruas Disp."       onclick="sortAllTOs('ruas')">Ruas Disp.</th>
+            </tr>
+          </thead>
+          <tbody id="allTOsBody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:right" id="allTOsCount">${totalTOs} TOs</div>
+    </div>
+  `;
+
+  // Populate the global data store and fill the tbody (respeita o filtro de farol ativo)
+  allTOsData = visibleTOs.map(to => ({ ...to, _fanout: to.dest_station_name || to.receiver || '—' }));
+  allTOsData.sort((a, b) => {
+    const wa = a.complete_time ? now - a.complete_time : 0;
+    const wb = b.complete_time ? now - b.complete_time : 0;
+    return wb - wa;
+  });
+  filterAllTOs();
+}
+
+// Clicar numa linha do farol filtra a tela inteira do Report; clicar de novo limpa o filtro
+function toggleFarolFilter(key) {
+  reportFarolFilter = reportFarolFilter === key ? null : key;
+  renderReport();
+}
+
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '15000'; // SoC_PE_Recife_04
+
+// ── Load data ──────────────────────────────────────────────────────────
+// TOs "Packed sem staging" há mais de MAX_AGE_HOURS provavelmente já foram
+// endereçadas/despachadas na vida real, mas o endpoint general_to/outbound/search
+// do SPX não atualizou staging_area_id (inconsistência do lado do SPX, não do sync).
+// Para não poluir a lista e os KPIs com esses registros órfãos, elas somem depois desse prazo.
+const MAX_AGE_HOURS = 36;
+
+// A tela só é re-renderizada a cada RENDER_THROTTLE_MS — o servidor acumula dados de
+// várias estações/abas do Tampermonkey e o total pode saltar bastante entre sincronizações
+// individuais; sem esse "cache", a tela fica piscando/mudando a cada 15s.
+const RENDER_THROTTLE_MS = 5 * 60 * 1000; // 5 minutos
+let lastRenderAt = 0;
+
+async function loadData() {
+  try {
+    const res  = await fetch(`/api/tos-packed?station=${STATION}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return;
+    lastAt = data.fetchedAt;
+    // Continua buscando a cada 15s (barato, mantém o servidor "vivo"), mas só aplica na
+    // tela a cada 5 minutos — exceto no primeiro carregamento, que deve aparecer na hora.
+    const isFirstLoad = lastRenderAt === 0;
+    if (isFirstLoad || Date.now() - lastRenderAt >= RENDER_THROTTLE_MS) {
+      applyData(data);
+    }
+  } catch (e) {}
+}
+
+// Uma TO cujo "sender" (estação de origem do empacotamento) é diferente da
+// "current_station_name" (onde ela está fisicamente agora) já saiu de lá — analisado com
+// dados reais (657 casos): nenhuma tinha idade < 6h de verdade (o único caso abaixo disso
+// era um artefato de encoding corrompido no nome da estação, não uma TO genuinamente fresca).
+// Ou seja, não são reempacotadas de fato na estação atual — são sobra de uma etapa anterior
+// cujo staging_area_id nunca foi atualizado no lado do SPX. Margem de 2h de segurança contra
+// inconsistências passageiras de sincronização ou encoding.
+const TRANSBORDO_GRACE_SEC = 2 * 60 * 60;
+function jaSaiuDaEstacao(to, nowSec) {
+  if (!to.sender || !to.current_station_name || to.sender === to.current_station_name) return false;
+  const ageSec = to.complete_time ? nowSec - to.complete_time : Infinity;
+  return ageSec > TRANSBORDO_GRACE_SEC;
+}
+
+function applyData(data) {
+  lastRenderAt = Date.now();
+  const nowSec = Math.floor(Date.now() / 1000);
+  const maxAgeSec = MAX_AGE_HOURS * 3600;
+  // So mostra TOs Packed que ainda NAO tem Staging Area atribuida, nao estao "orfas"
+  // (muito antigas) e ainda estao na mesma estacao onde foram empacotadas
+  const filtered = (data.list || []).filter(to => {
+    const semStaging = !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === '';
+    const orfa = to.complete_time && (nowSec - to.complete_time) > maxAgeSec;
+    return semStaging && !orfa && !jaSaiuDaEstacao(to, nowSec);
+  });
+  groups = buildGroups(filtered);
+  updateStats({ ...data, list: filtered });
+  render();
+  renderReport();
+}
+
+// ── Sort buttons ───────────────────────────────────────────────────────
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = btn.dataset.sort;
+    if (sortKey === s) sortAsc = !sortAsc;
+    else { sortKey = s; sortAsc = false; }
+    document.querySelectorAll('.sort-btn').forEach(b => {
+      b.classList.remove('active');
+      b.querySelector('.arrow').textContent = '↕';
+    });
+    btn.classList.add('active');
+    btn.querySelector('.arrow').textContent = sortAsc ? '↑' : '↓';
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', render);
+
+// ── Tab switching ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc => {
+      tc.style.display = tc.id === target ? '' : 'none';
+    });
+    if (target === 'reportTab') { renderReport(); loadStagingMap(); }
+  });
+});
+
+// ── Theme toggle ───────────────────────────────────────────────────────
+(function initTheme() {
+  const saved = localStorage.getItem('tos-theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('themeToggle').textContent = '🌙';
+  }
+})();
+
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const isLight = document.documentElement.classList.toggle('light');
+  document.getElementById('themeToggle').textContent = isLight ? '🌙' : '☀️';
+  localStorage.setItem('tos-theme', isLight ? 'light' : 'dark');
+});
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeToDetailModal(); });
+
+loadData();
+loadStagingMap();
+setInterval(loadData,       15000);
+setInterval(loadStagingMap, 30000);
+</script>
+</body>
+</html>

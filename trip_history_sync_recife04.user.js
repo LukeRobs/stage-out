@@ -1,0 +1,169 @@
+// ==UserScript==
+// @name         SPX Trip History → Transbordo Dashboard · Recife 04
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync_recife04.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync_recife04.user.js
+// @description  Sincroniza histórico de Linehaul trips com o dashboard Transbordo
+// @match        https://spx.shopee.com.br/*
+// @grant        GM_xmlhttpRequest
+// @connect      stage-out.onrender.com
+// ==/UserScript==
+
+(function () {
+  'use strict';
+
+  const SERVER_URL = 'https://stage-out.onrender.com/api/trip-history-data';
+  const API_URL    = '/api/admin/transportation/trip/history/list';
+  const INTERVAL   = 5 * 60 * 1000; // 5 minutos
+  const DAYS_BACK  = 7;              // últimos 7 dias
+  // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
+  const STATION_ID = '15000'; // SoC_PE_Recife_04
+
+  function getCsrf() {
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : '';
+  }
+
+  const PAGE_SIZE = 100;
+
+  async function fetchPage(pageno) {
+    const now   = Math.floor(Date.now() / 1000);
+    const start = now - DAYS_BACK * 86400;
+    const params = new URLSearchParams({
+      mtime:  `${start},${now}`,
+      pageno: `${pageno}`,
+      count:  String(PAGE_SIZE),
+    });
+    const res = await fetch(`${API_URL}?${params}`, {
+      credentials: 'include',
+      headers: { 'x-csrftoken': getCsrf() },
+    });
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e) { throw new Error(`Resposta não é JSON (status ${res.status})`); }
+    if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
+    return json.data;
+  }
+
+  function sendToServer(list, total) {
+    GM_xmlhttpRequest({
+      method:  'POST',
+      url:     SERVER_URL,
+      headers: { 'Content-Type': 'application/json' },
+      data:    JSON.stringify({ list, total, fetchedAt: Date.now(), station_id: STATION_ID }),
+      onload: r => {
+        if (r.status === 200) {
+          dot.textContent      = '✅ Histórico ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+          dot.style.background = '#059669';
+          console.log(`[TripHistory] ${list.length} trips enviados ao servidor`);
+        } else {
+          dot.textContent      = '❌ Erro servidor';
+          dot.style.background = '#cc0000';
+          console.error('[TripHistory] Resposta:', r.status, r.responseText);
+        }
+      },
+      onerror: () => {
+        dot.textContent      = '❌ Servidor offline';
+        dot.style.background = '#cc0000';
+        console.error('[TripHistory] Falha de rede ao enviar');
+      },
+    });
+  }
+
+  async function sync() {
+    dot.textContent      = '🔄 Histórico...';
+    dot.style.background = '#888';
+    try {
+      // Página 1 (até 500 trips)
+      const page1 = await fetchPage(1);
+      let list    = page1.list || [];
+      const total = page1.total || 0;
+
+      // Busca páginas restantes (até 1000 trips = 10 páginas de 100)
+      const pages = Math.min(Math.ceil(total / PAGE_SIZE), 10);
+      for (let p = 2; p <= pages; p++) {
+        try {
+          const page = await fetchPage(p);
+          list = list.concat(page.list || []);
+          console.log(`[TripHistory] Pág ${p}: +${page.list?.length || 0} trips`);
+        } catch (e) {
+          console.warn(`[TripHistory] Erro na página ${p}:`, e.message);
+          break;
+        }
+      }
+
+      sendToServer(list, total);
+      console.log(`[TripHistory] Total: ${list.length} trips (${total} no servidor)`);
+    } catch (e) {
+      dot.textContent      = '⚠️ Erro Histórico';
+      dot.style.background = '#cc7700';
+      console.error('[TripHistory]', e.message);
+    }
+  }
+
+  // ── Hub compartilhado ────────────────────────────────────────────────
+  function registerSyncDot(label, bgColor) {
+    let hub = document.getElementById('spx-sync-hub');
+    if (!hub) {
+      hub = document.createElement('div');
+      hub.id = 'spx-sync-hub';
+      hub.style.cssText = [
+        'position:fixed', 'bottom:16px', 'right:16px',
+        'z-index:2147483647', 'font-family:sans-serif',
+        'display:flex', 'flex-direction:column', 'align-items:flex-end',
+      ].join(';');
+      const panel = document.createElement('div');
+      panel.id = 'spx-hub-panel';
+      panel.style.cssText = [
+        'display:none', 'flex-direction:column', 'gap:5px',
+        'margin-bottom:8px', 'align-items:flex-end',
+      ].join(';');
+      const toggle = document.createElement('button');
+      toggle.id = 'spx-hub-toggle';
+      toggle.style.cssText = [
+        'background:#1a1a2e', 'color:#ccc', 'border:1px solid #334',
+        'padding:5px 14px', 'border-radius:20px', 'font-size:12px',
+        'cursor:pointer', 'box-shadow:0 2px 8px rgba(0,0,0,.4)',
+        'user-select:none', 'white-space:nowrap',
+      ].join(';');
+      toggle.textContent = '⚡ SPX Sync ▲';
+      toggle.addEventListener('click', () => {
+        const open = panel.style.display === 'flex';
+        panel.style.display = open ? 'none' : 'flex';
+        toggle.textContent  = `⚡ SPX Sync (${panel.children.length}) ${open ? '▲' : '▼'}`;
+      });
+      hub.appendChild(panel);
+      hub.appendChild(toggle);
+      document.body.appendChild(hub);
+    }
+    const panel  = document.getElementById('spx-hub-panel');
+    const toggle = document.getElementById('spx-hub-toggle');
+    const dot    = document.createElement('div');
+    dot.style.cssText = [
+      `background:${bgColor}`, 'color:#fff',
+      'padding:5px 12px', 'border-radius:16px', 'font-size:11px',
+      'cursor:pointer', 'box-shadow:0 1px 6px rgba(0,0,0,.3)',
+      'user-select:none', 'white-space:nowrap',
+    ].join(';');
+    dot.textContent = label;
+    panel.appendChild(dot);
+    const open = panel.style.display === 'flex';
+    toggle.textContent = `⚡ SPX Sync (${panel.children.length}) ${open ? '▼' : '▲'}`;
+    return dot;
+  }
+
+  // ── Badge visual ─────────────────────────────────────────────────────
+  const dot = registerSyncDot('📅 Trip History', '#7c3aed');
+  dot.title = 'Clique para sincronizar histórico agora';
+  dot.addEventListener('click', () => {
+    if (dot.textContent.includes('🔄')) return;
+    sync();
+  });
+
+  sync();
+  setInterval(sync, INTERVAL);
+
+  console.log('[TripHistory] ✅ v1.0 — Histórico Linehaul, a cada 5min');
+})();

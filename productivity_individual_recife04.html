@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Produtividade Individual · Recife 04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Tokens ── */
+:root {
+  --bg:       #08080f;
+  --surf:     #0f0f1a;
+  --surf2:    #161625;
+  --surf3:    #1c1c2e;
+  --border:   #1e1e30;
+  --border2:  #252538;
+  --text:     #e8e8f0;
+  --text2:    #a0a0b8;
+  --muted:    #555568;
+  --green:    #10b981;
+  --yellow:   #f59e0b;
+  --red:      #ef4444;
+  --purple:   #8b5cf6;
+  --blue:     #6366f1;
+  --teal:     #14b8a6;
+  --orange:   #f97316;
+  --green-bg: rgba(16,185,129,.12);
+  --yellow-bg:rgba(245,158,11,.12);
+  --red-bg:   rgba(239,68,68,.12);
+  --purple-bg:rgba(139,92,246,.12);
+  --blue-bg:  rgba(99,102,241,.12);
+  --teal-bg:  rgba(20,184,166,.12);
+  --orange-bg:rgba(249,115,22,.12);
+  --radius:   10px;
+  --radius-sm:6px;
+  --shadow:   0 1px 3px rgba(0,0,0,.4),0 4px 12px rgba(0,0,0,.25);
+  --font:     'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+[data-theme="light"] {
+  --bg:       #f2f2f8;
+  --surf:     #ffffff;
+  --surf2:    #f7f7fd;
+  --surf3:    #ededf8;
+  --border:   #dcdcec;
+  --border2:  #e8e8f4;
+  --text:     #0c0c1e;
+  --text2:    #4a4a6a;
+  --muted:    #6e6e89;
+  --green:    #059669;
+  --yellow:   #d97706;
+  --red:      #dc2626;
+  --purple:   #7c3aed;
+  --blue:     #4f46e5;
+  --green-bg: rgba(5,150,105,.1);
+  --yellow-bg:rgba(217,119,6,.1);
+  --red-bg:   rgba(220,38,38,.1);
+  --purple-bg:rgba(124,58,237,.1);
+  --blue-bg:  rgba(79,70,229,.1);
+  --teal-bg:  rgba(13,148,136,.1);
+  --orange-bg:rgba(234,88,12,.1);
+  --teal:     #0d9488;
+  --orange:   #ea580c;
+  --shadow:   0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.06);
+}
+
+/* ── Reset ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;line-height:1.5;min-height:100vh;padding-bottom:44px;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font-family:var(--font);cursor:pointer}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:var(--surf);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;gap:12px}
+.header-brand{display:flex;align-items:center;gap:10px}
+.header-icon{width:32px;height:32px;background:var(--blue-bg);border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+.header-icon svg{color:var(--blue)}
+.header-title{font-size:14px;font-weight:700;letter-spacing:-.2px}
+.header-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.header-actions{display:flex;align-items:center;gap:8px}
+.btn-icon{width:32px;height:32px;border:1px solid var(--border2);background:var(--surf2);border-radius:8px;display:grid;place-items:center;transition:border-color .15s,background .15s;color:var(--text2)}
+.btn-icon:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.btn-pill{height:32px;padding:0 14px;border:1px solid var(--border2);background:var(--surf2);border-radius:8px;font-size:11px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:6px;transition:all .15s}
+.btn-pill:hover{border-color:var(--blue);color:var(--blue)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--green)}50%{opacity:.7;box-shadow:0 0 0 4px rgba(16,185,129,0)}}
+.spinner{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Content ── */
+.content{padding:20px 32px;max-width:2200px;margin:0 auto}
+
+/* ── KPI grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:18px}
+.kpi-card{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:flex-start;gap:12px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border2)}
+.kpi-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.kpi-icon svg{width:16px;height:16px}
+.kpi-card.k-blue .kpi-icon{background:var(--blue-bg);color:var(--blue)}
+.kpi-card.k-green .kpi-icon{background:var(--green-bg);color:var(--green)}
+.kpi-card.k-yellow .kpi-icon{background:var(--yellow-bg);color:var(--yellow)}
+.kpi-card.k-red .kpi-icon{background:var(--red-bg);color:var(--red)}
+.kpi-card.k-purple .kpi-icon{background:var(--purple-bg);color:var(--purple)}
+.kpi-card.k-teal .kpi-icon{background:var(--teal-bg);color:var(--teal)}
+.kpi-card.k-orange .kpi-icon{background:var(--orange-bg);color:var(--orange)}
+.kpi-body{min-width:0;flex:1}
+.kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-val{font-size:26px;font-weight:700;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.kpi-sub{font-size:10px;color:var(--text2);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Turno tabs ── */
+.turno-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.turno-tab{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 16px;border-radius:10px;border:1px solid var(--border2);background:var(--surf);color:var(--text2);transition:.15s;min-width:130px;cursor:pointer}
+.turno-tab:hover{border-color:var(--border);background:var(--surf2)}
+.turno-tab-name{font-size:13px;font-weight:700;color:var(--text)}
+.turno-tab-range{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.turno-tab.active{border-color:transparent}
+.turno-tab.tt-T1.active{background:var(--orange-bg);border-color:var(--orange)}
+.turno-tab.tt-T1.active .turno-tab-name{color:var(--orange)}
+.turno-tab.tt-T2.active{background:var(--blue-bg);border-color:var(--blue)}
+.turno-tab.tt-T2.active .turno-tab-name{color:var(--blue)}
+.turno-tab.tt-T3.active{background:var(--purple-bg);border-color:var(--purple)}
+.turno-tab.tt-T3.active .turno-tab-name{color:var(--purple)}
+
+/* ── Toolbar ── */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px}
+.hour-tabs{display:flex;gap:5px;flex-wrap:wrap}
+.hour-tab{padding:5px 13px;border-radius:20px;border:1px solid var(--border2);background:var(--surf2);color:var(--muted);font-size:11px;font-weight:600;font-family:monospace;transition:.15s;cursor:pointer}
+.hour-tab:hover{border-color:var(--blue);color:var(--blue)}
+.hour-tab.active{background:var(--blue);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(99,102,241,.35)}
+.toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.toggle-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);cursor:pointer;user-select:none}
+.toggle-wrap input{accent-color:var(--blue);cursor:pointer}
+.tcount{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* ── Search input ── */
+.tsearch-wrap{position:relative;display:flex;align-items:center}
+.tsearch-icon{position:absolute;left:10px;color:var(--muted);pointer-events:none}
+.tsearch{height:32px;padding:0 10px 0 30px;width:220px;background:var(--surf2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;transition:border-color .15s}
+.tsearch:focus{border-color:var(--blue)}
+.tsearch::placeholder{color:var(--muted)}
+
+/* ── Rank badge (pivot table) ── */
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0}
+.rank-badge.rk-1{background:rgba(245,158,11,.16);color:#f59e0b}
+.rank-badge.rk-2{background:rgba(156,163,175,.18);color:#9ca3af}
+.rank-badge.rk-3{background:rgba(180,120,80,.18);color:#b8874a}
+.rank-badge.rk-n{background:var(--surf3);color:var(--muted)}
+
+/* ── Op cell ── */
+.op-name{font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+
+/* ── Panel ── */
+.panel{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.panel-title{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700;margin-bottom:14px}
+
+/* ── Distribution ── */
+.dist-rows{display:flex;flex-direction:column;gap:11px;padding:2px 0}
+.dist-row{display:grid;grid-template-columns:72px 1fr 36px 44px;align-items:center;gap:10px}
+.dist-lbl{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text)}
+.dist-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.dist-dot.bom{background:var(--green)}.dist-dot.ok{background:var(--yellow)}.dist-dot.ruim{background:var(--red)}
+.dist-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.dist-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.dist-fill.bom{background:var(--green)}.dist-fill.ok{background:var(--yellow)}.dist-fill.ruim{background:var(--red)}
+.dist-n{font-family:monospace;font-weight:700;font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text)}
+.dist-p{font-size:11px;font-weight:700;text-align:right}
+.dist-p.bom{color:var(--green)}.dist-p.ok{color:var(--yellow)}.dist-p.ruim{color:var(--red)}
+.dist-total{font-size:10px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* ── Produção por Hora (chart) ── */
+.panel-header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.chart-toggles{display:flex;gap:3px;background:var(--surf2);border-radius:8px;padding:3px;flex-shrink:0}
+.tog{padding:5px 12px;border-radius:6px;border:none;background:transparent;color:var(--muted);font-size:11px;font-weight:600;font-family:var(--font);transition:.15s}
+.tog.tog-active{background:var(--blue);color:#fff}
+.tog:hover:not(.tog-active){color:var(--text)}
+.chart-legend{display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.cleg{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2)}
+.cdot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.cdot-line{width:14px;height:2px;background:var(--orange);border-radius:1px;flex-shrink:0}
+.cdot-line-alt{background:var(--purple);opacity:.8}
+
+.chart-svg-wrap{width:100%;overflow-x:auto}
+.chart-svg-wrap svg{display:block;margin:0 auto}
+.chart-bar-rect{transition:height .35s ease,y .35s ease}
+.chart-empty-note{text-align:center;padding:60px 24px;color:var(--muted);font-size:12px}
+
+/* ── Aderência por hora (badges) ── */
+.chart-aderencia{display:flex;gap:6px;margin-top:14px;overflow-x:auto;padding-bottom:2px}
+.ader-col{flex:1;min-width:64px;display:flex;flex-direction:column;gap:5px}
+.ader-badge{text-align:center;padding:6px 4px;border-radius:8px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.ader-badge.g{background:rgba(16,185,129,.18);color:var(--green)}
+.ader-badge.r{background:rgba(239,68,68,.18);color:var(--red)}
+.ader-badge.n{background:var(--surf3);color:var(--muted)}
+.ader-range{text-align:center;font-size:10px;color:var(--muted);font-weight:600;background:var(--surf3);border-radius:6px;padding:3px 4px}
+
+/* ── Heatmap ── */
+.heatmap-section{margin-bottom:14px}
+.heatmap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.heatmap-wrap{background:var(--surf);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:380px;box-shadow:var(--shadow)}
+table.hm-t{border-collapse:collapse;font-size:11px;min-width:100%}
+table.hm-t th{background:var(--surf3);padding:7px 12px;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;text-align:center;white-space:nowrap}
+table.hm-t th:first-child{text-align:left;left:0;z-index:6;min-width:170px}
+table.hm-t td{padding:6px 10px;border-bottom:1px solid var(--border);border-right:1px solid var(--border);text-align:center;font-family:monospace;font-size:11px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;transition:opacity .2s}
+table.hm-t td:first-child{text-align:left;position:sticky;left:0;background:var(--surf);z-index:2;font-family:var(--font);font-size:11px;font-weight:600;border-right:1px solid var(--border2);padding:6px 12px}
+table.hm-t tr:last-child td{border-bottom:none}
+table.hm-t .hm-bom{background:rgba(16,185,129,.2);color:var(--green)}
+table.hm-t .hm-ok{background:rgba(245,158,11,.18);color:var(--yellow)}
+table.hm-t .hm-ruim{background:rgba(239,68,68,.18);color:var(--red)}
+table.hm-t .hm-empty{color:var(--border2)}
+table.hm-t th.hm-active{color:var(--blue)}
+table.hm-t th.th-sort{cursor:pointer;user-select:none;transition:color .15s}
+table.hm-t th.th-sort:hover{color:var(--text)}
+table.hm-t td.hm-total{font-weight:700;color:var(--blue);background:transparent;border-left:2px solid var(--border2);font-size:12px}
+table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
+
+/* ── Table head bar ── */
+.table-head-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.table-head-title{font-size:13px;font-weight:700}
+.table-head-sub{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* ── Status bar ── */
+.status-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--border);padding:5px 24px;font-size:10px;color:var(--muted);display:flex;gap:20px;z-index:100;align-items:center}
+.sdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.sdot.ok{background:var(--green)}.sdot.warn{background:var(--yellow)}.sdot.err{background:var(--red)}
+
+/* ── Empty / misc ── */
+.empty-msg{text-align:center;padding:48px 24px;color:var(--muted);font-size:12px}
+.sec-title{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:700}
+.sec-hint{font-size:10px;color:var(--muted)}
+
+/* ── Responsive ── */
+@media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .header{padding:0 16px}
+  .content{padding:16px}
+}
+@media(max-width:560px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .op-name{max-width:140px}
+}
+
+/* ── Scrollbar styling ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">Produtividade Individual</div>
+      <div class="header-sub" id="headerSub">Carregando...</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div id="loadingSpinner" style="display:none"><div class="spinner"></div></div>
+    <span id="lastUpdate" style="font-size:10px;color:var(--muted)"></span>
+    <button class="btn-icon" id="themeBtn" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">
+      <svg id="iconMoon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg id="iconSun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    </button>
+    <button class="btn-pill" onclick="loadData()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Atualizar
+    </button>
+  </div>
+</header>
+
+<div class="content">
+
+  <!-- ── KPI cards ── -->
+  <div class="kpi-grid">
+    <div class="kpi-card k-teal">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Produção da Hora</div>
+        <div class="kpi-val" id="kpiProdHora">—</div>
+        <div class="kpi-sub" id="kpiProdHoraSub">itens · hora selecionada</div>
+      </div>
+    </div>
+    <div class="kpi-card k-orange">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Produção do Dia</div>
+        <div class="kpi-val" id="kpiProdDia">—</div>
+        <div class="kpi-sub" id="kpiProdDiaSub">itens · todas as horas</div>
+      </div>
+    </div>
+    <div class="kpi-card k-blue">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Operadores</div>
+        <div class="kpi-val" id="kpiTotal">—</div>
+        <div class="kpi-sub" id="kpiTotalSub">no ranking (wh ≥ 0.5)</div>
+      </div>
+    </div>
+    <div class="kpi-card k-green">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Bom</div>
+        <div class="kpi-val" id="kpiBom">—</div>
+        <div class="kpi-sub" id="kpiBomPct">Itens/hora &gt; 500</div>
+      </div>
+    </div>
+    <div class="kpi-card k-yellow">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">OK</div>
+        <div class="kpi-val" id="kpiOk">—</div>
+        <div class="kpi-sub" id="kpiOkPct">200 – 500 itens/hora</div>
+      </div>
+    </div>
+    <div class="kpi-card k-red">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Ruim</div>
+        <div class="kpi-val" id="kpiRuim">—</div>
+        <div class="kpi-sub" id="kpiRuimPct">Itens/hora &lt; 200</div>
+      </div>
+    </div>
+    <div class="kpi-card k-purple">
+      <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg></div>
+      <div class="kpi-body">
+        <div class="kpi-label">Anomalias</div>
+        <div class="kpi-val" id="kpiAnom">—</div>
+        <div class="kpi-sub">tempo &lt; 0:30 · prod &gt; 500</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Turno tabs ── -->
+  <div class="turno-tabs" id="turnoTabs">
+    <span style="font-size:11px;color:var(--muted)">Aguardando dados...</span>
+  </div>
+
+  <!-- ── Hour tabs + filters ── -->
+  <div class="toolbar">
+    <div class="hour-tabs" id="hourTabs"></div>
+    <div class="toolbar-right">
+      <div class="tsearch-wrap">
+        <svg class="tsearch-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="opSearch" class="tsearch" placeholder="Buscar colaborador..." autocomplete="off">
+      </div>
+      <label class="toggle-wrap">
+        <input type="checkbox" id="chkWh05" checked>
+        Ranking: wh ≥ 0.5h
+      </label>
+      <label class="toggle-wrap" style="margin-left:4px">
+        <input type="checkbox" id="chkShowAll">
+        Mostrar todos
+      </label>
+    </div>
+  </div>
+
+  <!-- ── Produção por Hora (Real × Meta) ── -->
+  <div class="panel" style="margin-bottom:14px">
+    <div class="panel-header-row">
+      <div>
+        <div class="panel-title" style="margin-bottom:2px">Produção por Hora — <span id="chartTurnoLbl">—</span></div>
+        <div class="table-head-sub">Real × Meta Padrão × Meta Ajustada</div>
+      </div>
+      <div class="chart-toggles" id="chartToggles">
+        <button class="tog tog-active" data-view="bars">Barras</button>
+        <button class="tog" data-view="line">Linha</button>
+        <button class="tog" data-view="table">Tabela</button>
+      </div>
+    </div>
+    <div class="chart-legend">
+      <span class="cleg"><span class="cdot" style="background:var(--green)"></span>Bateu a meta ajustada</span>
+      <span class="cleg"><span class="cdot" style="background:var(--red)"></span>Abaixo da meta ajustada</span>
+      <span class="cleg"><span class="cdot-line"></span>Meta ajustada</span>
+      <span class="cleg"><span class="cdot-line cdot-line-alt"></span>Meta padrão</span>
+    </div>
+    <div id="chartBody"><div class="empty-msg">Aguardando dados...</div></div>
+    <div id="chartAderencia" class="chart-aderencia"></div>
+  </div>
+
+  <!-- ── Ranking table (pivot: colaborador × hora) ── -->
+  <div class="table-head-bar">
+    <div>
+      <div class="table-head-title">Ranking — Operação por colaborador</div>
+      <div class="table-head-sub" id="rankSub">Produção por hora · coluna Total = soma do turno</div>
+    </div>
+    <span class="tcount" id="rankCount"></span>
+  </div>
+  <div class="heatmap-wrap" style="margin-bottom:14px">
+    <table class="hm-t" id="rankTable">
+      <thead id="rankHead"></thead>
+      <tbody id="rankBody">
+        <tr><td class="empty-msg">Aguardando dados do Tampermonkey...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Distribution ── -->
+  <div class="panel" style="max-width:520px">
+    <div class="panel-title">Distribuição — hora selecionada</div>
+    <div id="distEmpty" class="empty-msg" style="display:none;padding:20px 4px">Detalhamento por colaborador ainda não chegou para esta hora — mostrando apenas o total agregado nos KPIs acima.</div>
+    <div id="distContent">
+      <div class="dist-rows">
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot bom"></span>Bom</div>
+          <div class="dist-bar"><div class="dist-fill bom" id="dbarBom" style="width:0%"></div></div>
+          <span class="dist-n" id="dnBom">—</span>
+          <span class="dist-p bom" id="dpBom">—</span>
+        </div>
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot ok"></span>OK</div>
+          <div class="dist-bar"><div class="dist-fill ok" id="dbarOk" style="width:0%"></div></div>
+          <span class="dist-n" id="dnOk">—</span>
+          <span class="dist-p ok" id="dpOk">—</span>
+        </div>
+        <div class="dist-row">
+          <div class="dist-lbl"><span class="dist-dot ruim"></span>Ruim</div>
+          <div class="dist-bar"><div class="dist-fill ruim" id="dbarRuim" style="width:0%"></div></div>
+          <span class="dist-n" id="dnRuim">—</span>
+          <span class="dist-p ruim" id="dpRuim">—</span>
+        </div>
+      </div>
+      <div class="dist-total" id="distTotal"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Status bar ── -->
+<div class="status-bar">
+  <span><span class="sdot" id="sdot"></span><span id="stext">—</span></span>
+  <span id="shora" style="font-variant-numeric:tabular-nums"></span>
+  <span id="stotal"></span>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '15000'; // SoC_PE_Recife_04
+const REFRESH = 60_000;
+
+// ── Turnos ────────────────────────────────────────────────────────────────
+const TURNOS = {
+  T1: { hours: [6,7,8,9,10,11,12,13],    label: '06:00–14:00' },
+  T2: { hours: [14,15,16,17,18,19,20,21],label: '14:00–22:00' },
+  T3: { hours: [22,23,0,1,2,3,4,5],      label: '22:00–06:00' },
+};
+function turnoOfHour(h) {
+  if (TURNOS.T1.hours.includes(h)) return 'T1';
+  if (TURNOS.T2.hours.includes(h)) return 'T2';
+  return 'T3';
+}
+function hourOfKey(k) { return parseInt((k || '').split(' ')[1] || '0', 10); }
+function hoursInTurno(turno) {
+  return Object.keys(allHours).filter(k => turnoOfHour(hourOfKey(k)) === turno).sort();
+}
+// Chave "YYYY-MM-DD HH:00" a partir de um timestamp da timelist
+function timelistKey(ts) {
+  const d = new Date(ts * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
+}
+// Horas de um turno = união de horas com dado por operador (allHours) + horas com
+// total real na timelist — cobre o caso em que a timelist já tem a hora mas o
+// coletor por operador ainda não postou (ex: início de hora/turno)
+function turnoHourKeys(turno) {
+  const fromIndividual = Object.keys(allHours);
+  const fromTimelist   = timelist.map(t => timelistKey(t.timestamp));
+  const merged = [...new Set([...fromIndividual, ...fromTimelist])];
+  return merged.filter(k => turnoOfHour(hourOfKey(k)) === turno).sort();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────
+let allHours   = {};
+let processed  = {};
+let timelist   = []; // [{timestamp, total}] from dashboard/list — authoritative totals
+let metaData   = { byHour: {} }; // { [hourNum]: { metaPadrao, metaAjustada } } from /api/productivity-meta
+let activeHora  = null;
+let activeTurno = null; // 'T1' | 'T2' | 'T3'
+let chartView   = 'bars'; // 'bars' | 'line' | 'table'
+let pivotSortCol = 'total'; // 'total' | 'name'
+let pivotSortAsc = false;
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const cur = document.documentElement.dataset.theme;
+  const nxt = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = nxt;
+  localStorage.setItem('theme', nxt);
+  document.getElementById('iconMoon').style.display = nxt === 'dark' ? '' : 'none';
+  document.getElementById('iconSun').style.display  = nxt === 'light' ? '' : 'none';
+}
+(function initTheme() {
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.dataset.theme = t;
+  document.getElementById('iconMoon').style.display = t === 'dark' ? '' : 'none';
+  document.getElementById('iconSun').style.display  = t === 'light' ? '' : 'none';
+})();
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function toHHMM(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
+}
+function pct(n, t) { return t > 0 ? Math.round(n / t * 100) : 0; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(n) { return n.toLocaleString('pt-BR'); }
+
+// ── Processing ────────────────────────────────────────────────────────────
+function parseOps(str) {
+  const m = (str || '').match(/^\[(\w+)\](.*)/);
+  return m ? { id: m[1], name: m[2].trim() } : { id: str, name: str };
+}
+
+function processRecords(records, showAll) {
+  const g = {};
+  for (const r of records) {
+    const wh = r.working_hours    ?? 0;
+    const tp = r.total_throughput ?? 0;
+    if (!showAll) {
+      if (wh === 0)   continue;
+      if (wh < 0.3)   continue;
+    }
+    const { id, name } = parseOps(r.ops);
+    if (!g[id]) g[id] = { id, name, wh: 0, tp: 0 };
+    g[id].wh += wh;
+    g[id].tp += tp;
+  }
+  return Object.values(g).map(o => {
+    const prod     = o.wh > 0 ? Math.round(o.tp / o.wh) : 0;
+    const wh       = +o.wh.toFixed(2);
+    const classe   = prod < 200 ? 'Ruim' : prod <= 500 ? 'OK' : 'Bom';
+    // Anomalia: tempo < 0.5h E prod > 500
+    const anomalia = wh < 0.5 && prod > 500;
+    return { id: o.id, name: o.name, wh, tp: o.tp, prod, classe, anomalia };
+  }).sort((a, b) => b.prod - a.prod);
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────
+async function loadData() {
+  setLoading(true);
+  try {
+    const [indRes, tlRes, metaRes] = await Promise.all([
+      fetch(`/api/productivity-individual?station=${STATION}`),
+      fetch(`/api/productivity-timelist?station=${STATION}`),
+      fetch('/api/productivity-meta'),
+    ]);
+    if (!indRes.ok) throw new Error(`HTTP ${indRes.status}`);
+    const data = await indRes.json();
+    if (data.error) throw new Error(data.error);
+
+    // Timelist e Metas (toleram falha — não bloqueiam o dashboard)
+    if (tlRes.ok) {
+      const tlData = await tlRes.json();
+      timelist = tlData.time_list || [];
+    }
+    if (metaRes.ok) {
+      const mdData = await metaRes.json();
+      if (!mdData.error) metaData = mdData;
+    }
+
+    allHours = data.hours || {};
+    const keys = Object.keys(allHours).sort(); // horas com dado por operador
+
+    const showAll = document.getElementById('chkShowAll').checked;
+    processed = {};
+    keys.forEach(k => { processed[k] = processRecords(allHours[k].records || [], showAll); });
+
+    // Todas as horas conhecidas (por operador ∪ timelist) — usado p/ escolher o turno ativo
+    const knownKeys = [...new Set([...keys, ...timelist.map(t => timelistKey(t.timestamp))])].sort();
+    if (!knownKeys.length) throw new Error('Sem dados');
+
+    // Turno ativo: turno da hora atual (se tiver dados), senão turno da última hora disponível
+    if (!activeTurno) {
+      const nowTurno = turnoOfHour(new Date().getHours());
+      activeTurno = knownKeys.some(k => turnoOfHour(hourOfKey(k)) === nowTurno) ? nowTurno : turnoOfHour(hourOfKey(knownKeys[knownKeys.length - 1]));
+    }
+    let turnoKeys = turnoHourKeys(activeTurno);
+    if (!turnoKeys.length) {
+      activeTurno = turnoOfHour(hourOfKey(knownKeys[knownKeys.length - 1]));
+      turnoKeys = turnoHourKeys(activeTurno);
+    }
+    if (!activeHora || !turnoKeys.includes(activeHora)) activeHora = turnoKeys[turnoKeys.length - 1];
+
+    buildTurnoTabs();
+    buildHourTabs(turnoKeys);
+    render();
+    setStatus('ok', knownKeys);
+  } catch (e) {
+    setStatus('err', null, e.message);
+    document.getElementById('headerSub').textContent = 'Erro ao carregar dados';
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function buildTurnoTabs() {
+  document.getElementById('turnoTabs').innerHTML = Object.keys(TURNOS).map(t => {
+    const active = t === activeTurno;
+    return `<button class="turno-tab tt-${t}${active ? ' active' : ''}" onclick="selectTurno('${t}')">
+      <span class="turno-tab-name">${t}</span>
+      <span class="turno-tab-range">${TURNOS[t].label}</span>
+    </button>`;
+  }).join('');
+}
+function selectTurno(t) {
+  activeTurno = t;
+  const turnoKeys = turnoHourKeys(t);
+  activeHora = turnoKeys[turnoKeys.length - 1] || null;
+  buildTurnoTabs();
+  buildHourTabs(turnoKeys);
+  render();
+}
+function buildHourTabs(keys) {
+  document.getElementById('hourTabs').innerHTML = keys.map(k => {
+    const lbl = (k.split(' ')[1] || k).substring(0, 5);
+    return `<button class="hour-tab${k === activeHora ? ' active' : ''}" data-hora="${k}" onclick="selectHora('${k}')">${lbl}</button>`;
+  }).join('');
+}
+function selectHora(h) {
+  activeHora = h;
+  document.querySelectorAll('.hour-tab').forEach(t => t.classList.toggle('active', t.dataset.hora === h));
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  if (!activeHora) return;
+  // processed[activeHora] pode não existir ainda quando a hora só tem total na
+  // timelist (coletor por operador não postou essa hora) — trata como sem detalhamento
+  const hasBreakdown = !!processed[activeHora];
+  const all  = processed[activeHora] || [];
+  const wh05 = document.getElementById('chkWh05').checked;
+  const view = wh05 ? all.filter(o => o.wh >= 0.5) : all;
+  buildKPIs(all, view, hasBreakdown);
+  buildDistribution(all, hasBreakdown);
+  buildHourChart();
+  buildRankTable();
+  document.getElementById('headerSub').textContent = hasBreakdown
+    ? `${activeHora} · ${all.length} operadores`
+    : `${activeHora} · detalhamento por colaborador ainda não disponível`;
+}
+
+// ── KPIs ──────────────────────────────────────────────────────────────────
+function buildKPIs(all, view, hasBreakdown) {
+  const t    = all.length || 1;
+  const bom  = all.filter(o => o.classe === 'Bom').length;
+  const ok   = all.filter(o => o.classe === 'OK').length;
+  const ruim = all.filter(o => o.classe === 'Ruim').length;
+  const anom = all.filter(o => o.anomalia).length;
+
+  // Produção da hora selecionada — usa timelist se disponível
+  let prodHora = 0, prodHoraLabel = 'operadores filtrados';
+  if (timelist.length) {
+    // Converte activeHora ("2026-04-28 13:00") para timestamp Unix do início da hora
+    const [datePart, timePart] = (activeHora || '').split(' ');
+    if (datePart && timePart) {
+      const d = new Date(`${datePart}T${timePart}:00`);
+      const ts = Math.floor(d.getTime() / 1000);
+      const entry = timelist.find(t => t.timestamp === ts);
+      if (entry) { prodHora = entry.total; prodHoraLabel = 'itens reais · dashboard'; }
+    }
+  }
+  if (!prodHora) { // fallback: soma dos operadores
+    prodHora = all.reduce((s, o) => s + o.tp, 0);
+    prodHoraLabel = 'itens · operadores filtrados';
+  }
+
+  // Produção do dia — janela de turno: 06:00 hoje → 05:00 amanhã
+  // Se agora < 06:00, turno começou ontem às 06:00
+  function shiftWindow() {
+    const now = new Date();
+    const d   = new Date(now);
+    if (d.getHours() < 6) d.setDate(d.getDate() - 1);
+    d.setHours(6, 0, 0, 0);
+    const start = Math.floor(d.getTime() / 1000);
+    const end   = start + 23 * 3600; // 06:00 → 05:00 = 23h
+    return { start, end };
+  }
+  const { start: shiftStart, end: shiftEnd } = shiftWindow();
+  let prodDia = 0, prodDiaLabel;
+  if (timelist.length) {
+    const shiftList = timelist.filter(t => t.timestamp >= shiftStart && t.timestamp < shiftEnd);
+    prodDia = shiftList.reduce((s, t) => s + (t.total || 0), 0);
+    prodDiaLabel = `itens reais · ${shiftList.length} hora${shiftList.length !== 1 ? 's' : ''}`;
+  } else {
+    prodDia = Object.values(processed).reduce((s, ops) => s + ops.reduce((ss, o) => ss + o.tp, 0), 0);
+    const nH = Object.keys(processed).length;
+    prodDiaLabel = `itens · ${nH} hora${nH !== 1 ? 's' : ''}`;
+  }
+
+  document.getElementById('kpiProdHora').textContent    = fmt(prodHora);
+  document.getElementById('kpiProdHoraSub').textContent = `${activeHora?.split(' ')[1] || '—'} · ${prodHoraLabel}`;
+  document.getElementById('kpiProdDia').textContent     = fmt(prodDia);
+  document.getElementById('kpiProdDiaSub').textContent  = prodDiaLabel;
+
+  if (hasBreakdown) {
+    document.getElementById('kpiTotal').textContent   = view.length;
+    document.getElementById('kpiTotalSub').textContent = 'no ranking (wh ≥ 0.5)';
+    document.getElementById('kpiBom').textContent     = bom;
+    document.getElementById('kpiBomPct').textContent  = `${pct(bom,t)}% de ${all.length} operadores`;
+    document.getElementById('kpiOk').textContent      = ok;
+    document.getElementById('kpiOkPct').textContent   = `${pct(ok,t)}% de ${all.length} operadores`;
+    document.getElementById('kpiRuim').textContent    = ruim;
+    document.getElementById('kpiRuimPct').textContent = `${pct(ruim,t)}% de ${all.length} operadores`;
+    document.getElementById('kpiAnom').textContent    = anom;
+  } else {
+    // Hora só tem total agregado (timelist) — ainda sem quebra por operador
+    ['kpiTotal', 'kpiBom', 'kpiOk', 'kpiRuim', 'kpiAnom'].forEach(id => { document.getElementById(id).textContent = '—'; });
+    document.getElementById('kpiTotalSub').textContent = 'detalhamento indisponível nesta hora';
+    document.getElementById('kpiBomPct').textContent   = 'aguardando dados';
+    document.getElementById('kpiOkPct').textContent    = 'aguardando dados';
+    document.getElementById('kpiRuimPct').textContent  = 'aguardando dados';
+  }
+}
+
+// ── Ranking table (pivot: colaborador × hora, com coluna Total) ───────────
+function buildRankTable() {
+  // Todas as horas do turno (mesmo as que ainda não têm quebra por operador —
+  // aparecem com células vazias em vez de sumir da tabela)
+  const hours = turnoHourKeys(activeTurno);
+  const wh05  = document.getElementById('chkWh05').checked;
+  const q     = (document.getElementById('opSearch').value || '').trim().toLowerCase();
+
+  const rankSub = document.getElementById('rankSub');
+  rankSub.textContent = (activeHora && !hoursInTurno(activeTurno).includes(activeHora))
+    ? `Produção por hora · coluna Total = soma do turno · hora ativa (${activeHora.split(' ')[1]}) ainda sem detalhamento por colaborador`
+    : 'Produção por hora · coluna Total = soma do turno';
+
+  // União de operadores em todas as horas disponíveis
+  const opMap = {};
+  hours.forEach(h => {
+    (processed[h] || []).forEach(o => {
+      if (!opMap[o.id]) opMap[o.id] = { id: o.id, name: o.name, byHour: {}, tp: 0, wh: 0 };
+      opMap[o.id].byHour[h] = o;
+      opMap[o.id].tp += o.tp;
+      opMap[o.id].wh += o.wh;
+    });
+  });
+
+  const totalOps = Object.keys(opMap).length;
+  let rows = Object.values(opMap);
+  if (wh05) rows = rows.filter(o => o.wh >= 0.5);
+  if (q)    rows = rows.filter(o => o.name.toLowerCase().includes(q));
+
+  rows.sort((a, b) => {
+    if (pivotSortCol === 'name') {
+      return pivotSortAsc ? a.name.localeCompare(b.name, 'pt-BR') : b.name.localeCompare(a.name, 'pt-BR');
+    }
+    return pivotSortAsc ? a.tp - b.tp : b.tp - a.tp;
+  });
+
+  const lbls = hours.map(h => (h.split(' ')[1] || h).substring(0, 2) + 'H');
+
+  document.getElementById('rankHead').innerHTML = `<tr>
+    <th style="width:36px;text-align:center;cursor:default">#</th>
+    <th class="th-sort" id="thSortName">Colaborador${pivotSortCol === 'name' ? (pivotSortAsc ? ' ▲' : ' ▼') : ''}</th>
+    ${lbls.map((l, i) => `<th class="${hours[i] === activeHora ? 'hm-active' : ''}" style="text-align:center">${l}</th>`).join('')}
+    <th class="hm-total-h th-sort" id="thSortTotal" style="text-align:right">Total${pivotSortCol === 'total' ? (pivotSortAsc ? ' ▲' : ' ▼') : ''}</th>
+  </tr>`;
+
+  document.getElementById('rankCount').textContent = `${rows.length} de ${totalOps} colaborador(es)`;
+
+  if (!rows.length) {
+    document.getElementById('rankBody').innerHTML = `<tr><td colspan="${hours.length + 3}" class="empty-msg">Nenhum colaborador encontrado</td></tr>`;
+  } else {
+    document.getElementById('rankBody').innerHTML = rows.map((o, i) => {
+      const ri   = i + 1;
+      const rCls = ri === 1 ? 'rk-1' : ri === 2 ? 'rk-2' : ri === 3 ? 'rk-3' : 'rk-n';
+      const cells = hours.map(h => {
+        const c = o.byHour[h];
+        if (!c || !c.tp) return `<td class="hm-empty">—</td>`;
+        return `<td class="hm-${c.classe.toLowerCase()}" title="${toHHMM(c.wh)} · ${fmt(c.prod)} itens/h">${fmt(c.tp)}</td>`;
+      }).join('');
+      return `<tr>
+        <td style="text-align:center"><span class="rank-badge ${rCls}">${ri}</span></td>
+        <td><div class="op-name" title="${esc(o.name)}">${esc(o.name)}</div></td>
+        ${cells}
+        <td class="hm-total" style="text-align:right">${fmt(o.tp)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const thName  = document.getElementById('thSortName');
+  const thTotal = document.getElementById('thSortTotal');
+  if (thName)  thName.onclick  = () => { pivotSortAsc = pivotSortCol === 'name'  ? !pivotSortAsc : true;  pivotSortCol = 'name';  buildRankTable(); };
+  if (thTotal) thTotal.onclick = () => { pivotSortAsc = pivotSortCol === 'total' ? !pivotSortAsc : false; pivotSortCol = 'total'; buildRankTable(); };
+}
+
+// ── Distribution ──────────────────────────────────────────────────────────
+function buildDistribution(all, hasBreakdown) {
+  document.getElementById('distEmpty').style.display   = hasBreakdown ? 'none' : '';
+  document.getElementById('distContent').style.display = hasBreakdown ? '' : 'none';
+  if (!hasBreakdown) return;
+
+  const t    = all.length || 1;
+  const bom  = all.filter(o => o.classe === 'Bom').length;
+  const ok   = all.filter(o => o.classe === 'OK').length;
+  const ruim = all.filter(o => o.classe === 'Ruim').length;
+
+  const set = (barId, nId, pId, n) => {
+    const p = pct(n, t);
+    document.getElementById(barId).style.width = `${p}%`;
+    document.getElementById(nId).textContent   = n;
+    document.getElementById(pId).textContent   = `${p}%`;
+  };
+  set('dbarBom',  'dnBom',  'dpBom',  bom);
+  set('dbarOk',   'dnOk',   'dpOk',   ok);
+  set('dbarRuim', 'dnRuim', 'dpRuim', ruim);
+
+  document.getElementById('distTotal').textContent = `Total: ${all.length} operadores na hora selecionada`;
+}
+
+// ── Produção por Hora (Real × Meta) ────────────────────────────────────────
+function realForHourKey(k) {
+  const [datePart, timePart] = (k || '').split(' ');
+  if (datePart && timePart && timelist.length) {
+    const ts = Math.floor(new Date(`${datePart}T${timePart}:00`).getTime() / 1000);
+    const entry = timelist.find(t => t.timestamp === ts);
+    if (entry) return entry.total;
+  }
+  return (processed[k] || []).reduce((s, o) => s + o.tp, 0);
+}
+
+function buildHourChart() {
+  const turnoKeys = turnoHourKeys(activeTurno);
+  const rows = turnoKeys.map(k => {
+    const hourNum = hourOfKey(k);
+    const meta = metaData.byHour?.[hourNum] || {};
+    return {
+      key: k,
+      hourNum,
+      label: String(hourNum).padStart(2, '0') + 'H',
+      real: realForHourKey(k),
+      metaPadrao: meta.metaPadrao || 0,
+      metaAjustada: meta.metaAjustada || 0,
+    };
+  });
+
+  document.getElementById('chartTurnoLbl').textContent = `${activeTurno || '—'} · ${TURNOS[activeTurno]?.label || ''}`;
+
+  if (!rows.length) {
+    document.getElementById('chartBody').innerHTML = `<div class="empty-msg">Sem dados para este turno</div>`;
+    document.getElementById('chartAderencia').innerHTML = '';
+    return;
+  }
+  if (chartView === 'bars')      renderChartBars(rows);
+  else if (chartView === 'line') renderChartLine(rows);
+  else                            renderChartTable(rows);
+  renderAderencia(rows);
+}
+
+// Faixa de badges "aderência" por hora — Real vs Meta Ajustada, rotulada com o
+// intervalo da hora (ex: "06-07" = produção da hora 06, que decorre até as 07)
+function renderAderencia(rows) {
+  document.getElementById('chartAderencia').innerHTML = rows.map(r => {
+    const nextH = String((r.hourNum + 1) % 24).padStart(2, '0');
+    const range = `${r.label.replace('H','')}-${nextH}`;
+    if (r.real === 0 && r.metaAjustada === 0) {
+      return `<div class="ader-col"><div class="ader-badge n">—</div><div class="ader-range">${range}</div></div>`;
+    }
+    const ader = r.metaAjustada > 0 ? Math.round(r.real / r.metaAjustada * 100) : 0;
+    const cls  = ader >= 100 ? 'g' : 'r';
+    return `<div class="ader-col"><div class="ader-badge ${cls}">${ader}%</div><div class="ader-range">${range}</div></div>`;
+  }).join('');
+}
+
+function renderChartBars(rows) {
+  const n = rows.length;
+  const W = Math.max(560, n * 90);
+  const H = 240, padL = 46, padR = 20, padT = 26, padB = 34;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...rows.map(r => Math.max(r.real, r.metaAjustada, r.metaPadrao)));
+  const slot    = plotW / n;
+  const bw      = Math.min(48, slot * 0.5);
+  const xCenter = i => padL + slot * i + slot / 2;
+  const y       = v => padT + plotH - (v / maxVal) * plotH;
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const gy = padT + plotH * (1 - f);
+    return `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="var(--border)" stroke-width="1"/>
+      <text x="${padL - 8}" y="${gy + 3}" font-size="9" fill="var(--muted)" text-anchor="end">${fmt(Math.round(maxVal * f))}</text>`;
+  }).join('');
+
+  const bars = rows.map((r, i) => {
+    const color = r.real === 0 ? 'var(--border2)' : (r.metaAjustada > 0 && r.real >= r.metaAjustada) ? 'var(--green)' : 'var(--red)';
+    const bx = xCenter(i) - bw / 2;
+    const by = y(r.real);
+    const bh = Math.max(2, padT + plotH - by);
+    return `<rect class="chart-bar-rect" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="4" fill="${color}">
+      <title>${r.label} · Real ${fmt(r.real)}${r.metaAjustada ? ` · Meta Ajustada ${fmt(r.metaAjustada)}` : ''}</title>
+    </rect>`;
+  }).join('');
+
+  const valLabels = rows.map((r, i) => r.real > 0
+    ? `<text x="${xCenter(i)}" y="${y(r.real) - 8}" font-size="10" font-weight="700" fill="var(--text2)" text-anchor="middle">${fmt(r.real)}</text>`
+    : '').join('');
+
+  const hasMetaAjustada = rows.some(r => r.metaAjustada > 0);
+  const metaAjustadaPts = rows.map((r, i) => `${xCenter(i)},${y(r.metaAjustada)}`).join(' ');
+  const metaAjustadaLine = hasMetaAjustada
+    ? `<polyline points="${metaAjustadaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="5 4"/>
+       ${rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${xCenter(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('')}`
+    : '';
+
+  const hasMetaPadrao = rows.some(r => r.metaPadrao > 0);
+  const metaPadraoPts = rows.map((r, i) => `${xCenter(i)},${y(r.metaPadrao)}`).join(' ');
+  const metaPadraoLine = hasMetaPadrao
+    ? `<polyline points="${metaPadraoPts}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-dasharray="2 3" opacity=".85"/>
+       ${rows.map((r, i) => r.metaPadrao > 0 ? `<circle cx="${xCenter(i)}" cy="${y(r.metaPadrao)}" r="2.5" fill="var(--purple)"/>` : '').join('')}`
+    : '';
+
+  const labels = rows.map((r, i) => `<text x="${xCenter(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%">
+    ${gridLines}${bars}${metaPadraoLine}${metaAjustadaLine}${valLabels}${labels}
+  </svg>`;
+  document.getElementById('chartBody').innerHTML = `<div class="chart-svg-wrap">${svg}</div>`;
+}
+
+function renderChartLine(rows) {
+  const W = Math.max(560, rows.length * 70);
+  const H = 220, padL = 42, padR = 16, padT = 16, padB = 30;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxVal = Math.max(1, ...rows.map(r => Math.max(r.real, r.metaAjustada, r.metaPadrao)));
+  const x = i => padL + (rows.length <= 1 ? plotW / 2 : (i / (rows.length - 1)) * plotW);
+  const y = v => padT + plotH - (v / maxVal) * plotH;
+
+  const realPts        = rows.map((r, i) => `${x(i)},${y(r.real)}`).join(' ');
+  const metaAjustadaPts = rows.map((r, i) => `${x(i)},${y(r.metaAjustada)}`).join(' ');
+  const metaPadraoPts  = rows.map((r, i) => `${x(i)},${y(r.metaPadrao)}`).join(' ');
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const gy = padT + plotH * (1 - f);
+    return `<line x1="${padL}" y1="${gy}" x2="${W - padR}" y2="${gy}" stroke="var(--border)" stroke-width="1"/>
+      <text x="${padL - 8}" y="${gy + 3}" font-size="9" fill="var(--muted)" text-anchor="end">${fmt(Math.round(maxVal * f))}</text>`;
+  }).join('');
+
+  const dots            = rows.map((r, i) => `<circle cx="${x(i)}" cy="${y(r.real)}" r="3.5" fill="${r.metaAjustada > 0 && r.real >= r.metaAjustada ? 'var(--green)' : 'var(--red)'}"/>`).join('');
+  const metaAjustadaDots = rows.map((r, i) => r.metaAjustada > 0 ? `<circle cx="${x(i)}" cy="${y(r.metaAjustada)}" r="2.5" fill="var(--orange)"/>` : '').join('');
+  const metaPadraoDots  = rows.map((r, i) => r.metaPadrao > 0 ? `<circle cx="${x(i)}" cy="${y(r.metaPadrao)}" r="2.5" fill="var(--purple)"/>` : '').join('');
+  const labels          = rows.map((r, i) => `<text x="${x(i)}" y="${H - 8}" font-size="10" fill="var(--muted)" text-anchor="middle" font-weight="600">${r.label}</text>`).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%">
+    ${gridLines}
+    <polyline points="${metaPadraoPts}" fill="none" stroke="var(--purple)" stroke-width="2" stroke-dasharray="2 3" opacity=".85"/>
+    <polyline points="${metaAjustadaPts}" fill="none" stroke="var(--orange)" stroke-width="2" stroke-dasharray="4 3"/>
+    <polyline points="${realPts}" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+    ${metaPadraoDots}${metaAjustadaDots}${dots}${labels}
+  </svg>`;
+  document.getElementById('chartBody').innerHTML = `<div class="chart-svg-wrap">${svg}</div>`;
+}
+
+function renderChartTable(rows) {
+  document.getElementById('chartBody').innerHTML = `<div class="heatmap-wrap" style="max-height:340px">
+    <table class="hm-t" style="min-width:0">
+      <thead><tr>
+        <th style="text-align:left">Hora</th>
+        <th>Real</th><th>Meta Padrão</th><th>Meta Ajustada</th><th>Aderência</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => {
+          const ader = r.metaAjustada > 0 ? Math.round(r.real / r.metaAjustada * 100) : 0;
+          const cls  = r.real === 0 ? 'hm-empty' : ader >= 100 ? 'hm-bom' : ader >= 80 ? 'hm-ok' : 'hm-ruim';
+          return `<tr>
+            <td style="text-align:left">${r.label}</td>
+            <td>${fmt(r.real)}</td>
+            <td>${fmt(r.metaPadrao)}</td>
+            <td>${fmt(r.metaAjustada)}</td>
+            <td class="${cls}">${ader}%</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ── Chart view toggle ────────────────────────────────────────────────────
+document.getElementById('chartToggles').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tog');
+  if (!btn) return;
+  chartView = btn.dataset.view;
+  document.querySelectorAll('#chartToggles .tog').forEach(b => b.classList.toggle('tog-active', b === btn));
+  buildHourChart();
+});
+
+// ── Filters ───────────────────────────────────────────────────────────────
+document.getElementById('chkWh05').addEventListener('change', render);
+document.getElementById('opSearch').addEventListener('input', buildRankTable);
+document.getElementById('chkShowAll').addEventListener('change', () => {
+  const showAll = document.getElementById('chkShowAll').checked;
+  const keys = Object.keys(allHours).sort();
+  processed = {};
+  keys.forEach(k => { processed[k] = processRecords(allHours[k].records || [], showAll); });
+  render();
+});
+
+// ── Loading / Status ──────────────────────────────────────────────────────
+function setLoading(on) {
+  document.getElementById('loadingSpinner').style.display = on ? '' : 'none';
+}
+function setStatus(state, keys, msg) {
+  const dot = document.getElementById('sdot');
+  dot.className = `sdot ${state}`;
+  if (state === 'ok' && keys) {
+    const snap = allHours[activeHora];
+    const at   = snap?.fetchedAt ? new Date(snap.fetchedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—';
+    document.getElementById('stext').textContent  = `Atualizado ${at}`;
+    document.getElementById('shora').textContent  = `Hora ativa: ${activeHora}`;
+    document.getElementById('stotal').textContent = `${keys.length} hora(s) disponível(is)`;
+    document.getElementById('lastUpdate').textContent = at;
+  } else {
+    document.getElementById('stext').textContent  = `Erro: ${msg}`;
+    document.getElementById('shora').textContent  = '';
+    document.getElementById('stotal').textContent = '';
+  }
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+loadData();
+setInterval(loadData, REFRESH);
+</script>
+</body>
+</html>
