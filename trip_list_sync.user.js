@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Trip List → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync.user.js
 // @description  Sincroniza trip list (viagens em trânsito) com o dashboard local
@@ -16,6 +16,9 @@
   const SERVER_URL = 'https://stage-out.onrender.com/api/trip-data';
   const API_URL    = '/api/admin/transportation/trip/list_v2';
   const INTERVAL   = 60 * 1000; // 60s
+  // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
+  // (o servidor usa isso pra nao misturar os dados de estações diferentes).
+  const STATION_ID = '10963'; // SoC_PE_Jaboatão dos Guararapes
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -67,7 +70,7 @@
     }
 
     console.log(`[Trips] ${list.length}/${total} viagens recebidas`);
-    return { list, total, fetchedAt: Date.now() };
+    return { list, total, fetchedAt: Date.now(), station_id: STATION_ID };
   }
 
   function sendToServer(data) {

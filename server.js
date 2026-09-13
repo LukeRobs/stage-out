@@ -441,8 +441,48 @@
     }
   }
 
+  // ── Suporte a múltiplas estações ───────────────────────────────────────
+  // Cada computador/estação roda seu próprio conjunto de scripts Tampermonkey
+  // apontando pro mesmo servidor. Sem particionar por estação, o segundo
+  // computador simplesmente sobrescreveria os dados do primeiro (mesmo bug
+  // de "overwrite" que já corrigimos pras TOs, agora pros outros módulos).
+  const DEFAULT_STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes — estação original, mantém compatibilidade se um payload nao informar station_id
+
+  // Deriva a estação de um payload a partir do primeiro item da lista, quando o
+  // proprio registro ja carrega um campo de estacao (TOs, queue, stage-out) —
+  // nesses casos nao precisa mexer no script, o servidor so precisa saber olhar.
+  function inferStation(list, field) {
+    const v = list?.[0]?.[field];
+    return v != null ? String(v) : DEFAULT_STATION;
+  }
+
+  // Le ?station=X da query string de uma requisicao GET (usado pelos dashboards)
+  function stationParam(req) {
+    return new URL(req.url, 'http://internal').searchParams.get('station') || DEFAULT_STATION;
+  }
+
+  // Filtra um cache global (TOs) por um campo que ja vem em cada registro (ex:
+  // current_station_id) — usado quando o merge continua global (nao vale a pena
+  // duplicar a logica de merge/evict/revalidacao por estacao), so a LEITURA e
+  // que precisa ser recortada por estacao.
+  function filterByStationField(cache, field, station) {
+    if (!cache) return null;
+    const list = (cache.list || []).filter(t => String(t?.[field]) === station);
+    return { ...cache, list, total: list.length };
+  }
+
+  // Cache simples particionado por estacao (usado pelos modulos que fazem
+  // "overwrite" — cada estacao te sua propria fatia, sem merge entre elas)
+  function makeStationCache() {
+    const byStation = new Map(); // station_id -> data
+    return {
+      set(stationId, data) { byStation.set(String(stationId ?? DEFAULT_STATION), data); },
+      get(stationId)       { return byStation.get(String(stationId ?? DEFAULT_STATION)) ?? null; },
+    };
+  }
+
   // ── Stage-out cache (fed by Tampermonkey) ─────────────────────────────
-  let stageCache        = null; // { list, total, fetchedAt }
+  const stageCacheByStation = makeStationCache(); // station_id -> { list, total, fetchedAt }
   let toPackingCache    = null; // { list, total, fetchedAt } — snapshot derivado do merge abaixo
   let toPackedCache     = null; // { list, total, fetchedAt } — snapshot derivado do merge abaixo
 
@@ -575,15 +615,22 @@
     }
   }
 
-  let stageInCache      = null; // { list, total, fetchedAt }
-  let queueCache        = null; // { list, total, pending_total, occupied_total, ..., fetchedAt }
-  let tripCache         = null; // { list, fetchedAt } — trip list v2
-  let tripHistoryCache  = { list: [], fetchedAt: null }; // { list, fetchedAt } — trip history (last 7 days)
-  let workstationCache  = null; // { workstations, operators, startTime, endTime, fetchedAt }
-  let prodIndividualCache = {}; // hora_key → { hora, records, total, start_time, end_time, fetchedAt }
-  let prodTimelistCache   = null; // { time_list: [{timestamp, total}], fetchedAt }
+  const stageInCacheByStation = makeStationCache(); // station_id -> { list, total, fetchedAt }
+  const queueCacheByStation = makeStationCache(); // station_id -> { list, total, pending_total, occupied_total, ..., fetchedAt }
+  const tripCacheByStation        = makeStationCache(); // station_id -> { list, fetchedAt } — trip list v2
+  const tripHistoryCacheByStation = makeStationCache(); // station_id -> { list, fetchedAt } — trip history (last 7 days)
+  const workstationCacheByStation = makeStationCache(); // station_id -> { workstations, operators, startTime, endTime, fetchedAt }
+  const prodIndividualByStation = new Map(); // station_id -> { hora_key → { hora, records, total, start_time, end_time, fetchedAt } }
+  function getProdIndividualSlot(station) {
+    if (!prodIndividualByStation.has(station)) prodIndividualByStation.set(station, {});
+    return prodIndividualByStation.get(station);
+  }
+  const prodTimelistCacheByStation = makeStationCache(); // station_id -> { time_list: [{timestamp, total}], fetchedAt }
 
+  // O relatorio horario pro Sheets/SeaTalk continua ligado a estacao original (DEFAULT_STATION)
+  // por enquanto — nao duplicado por estacao ainda.
   function buildHourlyRows() {
+    const workstationCache = workstationCacheByStation.get(DEFAULT_STATION);
     if (!workstationCache) return [];
 
     const now = new Date();
@@ -806,7 +853,7 @@
   let cageMapCache = null; // { cageMap: { CG001: OUT-185 }, byArea: { OUT-185: { sacas, cages } }, fetchedAt }
   async function forceSaveToSheets() {
   try {
-    if (!workstationCache) {
+    if (!workstationCacheByStation.get(DEFAULT_STATION)) {
       console.log('[force-save] ❌ Sem dados de workstation');
       return { ok: false, error: 'Sem dados' };
     }
@@ -830,7 +877,7 @@
   }
 }
   async function writeToSheets() {
-  if (!workstationCache) {
+  if (!workstationCacheByStation.get(DEFAULT_STATION)) {
     console.log('[flush] ❌ Sem dados de workstation');
     return;
   }
@@ -902,8 +949,10 @@
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          stageCache = JSON.parse(body);
-          console.log(`[stage-out] Received ${stageCache.list?.length}/${stageCache.total} positions`);
+          const parsed  = JSON.parse(body);
+          const station = inferStation(parsed.list, 'current_station_id');
+          stageCacheByStation.set(station, parsed);
+          console.log(`[stage-out] Received ${parsed.list?.length}/${parsed.total} positions (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1014,7 +1063,8 @@
       return;
     }
 
-    // GET /api/tos-packing — serves packing data to dashboard
+    // GET /api/tos-packing?station=X — serves packing data to dashboard (recortado por estacao;
+    // o merge em si continua global — ver toPackingMap acima)
     if (urlPath === '/api/tos-packing') {
       if (!toPackingCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
@@ -1022,11 +1072,12 @@
         return;
       }
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(toPackingCache));
+      res.end(JSON.stringify(filterByStationField(toPackingCache, 'current_station_id', stationParam(req))));
       return;
     }
 
-    // GET /api/tos-packed — serves packed data to dashboard
+    // GET /api/tos-packed?station=X — serves packed data to dashboard (recortado por estacao;
+    // o merge em si continua global — ver toPackedMap acima)
     if (urlPath === '/api/tos-packed') {
       if (!toPackedCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
@@ -1034,7 +1085,7 @@
         return;
       }
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(toPackedCache));
+      res.end(JSON.stringify(filterByStationField(toPackedCache, 'current_station_id', stationParam(req))));
       return;
     }
 
@@ -1255,8 +1306,10 @@
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          stageInCache = JSON.parse(body);
-          console.log(`[stage-in] Received ${stageInCache.list?.length}/${stageInCache.total} ruas`);
+          const parsed  = JSON.parse(body);
+          const station = String(parsed.station_id ?? DEFAULT_STATION);
+          stageInCacheByStation.set(station, parsed);
+          console.log(`[stage-in] Received ${parsed.list?.length}/${parsed.total} ruas (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1267,8 +1320,9 @@
       return;
     }
 
-    // GET /api/stage-in — serves inbound staging data to dashboard
+    // GET /api/stage-in?station=X — serves inbound staging data to dashboard
     if (urlPath === '/api/stage-in') {
+      const stageInCache = stageInCacheByStation.get(stationParam(req));
       if (!stageInCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
@@ -1285,8 +1339,10 @@
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          queueCache = JSON.parse(body);
-          console.log(`[queue] Received ${queueCache.list?.length}/${queueCache.total} vehicles`);
+          const parsed  = JSON.parse(body);
+          const station = inferStation(parsed.list, 'station_id');
+          queueCacheByStation.set(station, parsed);
+          console.log(`[queue] Received ${parsed.list?.length}/${parsed.total} vehicles (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1297,14 +1353,17 @@
       return;
     }
 
-    // POST /api/trip-data — receives trip list from Tampermonkey
+    // POST /api/trip-data — receives trip list from Tampermonkey (payload traz station_id,
+    // pois um trip pode envolver varias estacoes — nao da pra inferir de um campo so)
     if (urlPath === '/api/trip-data' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          tripCache = JSON.parse(body);
-          console.log(`[trips] Received ${tripCache.list?.length} trips`);
+          const parsed  = JSON.parse(body);
+          const station = String(parsed.station_id ?? DEFAULT_STATION);
+          tripCacheByStation.set(station, parsed);
+          console.log(`[trips] Received ${parsed.list?.length} trips (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1315,14 +1374,15 @@
       return;
     }
 
-    // GET /api/trips — serves trip list to dashboard
+    // GET /api/trips?station=X — serves trip list to dashboard
     if (urlPath === '/api/trips') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(tripCache || { list: [], fetchedAt: null }));
+      res.end(JSON.stringify(tripCacheByStation.get(stationParam(req)) || { list: [], fetchedAt: null }));
       return;
     }
 
-    // POST /api/trip-history-data — receives trip history from Tampermonkey
+    // POST /api/trip-history-data — receives trip history from Tampermonkey (merge por
+    // trip_number, particionado por estacao — cada estacao mantem seu proprio historico)
     if (urlPath === '/api/trip-history-data' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
@@ -1330,16 +1390,16 @@
         try {
           const incoming = JSON.parse(body);
           const inList   = incoming.list || [];
+          const station  = String(incoming.station_id ?? DEFAULT_STATION);
+          const slot     = tripHistoryCacheByStation.get(station) || { list: [], fetchedAt: null };
           // Merge by trip_number — incoming data overwrites existing (more up-to-date)
-          const map = new Map(tripHistoryCache.list.map(t => [t.trip_number, t]));
+          const map = new Map(slot.list.map(t => [t.trip_number, t]));
           inList.forEach(t => { if (t.trip_number) map.set(t.trip_number, t); });
-          tripHistoryCache = {
-            list:      Array.from(map.values()),
-            fetchedAt: incoming.fetchedAt || Date.now(),
-          };
-          console.log(`[trip-history] Merged → ${tripHistoryCache.list.length} trips (received ${inList.length})`);
+          const updated = { list: Array.from(map.values()), fetchedAt: incoming.fetchedAt || Date.now() };
+          tripHistoryCacheByStation.set(station, updated);
+          console.log(`[trip-history] Merged → ${updated.list.length} trips (received ${inList.length}, station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: true, total: tripHistoryCache.list.length }));
+          res.end(JSON.stringify({ ok: true, total: updated.list.length }));
         } catch (e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
@@ -1348,15 +1408,16 @@
       return;
     }
 
-    // GET /api/trip-history — serves trip history to dashboard
+    // GET /api/trip-history?station=X — serves trip history to dashboard
     if (urlPath === '/api/trip-history') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(tripHistoryCache));
+      res.end(JSON.stringify(tripHistoryCacheByStation.get(stationParam(req)) || { list: [], fetchedAt: null }));
       return;
     }
 
-    // GET /api/queue — serves vehicle queue to dashboard
+    // GET /api/queue?station=X — serves vehicle queue to dashboard
     if (urlPath === '/api/queue') {
+      const queueCache = queueCacheByStation.get(stationParam(req));
       if (!queueCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
@@ -1523,10 +1584,12 @@
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          workstationCache = JSON.parse(body);
-          const ws = workstationCache.workstations?.length || 0;
-          const op = workstationCache.operators?.length    || 0;
-          console.log(`[workstation] Received ${ws} workstations · ${op} operators`);
+          const parsed  = JSON.parse(body);
+          const station = String(parsed.station_id ?? DEFAULT_STATION);
+          workstationCacheByStation.set(station, parsed);
+          const ws = parsed.workstations?.length || 0;
+          const op = parsed.operators?.length    || 0;
+          console.log(`[workstation] Received ${ws} workstations · ${op} operators (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1537,8 +1600,9 @@
       return;
     }
 
-    // GET /api/workstation — serves workstation data to dashboard
+    // GET /api/workstation?station=X — serves workstation data to dashboard
     if (urlPath === '/api/workstation') {
+      const workstationCache = workstationCacheByStation.get(stationParam(req));
       if (!workstationCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
@@ -1551,7 +1615,7 @@
 
     // GET /api/debug/stage-sample — inspeciona estrutura de um item do stageCache
     if (urlPath === '/api/debug/stage-sample') {
-      const sample = stageCache?.list?.[0] ?? null;
+      const sample = stageCacheByStation.get(stationParam(req))?.list?.[0] ?? null;
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ keys: sample ? Object.keys(sample) : [], sample }, null, 2));
       return;
@@ -1593,8 +1657,9 @@
       return;
     }
 
-    // GET /api/stage-out — serves stage-out data to dashboard
+    // GET /api/stage-out?station=X — serves stage-out data to dashboard
     if (urlPath === '/api/stage-out') {
+      const stageCache = stageCacheByStation.get(stationParam(req));
       if (!stageCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
@@ -1624,33 +1689,35 @@
       return { module: name, updatedAt: cache.fetchedAt || new Date().toISOString(), data: cache };
     }
 
-    // GET /api/packing — normalized alias for tos-packing
+    // GET /api/packing?station=X — normalized alias for tos-packing
     if (urlPath === '/api/packing') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(moduleWrap('packing', toPackingCache)));
+      res.end(JSON.stringify(moduleWrap('packing', filterByStationField(toPackingCache, 'current_station_id', stationParam(req)))));
       return;
     }
 
-    // GET /api/packed — normalized alias for tos-packed
+    // GET /api/packed?station=X — normalized alias for tos-packed
     if (urlPath === '/api/packed') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(moduleWrap('packed', toPackedCache)));
+      res.end(JSON.stringify(moduleWrap('packed', filterByStationField(toPackedCache, 'current_station_id', stationParam(req)))));
       return;
     }
 
-    // GET /api/inbound — normalized alias for queue
+    // GET /api/inbound?station=X — normalized alias for queue
     if (urlPath === '/api/inbound') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(moduleWrap('inbound', queueCache)));
+      res.end(JSON.stringify(moduleWrap('inbound', queueCacheByStation.get(stationParam(req)))));
       return;
     }
 
-    // GET /api/transbordo — normalized alias combining trip-history + live trips + queue
+    // GET /api/transbordo?station=X — normalized alias combining trip-history + live trips + queue
     if (urlPath === '/api/transbordo') {
+      const station = stationParam(req);
+      const tripHistoryCache = tripHistoryCacheByStation.get(station) || { list: [], fetchedAt: null };
       const combined = {
         list:      tripHistoryCache.list || [],
-        liveTrips: tripCache?.list        || [],
-        queue:     queueCache?.list       || [],
+        liveTrips: tripCacheByStation.get(station)?.list  || [],
+        queue:     queueCacheByStation.get(station)?.list || [],
         fetchedAt: tripHistoryCache.fetchedAt,
       };
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
@@ -1658,23 +1725,25 @@
       return;
     }
 
-    // GET /api/dashboard — single consolidated snapshot of all modules
+    // GET /api/dashboard?station=X — single consolidated snapshot of all modules
     if (urlPath === '/api/dashboard') {
+      const station = stationParam(req);
+      const tripHistoryCache = tripHistoryCacheByStation.get(station) || { list: [], fetchedAt: null };
       const transbData = {
         list:      tripHistoryCache.list || [],
-        liveTrips: tripCache?.list        || [],
-        queue:     queueCache?.list       || [],
+        liveTrips: tripCacheByStation.get(station)?.list  || [],
+        queue:     queueCacheByStation.get(station)?.list || [],
         fetchedAt: tripHistoryCache.fetchedAt,
       };
       const dashboard = {
         module:    'dashboard',
         updatedAt: new Date().toISOString(),
         data: {
-          stageOut:   moduleWrap('stage_out',   stageCache),
-          packing:    moduleWrap('packing',      toPackingCache),
-          packed:     moduleWrap('packed',       toPackedCache),
-          stageIn:    moduleWrap('stage_in',     stageInCache),
-          inbound:    moduleWrap('inbound',      queueCache),
+          stageOut:   moduleWrap('stage_out',   stageCacheByStation.get(station)),
+          packing:    moduleWrap('packing',      filterByStationField(toPackingCache, 'current_station_id', station)),
+          packed:     moduleWrap('packed',       filterByStationField(toPackedCache, 'current_station_id', station)),
+          stageIn:    moduleWrap('stage_in',     stageInCacheByStation.get(station)),
+          inbound:    moduleWrap('inbound',      queueCacheByStation.get(station)),
           transbordo: moduleWrap('transbordo',   transbData),
         },
       };
@@ -1683,14 +1752,16 @@
       return;
     }
 
-    // POST /api/productivity-timelist — receives time_list from dashboard/list (authoritative hourly totals)
+    // POST /api/productivity-timelist — receives time_list from Tampermonkey (authoritative hourly totals)
     if (urlPath === '/api/productivity-timelist' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          prodTimelistCache = JSON.parse(body);
-          console.log(`[prod-timelist] ${prodTimelistCache.time_list?.length} horas`);
+          const parsed  = JSON.parse(body);
+          const station = String(parsed.station_id ?? DEFAULT_STATION);
+          prodTimelistCacheByStation.set(station, parsed);
+          console.log(`[prod-timelist] ${parsed.time_list?.length} horas (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1701,10 +1772,10 @@
       return;
     }
 
-    // GET /api/productivity-timelist
+    // GET /api/productivity-timelist?station=X
     if (urlPath === '/api/productivity-timelist') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(prodTimelistCache || { time_list: [] }));
+      res.end(JSON.stringify(prodTimelistCacheByStation.get(stationParam(req)) || { time_list: [] }));
       return;
     }
 
@@ -1717,11 +1788,13 @@
           const payload = JSON.parse(body);
           const key = payload.hora;
           if (!key) throw new Error('Missing hora field');
-          prodIndividualCache[key] = payload;
+          const station = String(payload.station_id ?? DEFAULT_STATION);
+          const slot = getProdIndividualSlot(station);
+          slot[key] = payload;
           // Keep only last 24 hours
-          const keys = Object.keys(prodIndividualCache).sort();
-          if (keys.length > 24) keys.slice(0, keys.length - 24).forEach(k => delete prodIndividualCache[k]);
-          console.log(`[prod-individual] ${key}: ${payload.records?.length} registros`);
+          const keys = Object.keys(slot).sort();
+          if (keys.length > 24) keys.slice(0, keys.length - 24).forEach(k => delete slot[k]);
+          console.log(`[prod-individual] ${key}: ${payload.records?.length} registros (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -1752,16 +1825,17 @@
       return;
     }
 
-    // GET /api/productivity-individual — serves per-hour operator productivity to dashboard
+    // GET /api/productivity-individual?station=X — serves per-hour operator productivity to dashboard
     if (urlPath === '/api/productivity-individual') {
-      const keys = Object.keys(prodIndividualCache);
+      const slot = getProdIndividualSlot(stationParam(req));
+      const keys = Object.keys(slot);
       if (!keys.length) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'No data yet — open SPX page with Tampermonkey active' }));
         return;
       }
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify({ hours: prodIndividualCache }));
+      res.end(JSON.stringify({ hours: slot }));
       return;
     }
 

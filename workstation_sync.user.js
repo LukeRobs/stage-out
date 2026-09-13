@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Workstation Productivity → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/workstation_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/workstation_sync.user.js
 // @description  Sincroniza produtividade por workstation com o dashboard
@@ -16,6 +16,8 @@
 
   const SERVER_BASE = 'https://stage-out.onrender.com';
   const INTERVAL    = 60 * 1000; // 60s
+  // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
+  const STATION_ID  = '10963'; // SoC_PE_Jaboatão dos Guararapes
 
   // Endpoint para lista de workstations (paginado — busca todas as páginas)
   const WS_API   = '/api/wfm/admin/workstation/productivity/productivity_workstation_list';
@@ -129,6 +131,7 @@
         startTime:  start_time,
         endTime:    end_time,
         fetchedAt:  Date.now(),
+        station_id: STATION_ID,
       });
     } catch (e) {
       dot.textContent      = '⚠️ Erro WS';

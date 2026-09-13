@@ -446,6 +446,9 @@ table.hm-t th.hm-total-h{color:var(--blue);border-left:2px solid var(--border2)}
 
 <script>
 // ── Config ────────────────────────────────────────────────────────────────
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
 const REFRESH = 60_000;
 
 // ── Turnos ────────────────────────────────────────────────────────────────
@@ -551,8 +554,8 @@ async function loadData() {
   setLoading(true);
   try {
     const [indRes, tlRes, metaRes] = await Promise.all([
-      fetch('/api/productivity-individual'),
-      fetch('/api/productivity-timelist'),
+      fetch(`/api/productivity-individual?station=${STATION}`),
+      fetch(`/api/productivity-timelist?station=${STATION}`),
       fetch('/api/productivity-meta'),
     ]);
     if (!indRes.ok) throw new Error(`HTTP ${indRes.status}`);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Productivity Individual → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/productivity_individual_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/productivity_individual_sync.user.js
 // @description  Sincroniza produtividade individual por hora com o dashboard
@@ -16,6 +16,8 @@
 
   const SERVER_BASE   = 'https://stage-out.onrender.com';
   const INTERVAL      = 60 * 1000;
+  // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
+  const STATION_ID    = '10963'; // SoC_PE_Jaboatão dos Guararapes
   const API_URL       = '/api/wfm/admin/workstation/productivity/productivity_individual_list';
   const ACTIVITY_TYPE = 12;
   const PAGE_SIZE     = 50;
@@ -116,7 +118,7 @@
       method  : 'POST',
       url     : SERVER_BASE + '/api/productivity-timelist',
       headers : { 'Content-Type': 'application/json' },
-      data    : JSON.stringify({ time_list, fetchedAt: Date.now() }),
+      data    : JSON.stringify({ time_list, fetchedAt: Date.now(), station_id: STATION_ID }),
       onload  : r => console.log(`[ProdInd] timelist: ${time_list.length} horas → ${r.status}`),
       onerror : () => console.warn('[ProdInd] timelist: server offline'),
     });
@@ -179,6 +181,7 @@
           records,
           total:      records.length,
           fetchedAt:  Date.now(),
+          station_id: STATION_ID,
         };
         const ok = await sendToServer(payload, w.hora);
 

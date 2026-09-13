@@ -884,6 +884,10 @@ const ZONE_RGBA = {
   other:    [139, 92,  246],
 };
 
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
+
 // ── State ──────────────────────────────────────────────────────────────
 let allAreas       = [];
 let reportData     = null;
@@ -2427,7 +2431,7 @@ function render() {
 async function loadData() {
   try {
     const [stageRes, reportRes, profileRes] = await Promise.all([
-      fetch('/api/stage-in'),
+      fetch(`/api/stage-in?station=${STATION}`),
       fetch('/api/report-data').catch(() => null),
       fetch('/api/profile-data').catch(() => null),
     ]);

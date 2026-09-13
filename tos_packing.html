@@ -756,6 +756,10 @@ function exportAllTOs() {
   a.click();
 }
 
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
+
 // ── State ──────────────────────────────────────────────────────────────
 let groups        = [];
 let sortKey       = 'duracao';
@@ -1220,7 +1224,7 @@ const MAX_AGE_HOURS = 24;
 
 async function loadData() {
   try {
-    const res  = await fetch('/api/tos-packing');
+    const res  = await fetch(`/api/tos-packing?station=${STATION}`);
     if (!res.ok) return;
     const data = await res.json();
     if (data.error) return;

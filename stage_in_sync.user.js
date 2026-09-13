@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Inbound Staging Area → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_in_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_in_sync.user.js
 // @description  Sincroniza dados do Inbound Staging Area com o dashboard
@@ -16,6 +16,8 @@
   const SERVER_BASE = 'https://stage-out.onrender.com';
   const API_URL     = '/api/in-station/inbound_staging_area/list';
   const INTERVAL    = 60 * 1000; // 60s
+  // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
+  const STATION_ID  = '10963'; // SoC_PE_Jaboatão dos Guararapes
 
   async function fetchAll() {
     const res = await fetch(API_URL, {
@@ -26,7 +28,7 @@
     });
     const json = await res.json();
     if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
-    return { list: json.data.list, total: json.data.total, fetchedAt: Date.now() };
+    return { list: json.data.list, total: json.data.total, fetchedAt: Date.now(), station_id: STATION_ID };
   }
 
   function sendToServer(data) {

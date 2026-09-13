@@ -559,6 +559,10 @@ function getQueueInfo(trip) {
   };
 }
 
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
+
 // ── State ──────────────────────────────────────────────────────────────
 let allItems     = [];
 let activeFilter = 'all';
@@ -814,7 +818,7 @@ function render() {
 // ── Load ────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [qRes, tRes] = await Promise.all([fetch('/api/queue'), fetch('/api/trips')]);
+    const [qRes, tRes] = await Promise.all([fetch(`/api/queue?station=${STATION}`), fetch(`/api/trips?station=${STATION}`)]);
     if (!qRes.ok) return;
 
     const [qData, tData] = await Promise.all([qRes.json(), tRes.json()]);

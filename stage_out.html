@@ -485,8 +485,11 @@ body {
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════════════════════
-const API_URL      = '/api/stage-out';
-const CAGE_API_URL = '/api/cage-data';
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION       = '10963'; // SoC_PE_Jaboatão dos Guararapes
+const API_URL       = `/api/stage-out?station=${STATION}`;
+const CAGE_API_URL  = '/api/cage-data';
 
 
 // ═══════════════════════════════════════════════════════════════

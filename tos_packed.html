@@ -726,7 +726,7 @@ function getSortVal(to, key, now) {
 
 async function loadStagingMap() {
   try {
-    const res = await fetch('/api/stage-out');
+    const res = await fetch(`/api/stage-out?station=${STATION}`);
     if (!res.ok) return;
     const data = await res.json();
     if (data.error) return;
@@ -1274,6 +1274,10 @@ function toggleFarolFilter(key) {
   renderReport();
 }
 
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
+
 // ── Load data ──────────────────────────────────────────────────────────
 // TOs "Packed sem staging" há mais de MAX_AGE_HOURS provavelmente já foram
 // endereçadas/despachadas na vida real, mas o endpoint general_to/outbound/search
@@ -1289,7 +1293,7 @@ let lastRenderAt = 0;
 
 async function loadData() {
   try {
-    const res  = await fetch('/api/tos-packed');
+    const res  = await fetch(`/api/tos-packed?station=${STATION}`);
     if (!res.ok) return;
     const data = await res.json();
     if (data.error) return;

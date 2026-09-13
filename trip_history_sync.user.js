@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Trip History → Transbordo Dashboard
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_history_sync.user.js
 // @description  Sincroniza histórico de Linehaul trips com o dashboard Transbordo
@@ -17,6 +17,8 @@
   const API_URL    = '/api/admin/transportation/trip/history/list';
   const INTERVAL   = 5 * 60 * 1000; // 5 minutos
   const DAYS_BACK  = 7;              // últimos 7 dias
+  // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
+  const STATION_ID = '10963'; // SoC_PE_Jaboatão dos Guararapes
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -50,7 +52,7 @@
       method:  'POST',
       url:     SERVER_URL,
       headers: { 'Content-Type': 'application/json' },
-      data:    JSON.stringify({ list, total, fetchedAt: Date.now() }),
+      data:    JSON.stringify({ list, total, fetchedAt: Date.now(), station_id: STATION_ID }),
       onload: r => {
         if (r.status === 200) {
           dot.textContent      = '✅ Histórico ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });

@@ -347,6 +347,10 @@ function actInfo(type) {
   return ACTIVITY[type] || { label: `Tipo ${type}`, cls: 'packing', color: 'var(--blue)' };
 }
 
+// Estação que este dashboard exibe — cada estação tem sua própria cópia deste
+// arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
+const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
+
 // ── State ────────────────────────────────────────────────────────────────
 let allWS       = [];
 let allOperators = [];
@@ -361,7 +365,7 @@ let maxProd     = 1;
 async function loadData() {
   document.getElementById('loadingSpinner').style.display = '';
   try {
-    const res  = await fetch('/api/workstation');
+    const res  = await fetch(`/api/workstation?station=${STATION}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
