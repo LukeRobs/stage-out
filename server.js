@@ -723,6 +723,16 @@
     ['SOC- SP8 SÃO BERNADO', 'SOC-SP8 / SP5'],
     ['SOC- CS1 IATAJAÍ', 'SOC-CS1'],
     ['SOC- CE_itaitinga', 'SOC-CE3'],
+    // Complementos — nomes reais (SPX) que não batiam com a lista original acima.
+    ['LM Hub_PB_JoãoPessoa_Industrial', 'HUB-LPB-04'],
+    ['SoC_SP_São Bernardo do Campo', 'SOC-SP8'],
+    ['XPT_PE_Goiana', 'XPT-LPE-90'],
+    ['SoC_RS_Gravataí_02', 'SOC-RS2'],
+    ['LM Hub_BA_Salvador_Retiro', 'SOC-BA19'],
+    ['LM Hub_AL_Maceió_01', 'HUB-LAL-01'],
+    ['SoC_GO_Goiânia_02', 'SOC-GO2'],
+    ['SoC_ES_Viana', 'SOC-ES1'],
+    ['SoC_SC_Itajaí', 'SOC-CS1'],
   ];
   const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
   function normalizeDestKey(s) {
