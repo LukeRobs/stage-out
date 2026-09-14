@@ -615,14 +615,17 @@
     if (added) { pruneSacasLog(); scheduleSacasLogSave(); }
   }
 
-  // ── SACAS → Google Sheets (arquivo bruto, só para guardar o dado) ────────────
-  // Aba "db" da planilha compartilhada pelo usuário. Isso é só um export/arquivo — não é
-  // lido de volta pelo dashboard (que continua servido por sacasLogByStation em memória +
-  // sacas_log.json em disco). Grava em lote a cada SACAS_SHEET_FLUSH_MS (pedido: 3h em 3h),
-  // nunca linha a linha, pra não estourar cota da API do Sheets.
+  // ── SACAS → Google Sheets (arquivo + recuperação pós-restart) ────────────────
+  // Aba "db" da planilha compartilhada pelo usuário. O dashboard continua sendo servido só
+  // por sacasLogByStation em memória — a planilha não é consultada a cada request. Mas como
+  // o Render pode reiniciar o processo a qualquer momento (plano free "dorme", redeploys,
+  // crash) e isso zera a memória (perdendo o que ainda não tinha sido escrito em disco), a
+  // planilha funciona como a cópia durável: gravamos em lote a cada SACAS_SHEET_FLUSH_MS
+  // (nunca linha a linha, pra não estourar cota da API) e, no boot do processo,
+  // loadSacasLogFromSheet() lê ela de volta e recompõe a memória — ver mais abaixo.
   const SACAS_SHEET_ID       = '1rOT258Ndy3Olv4XHoL8kZhNTvzhbooTiAIYCFQJ-sWc';
   const SACAS_SHEET_RANGE    = 'db!A:J';
-  const SACAS_SHEET_FLUSH_MS = 3 * 60 * 60 * 1000; // 3h
+  const SACAS_SHEET_FLUSH_MS = 10 * 60 * 1000; // 10min — janela curta de perda em caso de restart
   let sacasPendingRows = []; // linhas já formatadas, aguardando o próximo flush
 
   // O servidor roda em UTC (Render); o horário de Brasília é fixo em UTC-3 (sem horário de
@@ -638,6 +641,16 @@
   function fmtDtComplete(ts) {
     const p = brtParts(ts, 0);
     return `${p.y}-${pad2(p.mo)}-${pad2(p.day)} ${pad2(p.h)}:${pad2(p.mi)}:${pad2(p.s)}`;
+  }
+  // Inverso de fmtDtComplete — usado só na recuperação pós-restart (ver loadSacasLogFromSheet).
+  // Confirmado empiricamente que values.get devolve essa coluna como string "YYYY-MM-DD H:MM:SS"
+  // (FORMATTED_VALUE, o padrão da API) mesmo a célula tendo virado um datetime de verdade —
+  // o Sheets só derruba o zero à esquerda da hora, por isso a hora aceita 1 ou 2 dígitos.
+  function parseDtComplete(str) {
+    const m = String(str || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{1,2}):(\d{2}):(\d{2})$/);
+    if (!m) return null;
+    const [, y, mo, d, h, mi, s] = m.map(Number);
+    return Math.floor(Date.UTC(y, mo - 1, d, h, mi, s) / 1000) + BRT_OFFSET_SEC;
   }
   function turnoAjustadoOf(ts) {
     const h = brtParts(ts, 0).h;
@@ -804,7 +817,49 @@
       console.log('[sacas-sheet] cabeçalho gravado na aba "db"');
     } catch (e) { console.error('[sacas-sheet] falha ao verificar/gravar cabeçalho:', e.message); }
   }
+
+  // Recuperação pós-restart: lê a planilha inteira e recompõe sacasLogByStation com o que
+  // estiver faltando (nunca sobrescreve o que já está em memória/disco — só preenche
+  // buracos). É isso que garante que um turno inteiro não "suma" do dashboard só porque o
+  // processo reiniciou entre um flush e outro: mesmo que a memória volte vazia, a planilha
+  // (gravada a cada SACAS_SHEET_FLUSH_MS) tem quase tudo, e é recarregada aqui no boot.
+  // weight/operator/status não são colunas da planilha — ficam com valor neutro ao
+  // recarregar (o dashboard de SACAS não usa esses campos, só quantity/pack_name/complete_time
+  // /dest_station_name).
+  async function loadSacasLogFromSheet() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const token = await getServiceAccountToken();
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent('db!A2:J1000000')}`;
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
+      const rows = (await resp.json()).values || [];
+      let restored = 0;
+      rows.forEach(r => {
+        const complete_time = parseDtComplete(r[0]);
+        const to_number     = r[1];
+        if (!complete_time || !to_number) return;
+        const log = getSacasLog(r[9] || DEFAULT_STATION);
+        if (log.has(to_number)) return; // já tem em memória (mais recente/completo) — não sobrescreve
+        log.set(to_number, {
+          to_number,
+          complete_time,
+          dest_station_name: r[2] || '',
+          quantity: parseInt(r[3], 10) || 0,
+          pack_name: r[4] || '',
+          weight: 0,
+          operator: '',
+          status: 'Packed',
+        });
+        restored++;
+      });
+      pruneSacasLog();
+      if (restored) console.log(`[sacas-sheet] ${restored} registros recuperados da planilha (recomposição pós-restart)`);
+    } catch (e) { console.error('[sacas-sheet] falha ao recarregar da planilha:', e.message); }
+  }
+
   ensureSacasSheetHeader();
+  loadSacasLogFromSheet();
 
   async function flushSacasSheet() {
     if (!sacasPendingRows.length) return;
