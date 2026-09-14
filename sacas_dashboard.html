@@ -236,7 +236,7 @@ table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,
   <div class="header-icon">&#x1F9FA;</div>
   <div class="header-title">
     <h1>Produtividade de Sacas</h1>
-    <p>SPX EXPRESS &middot; % DE SACAS SOBRE TOs PACKED &middot; POR DIA OPERACIONAL E TURNO</p>
+    <p>SPX EXPRESS &middot; % DE PACOTES EM SACA SOBRE O TOTAL EMBALADO &middot; POR DIA OPERACIONAL E TURNO</p>
   </div>
   <div class="header-right">
     <span class="meta-tag" id="metaTag">&mdash;</span>
@@ -287,34 +287,34 @@ table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,
     <div class="section">
       <div class="kpi-row">
         <div class="kpi-card k-total" data-cls="ALL">
-          <div class="kpi-label">Total TOs Packed</div>
+          <div class="kpi-label">Total de Pacotes</div>
           <div class="kpi-value" id="kpiTotal">0</div>
-          <div class="kpi-sub">no per&iacute;odo/turno selecionado</div>
+          <div class="kpi-sub" id="kpiTotalSub">no per&iacute;odo/turno selecionado</div>
         </div>
         <div class="kpi-card k-saca" data-cls="SACA">
-          <div class="kpi-label">TOs Saca</div>
+          <div class="kpi-label">Pacotes em Saca</div>
           <div class="kpi-value" id="kpiSaca">0</div>
-          <div class="kpi-sub">classificadas como saca</div>
+          <div class="kpi-sub" id="kpiSacaSub">classificados como saca</div>
         </div>
         <div class="kpi-card k-nao" data-cls="NAO_SACA">
-          <div class="kpi-label">TOs N&atilde;o Saca</div>
+          <div class="kpi-label">Pacotes em Outro Unitizador</div>
           <div class="kpi-value" id="kpiNao">0</div>
-          <div class="kpi-sub">demais tipos de embalagem</div>
+          <div class="kpi-sub" id="kpiNaoSub">demais tipos de embalagem</div>
         </div>
         <div class="kpi-card k-pct" data-cls="SACA">
           <div class="kpi-label">% Sacas</div>
           <div class="kpi-value" id="kpiPct">0%</div>
-          <div class="kpi-sub">saca / (saca + n&atilde;o saca)</div>
+          <div class="kpi-sub">pacotes saca / (saca + outro unitizador)</div>
         </div>
         <div class="kpi-card k-pctn" data-cls="NAO_SACA">
-          <div class="kpi-label">% N&atilde;o Saca</div>
+          <div class="kpi-label">% Outro Unitizador</div>
           <div class="kpi-value" id="kpiPctN">0%</div>
-          <div class="kpi-sub">n&atilde;o saca / (saca + n&atilde;o saca)</div>
+          <div class="kpi-sub">outro unitizador / (saca + outro unitizador)</div>
         </div>
       </div>
       <div class="warn-banner" id="semClassBanner" data-cls="SEM_CLASS" style="display:none">
         <span>&#x26A0;&#xFE0F;</span>
-        <span><b id="semClassCount">0</b> TOs Packed sem classifica&ccedil;&atilde;o de tipo (SPX n&atilde;o informou o campo) &mdash; <u>n&atilde;o entram</u> no c&aacute;lculo de % Sacas. Clique para ver a lista.</span>
+        <span><b id="semClassCount">0</b> sem classifica&ccedil;&atilde;o de tipo de unitizador (SPX n&atilde;o informou o campo) &mdash; <u>n&atilde;o entram</u> no c&aacute;lculo de % Sacas. Clique para ver a lista.</span>
       </div>
     </div>
 
@@ -324,7 +324,7 @@ table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,
       <div class="turno-table-wrap">
         <table class="data-tbl">
           <thead><tr>
-            <th>Turno</th><th>Total TOs Packed</th><th>TOs Saca</th><th>TOs N&atilde;o Saca</th><th>% Saca</th>
+            <th>Turno</th><th>TOs</th><th>Total Pacotes</th><th>Pacotes Saca</th><th>Pacotes N&atilde;o Saca</th><th>% Saca</th>
           </tr></thead>
           <tbody id="turnoTblBody"></tbody>
         </table>
@@ -335,16 +335,16 @@ table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,
     <div class="section">
       <div class="section-title">Evolu&ccedil;&atilde;o por Dia Operacional</div>
       <div class="evo-legend">
-        <span><i style="background:var(--orange)"></i> Sacas</span>
-        <span><i style="background:#4b4b52"></i> N&atilde;o Saca</span>
-        <span style="color:var(--dim)">altura da barra = volume total &middot; n&uacute;mero no topo = % Sacas</span>
+        <span><i style="background:var(--orange)"></i> Pacotes em Saca</span>
+        <span><i style="background:#4b4b52"></i> Pacotes em Outro Unitizador</span>
+        <span style="color:var(--dim)">altura da barra = pacotes totais no dia &middot; n&uacute;mero no topo = % Sacas</span>
       </div>
       <div class="evo-chart" id="evoChart"></div>
     </div>
 
     <!-- Day x Turno matrix -->
     <div class="section">
-      <div class="section-title">Dia Operacional &times; Turno &mdash; % Sacas (clique numa c&eacute;lula para filtrar)</div>
+      <div class="section-title">Dia Operacional &times; Turno &mdash; % Sacas por Pacotes (clique numa c&eacute;lula para filtrar)</div>
       <div class="turno-table-wrap">
         <table class="data-tbl">
           <thead><tr><th>Dia Operacional</th><th>T1</th><th>T2</th><th>T3</th><th>Total</th></tr></thead>
@@ -375,7 +375,7 @@ table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,
       <div class="tbl-scroll">
         <table class="data-tbl">
           <thead><tr>
-            <th>TO</th><th>Tipo</th><th>Status</th><th>Conclu&iacute;do (PACKED)</th>
+            <th>TO</th><th>Tipo</th><th>Pacotes</th><th>Status</th><th>Conclu&iacute;do (PACKED)</th>
             <th>Dia Operacional</th><th>Turno</th><th>Destino</th><th>Esta&ccedil;&atilde;o</th>
           </tr></thead>
           <tbody id="allTblBody"></tbody>
@@ -509,17 +509,25 @@ function baseFiltered() {
   });
 }
 
+// A métrica de negócio é sobre PACOTES dentro do unitizador, não sobre contagem de TOs
+// (uma TO pode carregar dezenas de pacotes num único saco/carrinho) — ex.: 20.000 pacotes
+// no período, 15.000 em saca = 75% de sacas, mesmo que o número de TOs saca/não-saca seja
+// bem diferente disso. Contagem de TOs é mantida como informação secundária (tos/tosSaca/
+// tosNao/tosSem), útil operacionalmente, mas nunca entra no cálculo de %.
 function aggregate(list) {
   let saca = 0, nao = 0, sem = 0, pac = 0;
+  let tosSaca = 0, tosNao = 0, tosSem = 0;
   list.forEach(r => {
-    if (r.cls === 'SACA') saca++;
-    else if (r.cls === 'NAO_SACA') nao++;
-    else sem++;
-    pac += r.quantity || 0;
+    const q = r.quantity || 0;
+    pac += q;
+    if (r.cls === 'SACA')          { saca += q; tosSaca++; }
+    else if (r.cls === 'NAO_SACA') { nao  += q; tosNao++;  }
+    else                            { sem  += q; tosSem++;  }
   });
   const denom = saca + nao;
   return {
-    total: list.length, saca, nao, sem, pac,
+    pac, saca, nao, sem,
+    tos: list.length, tosSaca, tosNao, tosSem,
     pctSaca: denom ? (saca / denom * 100) : 0,
     pctNao:  denom ? (nao  / denom * 100) : 0,
   };
@@ -530,16 +538,20 @@ function render() {
   const scoped = baseFiltered();
   const agg    = aggregate(scoped);
 
-  document.getElementById('kpiTotal').textContent = agg.total.toLocaleString('pt-BR');
+  document.getElementById('kpiTotal').textContent = agg.pac.toLocaleString('pt-BR');
+  document.getElementById('kpiTotalSub').textContent = `${agg.tos.toLocaleString('pt-BR')} TOs no período/turno`;
   document.getElementById('kpiSaca').textContent  = agg.saca.toLocaleString('pt-BR');
+  document.getElementById('kpiSacaSub').textContent = `${agg.tosSaca.toLocaleString('pt-BR')} TOs classificadas como saca`;
   document.getElementById('kpiNao').textContent   = agg.nao.toLocaleString('pt-BR');
+  document.getElementById('kpiNaoSub').textContent = `${agg.tosNao.toLocaleString('pt-BR')} TOs com outro tipo`;
   document.getElementById('kpiPct').textContent   = agg.pctSaca.toFixed(1) + '%';
   document.getElementById('kpiPctN').textContent  = agg.pctNao.toFixed(1) + '%';
 
   const banner = document.getElementById('semClassBanner');
   if (agg.sem > 0) {
     banner.style.display = 'flex';
-    document.getElementById('semClassCount').textContent = agg.sem.toLocaleString('pt-BR');
+    document.getElementById('semClassCount').textContent =
+      `${agg.sem.toLocaleString('pt-BR')} pacotes (${agg.tosSem.toLocaleString('pt-BR')} TOs)`;
   } else banner.style.display = 'none';
 
   document.querySelectorAll('.kpi-card[data-cls]').forEach(el => {
@@ -563,7 +575,8 @@ function renderTurnoTable(scoped) {
     const active = filters.turno === tk;
     return `<tr data-clickable class="${active ? 'row-active' : ''}" onclick="setTurnoFilter('${tk}')">
       <td><span class="turno-pill ${tk.toLowerCase()}">${tk}</span></td>
-      <td class="mono">${a.total}</td>
+      <td class="mono">${a.tos}</td>
+      <td class="mono">${a.pac}</td>
       <td class="mono">${a.saca}</td>
       <td class="mono">${a.nao}</td>
       <td class="pct-cell">${a.pctSaca.toFixed(1)}%<span class="pct-bar-wrap"><span class="pct-bar" style="width:${Math.min(100,a.pctSaca)}%"></span></span></td>
@@ -571,7 +584,7 @@ function renderTurnoTable(scoped) {
   }).join('');
   const totalAgg = aggregate(scoped);
   const totalRow = `<tr class="row-total" data-clickable onclick="setTurnoFilter('ALL')">
-    <td>TOTAL</td><td class="mono">${totalAgg.total}</td><td class="mono">${totalAgg.saca}</td>
+    <td>TOTAL</td><td class="mono">${totalAgg.tos}</td><td class="mono">${totalAgg.pac}</td><td class="mono">${totalAgg.saca}</td>
     <td class="mono">${totalAgg.nao}</td>
     <td class="pct-cell">${totalAgg.pctSaca.toFixed(1)}%<span class="pct-bar-wrap"><span class="pct-bar" style="width:${Math.min(100,totalAgg.pctSaca)}%"></span></span></td>
   </tr>`;
@@ -595,16 +608,16 @@ function renderEvolution() {
       (!filters.destino.trim() || (r.dest_station_name || '').toLowerCase().includes(filters.destino.trim().toLowerCase())));
     return { dk, agg: aggregate(list) };
   });
-  const maxTotal = Math.max(...perDay.map(d => d.agg.total), 1);
+  const maxTotal = Math.max(...perDay.map(d => d.agg.pac), 1);
   const MAX_H = 150;
 
   chart.innerHTML = perDay.map(({ dk, agg }) => {
-    const h = Math.max(3, Math.round(agg.total / maxTotal * MAX_H));
-    const sacaH = agg.total ? Math.round(h * (agg.saca / agg.total)) : 0;
+    const h = Math.max(3, Math.round(agg.pac / maxTotal * MAX_H));
+    const sacaH = agg.pac ? Math.round(h * (agg.saca / agg.pac)) : 0;
     const naoH  = Math.max(0, h - sacaH);
     const active = filters.matrixDay === dk;
-    return `<div class="evo-col${active ? ' col-active' : ''}" onclick="isolateDay('${dk}')" title="${fmtDayShort(dk)} · ${agg.total} TOs">
-      <div class="evo-pct">${agg.total ? agg.pctSaca.toFixed(0) + '%' : ''}</div>
+    return `<div class="evo-col${active ? ' col-active' : ''}" onclick="isolateDay('${dk}')" title="${fmtDayShort(dk)} · ${agg.pac} pacotes (${agg.tos} TOs)">
+      <div class="evo-pct">${agg.pac ? agg.pctSaca.toFixed(0) + '%' : ''}</div>
       <div class="evo-bar-stack" style="height:${h}px">
         <div class="evo-seg-nao" style="height:${naoH}px"></div>
         <div class="evo-seg-saca" style="height:${sacaH}px"></div>
@@ -629,8 +642,8 @@ function renderMatrix() {
     const cells = ['T1', 'T2', 'T3', 'ALL'].map(tk => {
       const a = pctFor(dk, tk);
       const active = filters.matrixDay === dk && (filters.turno === tk || (tk === 'ALL' && filters.turno === 'ALL'));
-      const label = a.total ? a.pctSaca.toFixed(0) + '%' : '—';
-      return `<td class="matrix-cell${active ? ' active' : ''}" title="${a.saca}/${a.total} TOs" onclick="clickMatrixCell('${dk}','${tk}')">${label}</td>`;
+      const label = a.pac ? a.pctSaca.toFixed(0) + '%' : '—';
+      return `<td class="matrix-cell${active ? ' active' : ''}" title="${a.saca}/${a.saca + a.nao} pacotes (${a.tos} TOs)" onclick="clickMatrixCell('${dk}','${tk}')">${label}</td>`;
     }).join('');
     return `<tr><td>${fmtDayShort(dk)} <span style="color:var(--dim);font-size:10px">(${dk})</span></td>${cells}</tr>`;
   }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--dim)">Sem dias no período</td></tr>`;
@@ -638,13 +651,13 @@ function renderMatrix() {
 
 function renderValidation(scoped, agg) {
   const grid   = document.getElementById('valGrid');
-  const sumOk  = (agg.saca + agg.nao + agg.sem) === agg.total;
+  const sumOk  = (agg.saca + agg.nao + agg.sem) === agg.pac;
   const outOfRange = enriched.length - baseFiltered().length; // apenas informativo: quantos ficaram fora do filtro atual
   grid.innerHTML = `
     <div class="val-card ${sumOk ? 'ok' : 'err'}">
-      <div class="vtitle">Total = Saca + N&atilde;o Saca + Sem Classifica&ccedil;&atilde;o</div>
+      <div class="vtitle">Total Pacotes = Saca + N&atilde;o Saca + Sem Classifica&ccedil;&atilde;o</div>
       <div class="vval">${sumOk ? '&#10003; Consistente' : '&#10007; Inconsistente'}</div>
-      <div class="vsub">${agg.total} = ${agg.saca} + ${agg.nao} + ${agg.sem}</div>
+      <div class="vsub">${agg.pac} = ${agg.saca} + ${agg.nao} + ${agg.sem}</div>
     </div>
     <div class="val-card ${window.__invalidCount ? 'err' : 'ok'}">
       <div class="vtitle">TOs sem timestamp v&aacute;lido de PACKED</div>
@@ -681,6 +694,7 @@ function renderAllTable(scoped) {
     <tr>
       <td class="mono" style="font-weight:700">${r.to_number}</td>
       <td><span class="pill ${pillOf(r.cls)}">${labelOf(r.cls)}</span></td>
+      <td class="mono">${r.quantity || 0}</td>
       <td style="color:var(--muted)">${r.status || '—'}</td>
       <td class="mono" style="color:var(--muted)">${fmtDateTime(r.complete_time)}</td>
       <td class="mono">${fmtDayShort(r.dayKey)}</td>
@@ -781,10 +795,11 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   let list = baseFiltered();
   if (filters.kpiCls !== 'ALL') list = list.filter(r => r.cls === filters.kpiCls);
   if (q) list = list.filter(r => [r.to_number, r.dest_station_name, r.operator, r.pack_name].some(v => (v || '').toLowerCase().includes(q)));
-  const header = ['TO', 'Tipo', 'Status', 'Concluído (PACKED)', 'Dia Operacional', 'Turno', 'Destino', 'Estação'];
+  const header = ['TO', 'Tipo', 'Pacotes', 'Status', 'Concluído (PACKED)', 'Dia Operacional', 'Turno', 'Destino', 'Estação'];
   const rows = list.map(r => [
     r.to_number,
     r.cls === 'SACA' ? 'Saca' : r.cls === 'NAO_SACA' ? 'Não Saca' : 'Sem Classificação',
+    r.quantity || 0,
     r.status || '', fmtDateTime(r.complete_time), r.dayKey, r.turno, r.dest_station_name || '', STATION_LABEL,
   ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
   const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
