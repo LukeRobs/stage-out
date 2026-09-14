@@ -651,11 +651,7 @@
     const p = brtParts(ts, 6);
     return `${pad2(p.day)}/${pad2(p.mo)}/${p.y}`;
   }
-  // Canal: só 3 baldes hoje (confirmado com o usuário) — "Sort Code" fica em branco de
-  // propósito, porque não é derivável do nome do destino (não bate com nenhuma transformação
-  // simples — ex.: o sufixo numérico de "XPT-LPB-90" não existe em "XPT_PB_Patos") e parece
-  // vir de uma tabela de referência mantida à parte pelo time; preenchido manualmente até
-  // surgir uma fonte confiável pra automatizar.
+  // Canal: só 3 baldes hoje (confirmado com o usuário).
   function canalOf(destName) {
     const n = destName || '';
     if (/hub/i.test(n)) return 'Hub';
@@ -663,6 +659,91 @@
     if (/^soc/i.test(n)) return 'SOC';
     return '';
   }
+
+  // Tabela de referência destino → sort code, passada manualmente pelo usuário (não é
+  // derivável do nome do destino por nenhuma transformação — confirmado). Normalizamos os
+  // dois lados (acento/maiúscula/espaço/underscore/hífen) na hora de comparar porque os nomes
+  // reais de dest_station_name (LM Hub_/XPT_) batem quase exatamente com essa lista, mas com
+  // pequenas variações de formatação; a seção FANOUT_SOC já veio com nomes de convenção
+  // bem diferente da que o SPX usa hoje (sem acento, sem sufixo numérico) — pode não casar.
+  const SORT_CODE_TABLE = [
+    ['LM Hub_AL_Arapiraca', 'HUB-LAL-03'],
+    ['LM Hub_AL_Maceió_04', 'HUB-LAL-04'],
+    ['LM Hub_AL_Maceió_02', 'HUB-LAL-02'],
+    ['LM Hub_CE_Caucaia', 'HUB-LCE-02'],
+    ['LM Hub_CE_Fortaleza_Cajazeiras', 'HUB-LCE-01'],
+    ['LM Hub_CE_Fortaleza-02', 'HUB-LCE-05'],
+    ['LM Hub_CE_Juazeiro do Norte', 'HUB-LCE-04'],
+    ['LM Hub_PB_Campina Grande', 'HUB-LPB-02'],
+    ['LM Hub_PB_João Pessoa_Gramame', 'HUB-LPB-03'],
+    ['LM Hub_PE_Carpina', 'HUB-LPE-08'],
+    ['LM Hub_PE_Caruaru_Cidade_Alta', 'HUB-LPE-04'],
+    ['LM Hub_PE_Garanhuns', 'HUB-LPE-06'],
+    ['LM Hub_PE_Recife_Cabo de Santo A', 'HUB-LPE-02'],
+    ['LM Hub_PE_Recife_Guabiraba', 'HUB-LPE-03'],
+    ['LM Hub_PE_Recife_Muribeca', 'HUB-LPE-11'],
+    ['LM Hub_PE_Recife_Jaboatão', 'HUB-LPE-07'],
+    ['LM Hub_PE_Recife_Paulista', 'HUB-LPE-12'],
+    ['LM Hub_PI_Teresina_02', 'HUB-LPI-02'],
+    ['LM Hub_RN_FX_Natal_03', 'HUB-LRN-03-X'],
+    ['LM Hub_RN_Natal_01', 'HUB-LRN-01'],
+    ['LM Hub_RN_Natal_03', 'HUB-LRN-03'],
+    ['LM Hub_SE_Aracaju_01', 'HUB-LSE-01'],
+    ['LM Hub_SE_Aracaju_02', 'HUB-LSE-03'],
+    ['XPT_AL_Maragogi', 'XPT-LAL-90'],
+    ['XPT_AL_União dos Palmares', 'XPT-LAL-91'],
+    ['XPT_PB_Guarabira', 'XPT-LPB-91'],
+    ['XPT_PB_Itabaiana', 'XPT-LPB-92'],
+    ['XPT_PB_Cajazeiras', 'XPT-LPB-93'],
+    ['XPT_PB_Taperoá', 'XPT-LPB-94'],
+    ['XPT_PB_Patos', 'XPT-LPB-90'],
+    ['XPT_PE_Afogados da Ingazeira', 'XPT-LPE-96'],
+    ['XPT_PE_Arcoverde', 'XPT-LPE-93'],
+    ['XPT_PE_Goiana - Timbaúba', 'XPT-LPE-90'],
+    ['XPT_PE_Palmares_02', 'XPT-LPE-92'],
+    ['XPT_PE_Serra Talhada', 'XPT-LPE-94'],
+    ['XPT_PE_Vitória de Santo Antão', 'XPT-LPE-91'],
+    ['XPT_RN_São Gonçalo do Amarante', 'XPT-LRN-90'],
+    ['XPT_RN_Açu', 'XPT-LRN-92'],
+    ['XPT_RN_Goianinha', 'XPT-LRN-93'],
+    ['XPT_RN_Caicó', 'XPT-LRN-94'],
+    ['CorreiosLM', 'CorreiosLM'],
+    ['FBS_PE_Jaboatão dos Guararapes', 'FBS-PE3'],
+    ['J&TNewLM', 'J&TNewLM'],
+    ['SOC SP_Cravinhos', 'SOC-SP5'],
+    ['SOC SP_Louveira', 'SOC-SP7'],
+    ['SOC BA_Simões Filho', 'SOC-BA2'],
+    ['SOC BA_Salvador Retiro', 'SOC-BA19'],
+    ['LM HUB BA_Simões Filho', 'SOC-BA17'],
+    ['SOC MG_ Betim', 'SOC-MG2'],
+    ['SOC PR_Curitiba', 'SOC-PR1'],
+    ['SOC RS_Gravatai', 'SOC-RS2'],
+    ['SOC RJ_ Duque de Caxias', 'SOC-RJ2'],
+    ['SOC GO_Goiania', 'SOC-GO2/PA-03=SP8'], // dado 2x pelo usuário com códigos diferentes — mantido o último
+    ['SOC- SP8 SÃO BERNADO', 'SOC-SP8 / SP5'],
+    ['SOC- CS1 IATAJAÍ', 'SOC-CS1'],
+    ['SOC- CE_itaitinga', 'SOC-CE3'],
+  ];
+  const DIACRITICS_RE = new RegExp('[̀-ͯ]', 'g');
+  function normalizeDestKey(s) {
+    return (s || '')
+      .normalize('NFD').replace(DIACRITICS_RE, '') // remove acentos
+      .toLowerCase()
+      .replace(/[\s_-]+/g, ' ')
+      .trim();
+  }
+  const SORT_CODE_MAP = new Map(SORT_CODE_TABLE.map(([name, code]) => [normalizeDestKey(name), code]));
+  const sortCodeMisses = new Set(); // evita logar o mesmo destino sem match toda hora
+  function sortCodeOf(destName) {
+    const code = SORT_CODE_MAP.get(normalizeDestKey(destName));
+    if (code) return code;
+    if (destName && !sortCodeMisses.has(destName)) {
+      sortCodeMisses.add(destName);
+      console.warn(`[sacas-sheet] sem Sort Code cadastrado para destino: "${destName}"`);
+    }
+    return '';
+  }
+
   function buildSacasSheetRow(to) {
     const destino = to.dest_station_name || to.receiver || '';
     return [
@@ -674,7 +755,7 @@
       turnoAjustadoOf(to.complete_time),
       dataAjustadaOf(to.complete_time),
       canalOf(destino),
-      '', // Sort Code — preenchido manualmente (ver comentário acima)
+      sortCodeOf(destino),
       String(to.current_station_id ?? DEFAULT_STATION),
     ];
   }
