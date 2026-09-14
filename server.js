@@ -610,8 +610,122 @@
         status:            to.status || 'Packed',
       });
       added++;
+      sacasPendingRows.push(buildSacasSheetRow(to));
     });
     if (added) { pruneSacasLog(); scheduleSacasLogSave(); }
+  }
+
+  // ── SACAS → Google Sheets (arquivo bruto, só para guardar o dado) ────────────
+  // Aba "db" da planilha compartilhada pelo usuário. Isso é só um export/arquivo — não é
+  // lido de volta pelo dashboard (que continua servido por sacasLogByStation em memória +
+  // sacas_log.json em disco). Grava em lote a cada SACAS_SHEET_FLUSH_MS (pedido: 3h em 3h),
+  // nunca linha a linha, pra não estourar cota da API do Sheets.
+  const SACAS_SHEET_ID       = '1rOT258Ndy3Olv4XHoL8kZhNTvzhbooTiAIYCFQJ-sWc';
+  const SACAS_SHEET_RANGE    = 'db!A:J';
+  const SACAS_SHEET_FLUSH_MS = 3 * 60 * 60 * 1000; // 3h
+  let sacasPendingRows = []; // linhas já formatadas, aguardando o próximo flush
+
+  // O servidor roda em UTC (Render); o horário de Brasília é fixo em UTC-3 (sem horário de
+  // verão desde 2019), então aplicamos o offset na mão em vez de depender do timezone do
+  // processo — replica exatamente a mesma regra de turno/dia operacional que o dashboard já
+  // aplica no navegador (lá, via timezone local do próprio navegador do usuário).
+  const BRT_OFFSET_SEC = 3 * 3600;
+  function brtParts(ts, extraShiftHours) {
+    const d = new Date((ts - BRT_OFFSET_SEC - (extraShiftHours || 0) * 3600) * 1000);
+    return { y: d.getUTCFullYear(), mo: d.getUTCMonth() + 1, day: d.getUTCDate(), h: d.getUTCHours(), mi: d.getUTCMinutes(), s: d.getUTCSeconds() };
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function fmtDtComplete(ts) {
+    const p = brtParts(ts, 0);
+    return `${p.y}-${pad2(p.mo)}-${pad2(p.day)} ${pad2(p.h)}:${pad2(p.mi)}:${pad2(p.s)}`;
+  }
+  function turnoAjustadoOf(ts) {
+    const h = brtParts(ts, 0).h;
+    if (h >= 6 && h < 14) return 'T1';
+    if (h >= 14 && h < 22) return 'T2';
+    return 'T3';
+  }
+  function dataAjustadaOf(ts) {
+    // Mesma regra de dia operacional (06:00–05:59:59) usada no dashboard: desloca -6h antes
+    // de tomar a data.
+    const p = brtParts(ts, 6);
+    return `${pad2(p.day)}/${pad2(p.mo)}/${p.y}`;
+  }
+  // Canal: só 3 baldes hoje (confirmado com o usuário) — "Sort Code" fica em branco de
+  // propósito, porque não é derivável do nome do destino (não bate com nenhuma transformação
+  // simples — ex.: o sufixo numérico de "XPT-LPB-90" não existe em "XPT_PB_Patos") e parece
+  // vir de uma tabela de referência mantida à parte pelo time; preenchido manualmente até
+  // surgir uma fonte confiável pra automatizar.
+  function canalOf(destName) {
+    const n = destName || '';
+    if (/hub/i.test(n)) return 'Hub';
+    if (/^xpt/i.test(n)) return 'XPT';
+    if (/^soc/i.test(n)) return 'SOC';
+    return '';
+  }
+  function buildSacasSheetRow(to) {
+    const destino = to.dest_station_name || to.receiver || '';
+    return [
+      fmtDtComplete(to.complete_time),
+      to.to_number,
+      destino,
+      to.quantity || 0,
+      to.pack_name || '',
+      turnoAjustadoOf(to.complete_time),
+      dataAjustadaOf(to.complete_time),
+      canalOf(destino),
+      '', // Sort Code — preenchido manualmente (ver comentário acima)
+      String(to.current_station_id ?? DEFAULT_STATION),
+    ];
+  }
+
+  async function appendSacasRowsToSheet(rows) {
+    if (!rows.length) return;
+    if (!SERVICE_ACCOUNT) { console.warn('[sacas-sheet] Service Account não configurado, pulando flush'); return; }
+    const token = await getServiceAccountToken();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(SACAS_SHEET_RANGE)}:append?valueInputOption=USER_ENTERED`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    });
+    if (!resp.ok) throw new Error(`Sheets append ${resp.status}: ${await resp.text()}`);
+  }
+
+  const SACAS_SHEET_HEADER = ['dt_complete', 'to_number', 'dest_station_name', 'orders', 'unitizador', 'Turno ajustado', 'Data ajustada', 'Canal', 'Sort Code', 'Estação'];
+  async function ensureSacasSheetHeader() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const token = await getServiceAccountToken();
+      const headerRange = 'db!A1:J1';
+      const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(headerRange)}`;
+      const getResp = await fetch(getUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!getResp.ok) throw new Error(`Sheets get ${getResp.status}: ${await getResp.text()}`);
+      const data = await getResp.json();
+      if (data.values && data.values.length) return; // já tem cabeçalho, não sobrescreve
+      const putUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(headerRange)}?valueInputOption=USER_ENTERED`;
+      const putResp = await fetch(putUrl, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [SACAS_SHEET_HEADER] }),
+      });
+      if (!putResp.ok) throw new Error(`Sheets put ${putResp.status}: ${await putResp.text()}`);
+      console.log('[sacas-sheet] cabeçalho gravado na aba "db"');
+    } catch (e) { console.error('[sacas-sheet] falha ao verificar/gravar cabeçalho:', e.message); }
+  }
+  ensureSacasSheetHeader();
+
+  async function flushSacasSheet() {
+    if (!sacasPendingRows.length) return;
+    const batch = sacasPendingRows;
+    sacasPendingRows = [];
+    try {
+      await appendSacasRowsToSheet(batch);
+      console.log(`[sacas-sheet] ${batch.length} linhas gravadas na planilha`);
+    } catch (e) {
+      console.error('[sacas-sheet] falha ao gravar, devolvendo para a fila:', e.message);
+      sacasPendingRows = batch.concat(sacasPendingRows); // tenta de novo no próximo ciclo
+    }
   }
 
   // ── TO detail on-demand (relay) ─────────────────────────────────────
@@ -1975,5 +2089,10 @@
   }
   setInterval(safeScheduleRevalidation, REVALIDATE_INTERVAL_MS);
   setTimeout(safeScheduleRevalidation, 15 * 1000); // primeira leva logo apos o boot, sem esperar 5min
+
+  function safeFlushSacasSheet() {
+    flushSacasSheet().catch(e => console.error('[sacas-sheet] erro inesperado (ignorado):', e.message));
+  }
+  setInterval(safeFlushSacasSheet, SACAS_SHEET_FLUSH_MS);
 
   server.listen(PORT, () => console.log(`Dashboard → http://localhost:${PORT}`));
