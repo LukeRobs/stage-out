@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Produtividade de Sacas</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0D0D0D;
+  --surface: #1A1A1C;
+  --surface2: #2A2A2C;
+  --border: #2A2A2C;
+  --border2: #3a3a3e;
+  --text: #F2F2F3;
+  --muted: #BFBFC3;
+  --dim: #7d7d82;
+  --orange: #FA4C00;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --radius: 10px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-icon {
+  width: 36px; height: 36px;
+  background: var(--orange);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.header-title h1 { font-size: 15px; font-weight: 700; }
+.header-title p  { font-size: 11px; color: var(--muted); }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.meta-tag {
+  font-size: 11px; color: var(--muted);
+  background: var(--surface2); padding: 3px 8px; border-radius: 20px;
+  border: 1px solid var(--border2);
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  position: sticky; top: 65px; z-index: 99;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+  padding: 6px 13px; border-radius: 20px; font-size: 12px; cursor: pointer;
+  transition: all .15s; white-space: nowrap; font-weight: 600;
+}
+.chip:hover { color: var(--text); border-color: #55555a; }
+.chip.active { background: rgba(250,76,0,.14); border-color: var(--orange); color: var(--orange); }
+.chip.chip-t1.active { background: rgba(59,130,246,.14); border-color: var(--blue); color: #7fb2ff; }
+.chip.chip-t2.active { background: rgba(139,92,246,.14); border-color: var(--purple); color: #b79bfa; }
+.chip.chip-t3.active { background: rgba(250,76,0,.14); border-color: var(--orange); color: var(--orange); }
+.date-input {
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+  padding: 6px 10px; border-radius: 8px; font-size: 12px; outline: none;
+}
+.date-sep { color: var(--dim); font-size: 12px; }
+.search-input {
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; outline: none; min-width: 180px;
+}
+.search-input:focus, .date-input:focus { border-color: var(--orange); }
+.clear-btn {
+  background: none; border: 1px solid var(--border2); color: var(--dim);
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+}
+.clear-btn:hover { color: var(--text); border-color: #55555a; }
+.filter-summary {
+  font-size: 11px; color: var(--muted); margin-left: auto; text-align: right;
+}
+.filter-summary b { color: var(--orange); }
+
+/* ── Content ── */
+.content { padding: 20px 24px 40px; }
+.section { margin-bottom: 26px; }
+.section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 12px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+/* ── KPI cards ── */
+.kpi-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 20px; position: relative; overflow: hidden; cursor: pointer;
+  transition: border-color .15s, transform .1s;
+}
+.kpi-card:hover { border-color: var(--border2); }
+.kpi-card.kpi-active { border-color: var(--orange); }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.kpi-card.k-total::before { background: var(--blue); }
+.kpi-card.k-saca::before  { background: var(--orange); }
+.kpi-card.k-nao::before   { background: var(--purple); }
+.kpi-card.k-pct::before   { background: var(--orange); }
+.kpi-card.k-pctn::before  { background: var(--muted); }
+.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 8px; }
+.kpi-value { font-size: 34px; font-weight: 800; line-height: 1; }
+.k-total .kpi-value { color: var(--blue); }
+.k-saca  .kpi-value { color: var(--orange); }
+.k-nao   .kpi-value { color: #b79bfa; }
+.k-pct   .kpi-value { color: var(--orange); }
+.k-pctn  .kpi-value { color: var(--muted); }
+.kpi-sub { font-size: 11px; color: var(--dim); margin-top: 6px; }
+
+/* ── Warning banner ── */
+.warn-banner {
+  margin-top: 12px; background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.35);
+  color: var(--yellow); border-radius: var(--radius); padding: 12px 16px; font-size: 12px;
+  cursor: pointer; display: flex; align-items: center; gap: 10px;
+}
+.warn-banner b { font-size: 15px; }
+.warn-banner:hover { background: rgba(245,158,11,.14); }
+
+/* ── Turno table ── */
+.turno-table-wrap, .top-tbl-wrap {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+table.data-tbl { width: 100%; border-collapse: collapse; }
+table.data-tbl th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--muted); padding: 10px 14px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--border); font-weight: 600;
+}
+table.data-tbl td { padding: 10px 14px; border-bottom: 1px solid rgba(42,42,44,.7); vertical-align: middle; font-size: 12.5px; }
+table.data-tbl tr:last-child td { border-bottom: none; }
+table.data-tbl tbody tr[data-clickable] { cursor: pointer; transition: background .15s; }
+table.data-tbl tbody tr[data-clickable]:hover td { background: rgba(255,255,255,.03); }
+table.data-tbl tbody tr.row-active td { background: rgba(250,76,0,.10); box-shadow: inset 3px 0 0 var(--orange); }
+table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,.02); }
+.pct-cell { font-family: monospace; font-weight: 700; }
+.pct-bar-wrap { display:inline-block; width:60px; height:5px; background:var(--surface2); border-radius:3px; overflow:hidden; margin-left:8px; vertical-align:middle; }
+.pct-bar { height:100%; background: var(--orange); }
+
+/* ── Evolution chart ── */
+.evo-chart {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px 14px 10px; display: flex; align-items: flex-end; gap: 6px; height: 210px;
+  overflow-x: auto;
+}
+.evo-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 34px; flex-shrink: 0; cursor: pointer; }
+.evo-pct { font-size: 10px; color: var(--orange); font-weight: 700; margin-bottom: 3px; }
+.evo-bar-stack { width: 100%; display: flex; flex-direction: column-reverse; border-radius: 3px 3px 0 0; overflow: hidden; min-height: 3px; }
+.evo-seg-saca { background: var(--orange); }
+.evo-seg-nao  { background: #4b4b52; }
+.evo-lbl { font-size: 9px; color: var(--dim); margin-top: 5px; white-space: nowrap; }
+.evo-col.col-active .evo-lbl { color: var(--orange); font-weight: 700; }
+.evo-legend { display:flex; gap:16px; padding: 8px 14px 2px; font-size: 11px; color: var(--muted); }
+.evo-legend span { display:inline-flex; align-items:center; gap:6px; }
+.evo-legend i { width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+/* ── Matrix table ── */
+.matrix-cell { cursor: pointer; border-radius: 6px; padding: 4px 8px !important; text-align: center; font-family: monospace; }
+.matrix-cell:hover { background: rgba(255,255,255,.05); }
+.matrix-cell.active { background: rgba(250,76,0,.18); box-shadow: inset 0 0 0 1px var(--orange); }
+
+/* ── Validation panel ── */
+.val-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.val-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.val-card .vtitle { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 6px; }
+.val-card .vval { font-size: 20px; font-weight: 800; }
+.val-card.ok .vval { color: var(--green); }
+.val-card.err .vval { color: var(--red); }
+.val-card .vsub { font-size: 10.5px; color: var(--dim); margin-top: 4px; }
+
+/* ── All TOs table ── */
+.tbl-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.tbl-toolbar .search-input { flex: 1; min-width: 200px; }
+.export-btn {
+  background: var(--surface2); border: 1px solid var(--border2); color: var(--muted);
+  padding: 7px 16px; border-radius: 8px; font-size: 12px; cursor: pointer;
+}
+.export-btn:hover { color: var(--text); border-color: #55555a; }
+.tbl-scroll { max-height: 520px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.tbl-scroll table.data-tbl th { position: sticky; top: 0; z-index: 1; }
+.pill { display:inline-block; padding: 2px 9px; border-radius: 10px; font-size: 10.5px; font-weight: 700; }
+.pill-saca { background: rgba(250,76,0,.15); color: var(--orange); border: 1px solid rgba(250,76,0,.3); }
+.pill-nao  { background: rgba(139,92,246,.15); color: #b79bfa; border: 1px solid rgba(139,92,246,.3); }
+.pill-sem  { background: rgba(245,158,11,.15); color: var(--yellow); border: 1px solid rgba(245,158,11,.3); }
+.turno-pill { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+.turno-pill.t1 { background: rgba(59,130,246,.15); color: #7fb2ff; }
+.turno-pill.t2 { background: rgba(139,92,246,.15); color: #b79bfa; }
+.turno-pill.t3 { background: rgba(250,76,0,.15); color: var(--orange); }
+.mono { font-family: monospace; }
+.tbl-count { font-size: 11px; color: var(--dim); margin-top: 6px; text-align: right; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 70px 20px; color: var(--muted); }
+.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px;
+  text-align: left; line-height: 1.8;
+}
+
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .val-grid { grid-template-columns: repeat(2,1fr); }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">&#x1F9FA;</div>
+  <div class="header-title">
+    <h1>Produtividade de Sacas</h1>
+    <p>SPX EXPRESS &middot; % DE SACAS SOBRE TOs PACKED &middot; POR DIA OPERACIONAL E TURNO</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">&mdash;</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div class="filter-row">
+    <button class="chip" data-preset="today">Hoje</button>
+    <button class="chip" data-preset="yesterday">Ontem</button>
+    <button class="chip" data-preset="7d">&Uacute;ltimos 7 dias</button>
+    <button class="chip" data-preset="30d">&Uacute;ltimos 30 dias</button>
+    <button class="chip" data-preset="all">Tudo</button>
+    <span class="date-sep">|</span>
+    <input type="date" class="date-input" id="fromDate">
+    <span class="date-sep">&rarr;</span>
+    <input type="date" class="date-input" id="toDate">
+  </div>
+  <div class="filter-row">
+    <button class="chip active" data-turno="ALL">Turno: TOTAL</button>
+    <button class="chip chip-t1" data-turno="T1">T1 (06&ndash;14h)</button>
+    <button class="chip chip-t2" data-turno="T2">T2 (14&ndash;22h)</button>
+    <button class="chip chip-t3" data-turno="T3">T3 (22&ndash;06h)</button>
+    <span class="date-sep">|</span>
+    <input type="text" class="search-input" id="destinoFilter" placeholder="Filtrar por destino...">
+    <button class="clear-btn" id="clearFiltersBtn">Limpar filtros</button>
+    <span class="filter-summary" id="filterSummary"></span>
+  </div>
+</div>
+
+<div class="content" id="content">
+  <div class="empty" id="emptyState">
+    <h2>&#x23F3; Aguardando dados</h2>
+    <p>Nenhuma TO Packed recebida ainda para esta esta&ccedil;&atilde;o.</p>
+    <code>
+      Este dashboard reaproveita o mesmo fluxo do <b>tos_sync.user.js</b> (TOs Packed).<br>
+      Nenhum script novo &eacute; necess&aacute;rio &mdash; basta manter uma aba do SPX aberta<br>
+      com o Tampermonkey ativo e aguardar a sincroniza&ccedil;&atilde;o.
+    </code>
+  </div>
+
+  <div id="dashBody" style="display:none">
+    <!-- KPIs -->
+    <div class="section">
+      <div class="kpi-row">
+        <div class="kpi-card k-total" data-cls="ALL">
+          <div class="kpi-label">Total TOs Packed</div>
+          <div class="kpi-value" id="kpiTotal">0</div>
+          <div class="kpi-sub">no per&iacute;odo/turno selecionado</div>
+        </div>
+        <div class="kpi-card k-saca" data-cls="SACA">
+          <div class="kpi-label">TOs Saca</div>
+          <div class="kpi-value" id="kpiSaca">0</div>
+          <div class="kpi-sub">classificadas como saca</div>
+        </div>
+        <div class="kpi-card k-nao" data-cls="NAO_SACA">
+          <div class="kpi-label">TOs N&atilde;o Saca</div>
+          <div class="kpi-value" id="kpiNao">0</div>
+          <div class="kpi-sub">demais tipos de embalagem</div>
+        </div>
+        <div class="kpi-card k-pct" data-cls="SACA">
+          <div class="kpi-label">% Sacas</div>
+          <div class="kpi-value" id="kpiPct">0%</div>
+          <div class="kpi-sub">saca / (saca + n&atilde;o saca)</div>
+        </div>
+        <div class="kpi-card k-pctn" data-cls="NAO_SACA">
+          <div class="kpi-label">% N&atilde;o Saca</div>
+          <div class="kpi-value" id="kpiPctN">0%</div>
+          <div class="kpi-sub">n&atilde;o saca / (saca + n&atilde;o saca)</div>
+        </div>
+      </div>
+      <div class="warn-banner" id="semClassBanner" data-cls="SEM_CLASS" style="display:none">
+        <span>&#x26A0;&#xFE0F;</span>
+        <span><b id="semClassCount">0</b> TOs Packed sem classifica&ccedil;&atilde;o de tipo (SPX n&atilde;o informou o campo) &mdash; <u>n&atilde;o entram</u> no c&aacute;lculo de % Sacas. Clique para ver a lista.</span>
+      </div>
+    </div>
+
+    <!-- Turno comparison -->
+    <div class="section">
+      <div class="section-title">Compara&ccedil;&atilde;o por Turno &mdash; clique numa linha para filtrar</div>
+      <div class="turno-table-wrap">
+        <table class="data-tbl">
+          <thead><tr>
+            <th>Turno</th><th>Total TOs Packed</th><th>TOs Saca</th><th>TOs N&atilde;o Saca</th><th>% Saca</th>
+          </tr></thead>
+          <tbody id="turnoTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Evolution -->
+    <div class="section">
+      <div class="section-title">Evolu&ccedil;&atilde;o por Dia Operacional</div>
+      <div class="evo-legend">
+        <span><i style="background:var(--orange)"></i> Sacas</span>
+        <span><i style="background:#4b4b52"></i> N&atilde;o Saca</span>
+        <span style="color:var(--dim)">altura da barra = volume total &middot; n&uacute;mero no topo = % Sacas</span>
+      </div>
+      <div class="evo-chart" id="evoChart"></div>
+    </div>
+
+    <!-- Day x Turno matrix -->
+    <div class="section">
+      <div class="section-title">Dia Operacional &times; Turno &mdash; % Sacas (clique numa c&eacute;lula para filtrar)</div>
+      <div class="turno-table-wrap">
+        <table class="data-tbl">
+          <thead><tr><th>Dia Operacional</th><th>T1</th><th>T2</th><th>T3</th><th>Total</th></tr></thead>
+          <tbody id="matrixTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Validation -->
+    <div class="section">
+      <div class="section-title">Valida&ccedil;&atilde;o da Regra</div>
+      <div class="val-grid" id="valGrid"></div>
+    </div>
+
+    <!-- All TOs -->
+    <div class="section">
+      <div class="section-title" style="border-bottom:none;margin-bottom:8px">
+        <span>TOs no C&aacute;lculo &mdash; Auditoria / Drill-down</span>
+      </div>
+      <div class="tbl-toolbar">
+        <input type="text" class="search-input" id="tableSearch" placeholder="Buscar por TO, destino, operador...">
+        <button class="chip" data-clsfilter="ALL">Todas</button>
+        <button class="chip" data-clsfilter="SACA">S&oacute; Saca</button>
+        <button class="chip" data-clsfilter="NAO_SACA">S&oacute; N&atilde;o Saca</button>
+        <button class="chip" data-clsfilter="SEM_CLASS">S&oacute; Sem Classifica&ccedil;&atilde;o</button>
+        <button class="export-btn" id="exportBtn">&#x2B07; CSV</button>
+      </div>
+      <div class="tbl-scroll">
+        <table class="data-tbl">
+          <thead><tr>
+            <th>TO</th><th>Tipo</th><th>Status</th><th>Conclu&iacute;do (PACKED)</th>
+            <th>Dia Operacional</th><th>Turno</th><th>Destino</th><th>Esta&ccedil;&atilde;o</th>
+          </tr></thead>
+          <tbody id="allTblBody"></tbody>
+        </table>
+      </div>
+      <div class="tbl-count" id="tblCount"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Estação exibida por este arquivo (mesmo padrão dos demais dashboards: cada
+// estação tem sua própria cópia deste HTML, mudando só essas duas constantes) ──
+const STATION       = '10963';
+const STATION_LABEL = 'SoC_PE_Jaboatão dos Guararapes';
+
+// ── Regra de dia operacional / turno (06:00–05:59:59) ───────────────────────
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function operationalDayKey(ts) {
+  const shifted = new Date(ts * 1000 - 6 * 3600 * 1000);
+  return `${shifted.getFullYear()}-${pad2(shifted.getMonth() + 1)}-${pad2(shifted.getDate())}`;
+}
+function turnoOf(ts) {
+  const h = new Date(ts * 1000).getHours();
+  if (h >= 6  && h < 14) return 'T1';
+  if (h >= 14 && h < 22) return 'T2';
+  return 'T3';
+}
+function dayKeyOffset(key, offsetDays) {
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + offsetDays);
+  return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+}
+function fmtDayShort(key) {
+  const [y, m, d] = key.split('-');
+  return `${d}/${m}`;
+}
+function fmtDateTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function classify(pack_name) {
+  const n = (pack_name || '').trim().toLowerCase();
+  if (!n) return 'SEM_CLASS';
+  return n === 'saca' ? 'SACA' : 'NAO_SACA';
+}
+function todayOpKey() { return operationalDayKey(Math.floor(Date.now() / 1000)); }
+
+// ── State ────────────────────────────────────────────────────────────────
+let rawList   = [];   // registros crus vindos do servidor (deduplicados por to_number)
+let enriched  = [];   // + dayKey, turno, cls
+let lastAt    = null;
+
+const filters = {
+  from: dayKeyOffset(todayOpKey(), -6),
+  to:   todayOpKey(),
+  turno: 'ALL',       // ALL | T1 | T2 | T3
+  destino: '',
+  kpiCls: 'ALL',      // filtro disparado ao clicar num KPI/turno-linha — afeta a tabela de auditoria
+  matrixDay: null,    // dia isolado ao clicar na matriz (combinado com turno)
+};
+
+// ── Carga de dados ───────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch(`/api/sacas-history?station=${STATION}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return;
+    lastAt = data.fetchedAt;
+    applyData(data);
+  } catch (e) { /* mantém última tela renderizada */ }
+}
+
+function applyData(data) {
+  // Dedup defensivo por to_number (o servidor já deduplica, mas validamos aqui de novo
+  // — ver painel de Validação, que reporta duplicados encontrados para auditoria).
+  const seen = new Map();
+  let dupCount = 0;
+  (data.list || []).forEach(r => {
+    if (!r || !r.to_number) return;
+    if (seen.has(r.to_number)) { dupCount++; return; }
+    seen.set(r.to_number, r);
+  });
+  rawList = [...seen.values()];
+  window.__dupCount = dupCount;
+
+  // Só entram no cálculo TOs com timestamp de conclusão válido (> 0)
+  const invalid = rawList.filter(r => !(r.complete_time > 0)).length;
+  window.__invalidCount = invalid;
+
+  enriched = rawList
+    .filter(r => r.complete_time > 0)
+    .map(r => ({
+      ...r,
+      dayKey: operationalDayKey(r.complete_time),
+      turno:  turnoOf(r.complete_time),
+      cls:    classify(r.pack_name),
+    }));
+
+  document.getElementById('emptyState').style.display = enriched.length ? 'none' : '';
+  document.getElementById('dashBody').style.display    = enriched.length ? '' : 'none';
+  if (!enriched.length) return;
+
+  const t  = new Date(data.fetchedAt);
+  const ts = t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('lastUpdated').textContent = ts;
+  document.getElementById('liveDot').className       = 'live-dot on';
+  document.getElementById('metaTag').textContent     = `${STATION_LABEL} · ${enriched.length} TOs no histórico · ${ts}`;
+
+  render();
+}
+
+// ── Pipeline de filtro ───────────────────────────────────────────────────
+function inRange(dayKey) {
+  if (filters.from && dayKey < filters.from) return false;
+  if (filters.to   && dayKey > filters.to)   return false;
+  return true;
+}
+
+function baseFiltered() {
+  const destino = filters.destino.trim().toLowerCase();
+  return enriched.filter(r => {
+    if (filters.matrixDay) { if (r.dayKey !== filters.matrixDay) return false; }
+    else if (!inRange(r.dayKey)) return false;
+    if (filters.turno !== 'ALL' && r.turno !== filters.turno) return false;
+    if (destino && !(r.dest_station_name || '').toLowerCase().includes(destino)) return false;
+    return true;
+  });
+}
+
+function aggregate(list) {
+  let saca = 0, nao = 0, sem = 0, pac = 0;
+  list.forEach(r => {
+    if (r.cls === 'SACA') saca++;
+    else if (r.cls === 'NAO_SACA') nao++;
+    else sem++;
+    pac += r.quantity || 0;
+  });
+  const denom = saca + nao;
+  return {
+    total: list.length, saca, nao, sem, pac,
+    pctSaca: denom ? (saca / denom * 100) : 0,
+    pctNao:  denom ? (nao  / denom * 100) : 0,
+  };
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function render() {
+  const scoped = baseFiltered();
+  const agg    = aggregate(scoped);
+
+  document.getElementById('kpiTotal').textContent = agg.total.toLocaleString('pt-BR');
+  document.getElementById('kpiSaca').textContent  = agg.saca.toLocaleString('pt-BR');
+  document.getElementById('kpiNao').textContent   = agg.nao.toLocaleString('pt-BR');
+  document.getElementById('kpiPct').textContent   = agg.pctSaca.toFixed(1) + '%';
+  document.getElementById('kpiPctN').textContent  = agg.pctNao.toFixed(1) + '%';
+
+  const banner = document.getElementById('semClassBanner');
+  if (agg.sem > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('semClassCount').textContent = agg.sem.toLocaleString('pt-BR');
+  } else banner.style.display = 'none';
+
+  document.querySelectorAll('.kpi-card[data-cls]').forEach(el => {
+    el.classList.toggle('kpi-active', filters.kpiCls === el.dataset.cls);
+  });
+  banner.classList.toggle('kpi-active', filters.kpiCls === 'SEM_CLASS');
+
+  renderTurnoTable(scoped);
+  renderEvolution();
+  renderMatrix();
+  renderValidation(scoped, agg);
+  renderAllTable(scoped);
+  renderFilterSummary();
+}
+
+function renderTurnoTable(scoped) {
+  const turnos = ['T1', 'T2', 'T3'];
+  const rows = turnos.map(tk => {
+    const list = scoped.filter(r => r.turno === tk);
+    const a = aggregate(list);
+    const active = filters.turno === tk;
+    return `<tr data-clickable class="${active ? 'row-active' : ''}" onclick="setTurnoFilter('${tk}')">
+      <td><span class="turno-pill ${tk.toLowerCase()}">${tk}</span></td>
+      <td class="mono">${a.total}</td>
+      <td class="mono">${a.saca}</td>
+      <td class="mono">${a.nao}</td>
+      <td class="pct-cell">${a.pctSaca.toFixed(1)}%<span class="pct-bar-wrap"><span class="pct-bar" style="width:${Math.min(100,a.pctSaca)}%"></span></span></td>
+    </tr>`;
+  }).join('');
+  const totalAgg = aggregate(scoped);
+  const totalRow = `<tr class="row-total" data-clickable onclick="setTurnoFilter('ALL')">
+    <td>TOTAL</td><td class="mono">${totalAgg.total}</td><td class="mono">${totalAgg.saca}</td>
+    <td class="mono">${totalAgg.nao}</td>
+    <td class="pct-cell">${totalAgg.pctSaca.toFixed(1)}%<span class="pct-bar-wrap"><span class="pct-bar" style="width:${Math.min(100,totalAgg.pctSaca)}%"></span></span></td>
+  </tr>`;
+  document.getElementById('turnoTblBody').innerHTML = rows + totalRow;
+}
+
+function daysInWindow() {
+  // Quando um dia foi isolado via matriz, mostra só ele; senão, todo o range do/até.
+  if (filters.matrixDay) return [filters.matrixDay];
+  const days = [...new Set(enriched.filter(r => inRange(r.dayKey)).map(r => r.dayKey))].sort();
+  return days;
+}
+
+function renderEvolution() {
+  const days = daysInWindow();
+  const chart = document.getElementById('evoChart');
+  if (!days.length) { chart.innerHTML = '<div class="empty" style="padding:20px"><p>Sem dias no período selecionado.</p></div>'; return; }
+
+  const perDay = days.map(dk => {
+    const list = enriched.filter(r => r.dayKey === dk && (filters.turno === 'ALL' || r.turno === filters.turno) &&
+      (!filters.destino.trim() || (r.dest_station_name || '').toLowerCase().includes(filters.destino.trim().toLowerCase())));
+    return { dk, agg: aggregate(list) };
+  });
+  const maxTotal = Math.max(...perDay.map(d => d.agg.total), 1);
+  const MAX_H = 150;
+
+  chart.innerHTML = perDay.map(({ dk, agg }) => {
+    const h = Math.max(3, Math.round(agg.total / maxTotal * MAX_H));
+    const sacaH = agg.total ? Math.round(h * (agg.saca / agg.total)) : 0;
+    const naoH  = Math.max(0, h - sacaH);
+    const active = filters.matrixDay === dk;
+    return `<div class="evo-col${active ? ' col-active' : ''}" onclick="isolateDay('${dk}')" title="${fmtDayShort(dk)} · ${agg.total} TOs">
+      <div class="evo-pct">${agg.total ? agg.pctSaca.toFixed(0) + '%' : ''}</div>
+      <div class="evo-bar-stack" style="height:${h}px">
+        <div class="evo-seg-nao" style="height:${naoH}px"></div>
+        <div class="evo-seg-saca" style="height:${sacaH}px"></div>
+      </div>
+      <div class="evo-lbl">${fmtDayShort(dk)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMatrix() {
+  const days = filters.matrixDay
+    ? [filters.matrixDay]
+    : [...new Set(enriched.filter(r => inRange(r.dayKey)).map(r => r.dayKey))].sort();
+  const destino = filters.destino.trim().toLowerCase();
+  function pctFor(dk, turno) {
+    const list = enriched.filter(r => r.dayKey === dk &&
+      (turno === 'ALL' || r.turno === turno) &&
+      (!destino || (r.dest_station_name || '').toLowerCase().includes(destino)));
+    return aggregate(list);
+  }
+  document.getElementById('matrixTblBody').innerHTML = days.map(dk => {
+    const cells = ['T1', 'T2', 'T3', 'ALL'].map(tk => {
+      const a = pctFor(dk, tk);
+      const active = filters.matrixDay === dk && (filters.turno === tk || (tk === 'ALL' && filters.turno === 'ALL'));
+      const label = a.total ? a.pctSaca.toFixed(0) + '%' : '—';
+      return `<td class="matrix-cell${active ? ' active' : ''}" title="${a.saca}/${a.total} TOs" onclick="clickMatrixCell('${dk}','${tk}')">${label}</td>`;
+    }).join('');
+    return `<tr><td>${fmtDayShort(dk)} <span style="color:var(--dim);font-size:10px">(${dk})</span></td>${cells}</tr>`;
+  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--dim)">Sem dias no período</td></tr>`;
+}
+
+function renderValidation(scoped, agg) {
+  const grid   = document.getElementById('valGrid');
+  const sumOk  = (agg.saca + agg.nao + agg.sem) === agg.total;
+  const outOfRange = enriched.length - baseFiltered().length; // apenas informativo: quantos ficaram fora do filtro atual
+  grid.innerHTML = `
+    <div class="val-card ${sumOk ? 'ok' : 'err'}">
+      <div class="vtitle">Total = Saca + N&atilde;o Saca + Sem Classifica&ccedil;&atilde;o</div>
+      <div class="vval">${sumOk ? '&#10003; Consistente' : '&#10007; Inconsistente'}</div>
+      <div class="vsub">${agg.total} = ${agg.saca} + ${agg.nao} + ${agg.sem}</div>
+    </div>
+    <div class="val-card ${window.__invalidCount ? 'err' : 'ok'}">
+      <div class="vtitle">TOs sem timestamp v&aacute;lido de PACKED</div>
+      <div class="vval">${window.__invalidCount || 0}</div>
+      <div class="vsub">exclu&iacute;das do c&aacute;lculo (n&atilde;o entram em nenhum dia/turno)</div>
+    </div>
+    <div class="val-card ${window.__dupCount ? 'err' : 'ok'}">
+      <div class="vtitle">TOs duplicadas detectadas</div>
+      <div class="vval">${window.__dupCount || 0}</div>
+      <div class="vsub">mesma TO recebida mais de uma vez (deduplicada por to_number)</div>
+    </div>
+    <div class="val-card ok">
+      <div class="vtitle">Fora do filtro atual</div>
+      <div class="vval">${outOfRange}</div>
+      <div class="vsub">TOs v&aacute;lidas no hist&oacute;rico, fora do per&iacute;odo/turno/destino selecionado</div>
+    </div>
+  `;
+}
+
+function renderAllTable(scoped) {
+  const q = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
+  let list = scoped;
+  if (filters.kpiCls !== 'ALL') list = list.filter(r => r.cls === filters.kpiCls);
+  if (q) {
+    list = list.filter(r => [r.to_number, r.dest_station_name, r.operator, r.pack_name]
+      .some(v => (v || '').toLowerCase().includes(q)));
+  }
+  list = [...list].sort((a, b) => b.complete_time - a.complete_time);
+
+  const pillOf = cls => cls === 'SACA' ? 'pill-saca' : cls === 'NAO_SACA' ? 'pill-nao' : 'pill-sem';
+  const labelOf = cls => cls === 'SACA' ? 'Saca' : cls === 'NAO_SACA' ? 'Não Saca' : 'Sem Classificação';
+
+  document.getElementById('allTblBody').innerHTML = list.slice(0, 3000).map(r => `
+    <tr>
+      <td class="mono" style="font-weight:700">${r.to_number}</td>
+      <td><span class="pill ${pillOf(r.cls)}">${labelOf(r.cls)}</span></td>
+      <td style="color:var(--muted)">${r.status || '—'}</td>
+      <td class="mono" style="color:var(--muted)">${fmtDateTime(r.complete_time)}</td>
+      <td class="mono">${fmtDayShort(r.dayKey)}</td>
+      <td><span class="turno-pill ${r.turno.toLowerCase()}">${r.turno}</span></td>
+      <td style="color:var(--muted)">${r.dest_station_name || '—'}</td>
+      <td style="color:var(--dim)">${STATION_LABEL}</td>
+    </tr>`).join('');
+
+  const countLbl = document.getElementById('tblCount');
+  countLbl.textContent = list.length > 3000
+    ? `mostrando 3000 de ${list.length} TOs (refine os filtros para ver o restante)`
+    : `${list.length} TOs`;
+}
+
+function renderFilterSummary() {
+  const parts = [];
+  parts.push(filters.matrixDay ? fmtDayShort(filters.matrixDay) : `${fmtDayShort(filters.from)}–${fmtDayShort(filters.to)}`);
+  if (filters.turno !== 'ALL') parts.push(filters.turno);
+  if (filters.destino.trim()) parts.push(`destino: "${filters.destino.trim()}"`);
+  if (filters.kpiCls !== 'ALL') parts.push(filters.kpiCls === 'SEM_CLASS' ? 'sem classificação' : filters.kpiCls === 'SACA' ? 'só saca' : 'só não saca');
+  document.getElementById('filterSummary').innerHTML = `Mostrando: <b>${parts.join(' · ')}</b>`;
+}
+
+// ── Interações de filtro ─────────────────────────────────────────────────
+function setTurnoFilter(tk) {
+  filters.turno = tk;
+  document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === tk));
+  render();
+}
+function isolateDay(dk) {
+  filters.matrixDay = filters.matrixDay === dk ? null : dk;
+  render();
+}
+function clickMatrixCell(dk, tk) {
+  filters.matrixDay = dk;
+  filters.turno = tk;
+  document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === tk));
+  render();
+}
+function setKpiClsFilter(cls) {
+  filters.kpiCls = filters.kpiCls === cls ? 'ALL' : cls;
+  render();
+  document.getElementById('dashBody').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+document.querySelectorAll('.kpi-card[data-cls]').forEach(el => {
+  el.addEventListener('click', () => setKpiClsFilter(el.dataset.cls));
+});
+document.getElementById('semClassBanner').addEventListener('click', () => setKpiClsFilter('SEM_CLASS'));
+document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(el => {
+  el.addEventListener('click', () => {
+    filters.kpiCls = el.dataset.clsfilter;
+    document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(c => c.classList.toggle('active', c === el));
+    render();
+  });
+});
+
+document.querySelectorAll('.chip[data-preset]').forEach(el => {
+  el.addEventListener('click', () => {
+    const today = todayOpKey();
+    filters.matrixDay = null;
+    if (el.dataset.preset === 'today')     { filters.from = today; filters.to = today; }
+    if (el.dataset.preset === 'yesterday') { const y = dayKeyOffset(today, -1); filters.from = y; filters.to = y; }
+    if (el.dataset.preset === '7d')        { filters.from = dayKeyOffset(today, -6); filters.to = today; }
+    if (el.dataset.preset === '30d')       { filters.from = dayKeyOffset(today, -29); filters.to = today; }
+    if (el.dataset.preset === 'all')       {
+      const days = [...new Set(enriched.map(r => r.dayKey))].sort();
+      filters.from = days[0] || today; filters.to = days[days.length - 1] || today;
+    }
+    document.getElementById('fromDate').value = filters.from;
+    document.getElementById('toDate').value   = filters.to;
+    render();
+  });
+});
+
+document.getElementById('fromDate').addEventListener('change', e => { filters.from = e.target.value; filters.matrixDay = null; render(); });
+document.getElementById('toDate').addEventListener('change',   e => { filters.to   = e.target.value; filters.matrixDay = null; render(); });
+document.getElementById('destinoFilter').addEventListener('input', e => { filters.destino = e.target.value; render(); });
+document.getElementById('tableSearch').addEventListener('input', () => renderAllTable(baseFiltered()));
+
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  filters.from = dayKeyOffset(todayOpKey(), -6);
+  filters.to = todayOpKey();
+  filters.turno = 'ALL';
+  filters.destino = '';
+  filters.kpiCls = 'ALL';
+  filters.matrixDay = null;
+  document.getElementById('fromDate').value = filters.from;
+  document.getElementById('toDate').value   = filters.to;
+  document.getElementById('destinoFilter').value = '';
+  document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === 'ALL'));
+  document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(c => c.classList.toggle('active', c.dataset.clsfilter === 'ALL'));
+  render();
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const q = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
+  let list = baseFiltered();
+  if (filters.kpiCls !== 'ALL') list = list.filter(r => r.cls === filters.kpiCls);
+  if (q) list = list.filter(r => [r.to_number, r.dest_station_name, r.operator, r.pack_name].some(v => (v || '').toLowerCase().includes(q)));
+  const header = ['TO', 'Tipo', 'Status', 'Concluído (PACKED)', 'Dia Operacional', 'Turno', 'Destino', 'Estação'];
+  const rows = list.map(r => [
+    r.to_number,
+    r.cls === 'SACA' ? 'Saca' : r.cls === 'NAO_SACA' ? 'Não Saca' : 'Sem Classificação',
+    r.status || '', fmtDateTime(r.complete_time), r.dayKey, r.turno, r.dest_station_name || '', STATION_LABEL,
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+  const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sacas_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+});
+
+document.getElementById('fromDate').value = filters.from;
+document.getElementById('toDate').value   = filters.to;
+
+loadData();
+setInterval(loadData, 30000);
+</script>
+</body>
+</html>

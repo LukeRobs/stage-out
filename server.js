@@ -536,6 +536,84 @@
     return { list: [...map.values()], total: map.size, fetchedAt };
   }
 
+  // ── SACAS productivity log — histórico durável de TOs que já foram Packed ─────
+  // Diferente do toPackedMap acima (que só guarda o que está "Packed AGORA" — podado por
+  // idade e evictado assim que a TO muda de status/é endereçada), esse log só ACRESCENTA:
+  // grava pra sempre (até SACAS_LOG_MAX_AGE_DAYS) o snapshot da TO no momento em que ela
+  // aparece pela 1ª vez com um complete_time válido. Sem isso, o dashboard de %SACA por dia
+  // operacional não teria como calcular a produção de dias anteriores — a TO já teria sumido
+  // do toPackedMap assim que fosse endereçada/despachada. Persistido em disco (best-effort)
+  // porque um restart no Render zeraria o histórico de produtividade, que é o dado principal
+  // desse dashboard (diferente dos outros módulos, que só mostram estado "ao vivo").
+  const sacasLogByStation  = new Map(); // station_id -> Map(to_number -> record)
+  const SACAS_LOG_MAX_AGE_DAYS = 60;
+  const SACAS_LOG_FILE = path.join(__dirname, 'sacas_log.json');
+
+  function getSacasLog(station) {
+    const key = String(station ?? DEFAULT_STATION);
+    if (!sacasLogByStation.has(key)) sacasLogByStation.set(key, new Map());
+    return sacasLogByStation.get(key);
+  }
+
+  function pruneSacasLog() {
+    const cutoffSec = Date.now() / 1000 - SACAS_LOG_MAX_AGE_DAYS * 86400;
+    for (const log of sacasLogByStation.values()) {
+      for (const [key, rec] of log) if (rec.complete_time < cutoffSec) log.delete(key);
+    }
+  }
+
+  let sacasLogSaveTimer = null;
+  function saveSacasLog() {
+    try {
+      const out = {};
+      for (const [station, log] of sacasLogByStation) out[station] = [...log.values()];
+      fs.writeFileSync(SACAS_LOG_FILE, JSON.stringify(out));
+    } catch (e) { console.error('[sacas-log] falha ao salvar:', e.message); }
+  }
+  function scheduleSacasLogSave() {
+    if (sacasLogSaveTimer) return;
+    sacasLogSaveTimer = setTimeout(() => { sacasLogSaveTimer = null; saveSacasLog(); }, 5000);
+  }
+
+  function loadSacasLog() {
+    try {
+      const raw = JSON.parse(fs.readFileSync(SACAS_LOG_FILE, 'utf8'));
+      for (const station of Object.keys(raw)) {
+        const log = getSacasLog(station);
+        (raw[station] || []).forEach(rec => { if (rec && rec.to_number) log.set(rec.to_number, rec); });
+      }
+      pruneSacasLog();
+      const total = [...sacasLogByStation.values()].reduce((s, l) => s + l.size, 0);
+      console.log(`[sacas-log] carregado do disco — ${total} TOs`);
+    } catch (e) { /* sem arquivo ainda (1ª execução) — segue com log vazio */ }
+  }
+  loadSacasLog();
+
+  // Alimentado a partir do MESMO payload que chega em /api/tos-packed-data (ver abaixo) —
+  // só grava TOs com complete_time (ou seja, já efetivamente Packed) e nunca sobrescreve um
+  // registro existente (a 1ª captura já tem o complete_time correto; sobrescrever abriria
+  // brecha pra um snapshot atrasado/inconsistente mudar retroativamente um dia já fechado).
+  function recordSacasLog(list) {
+    let added = 0;
+    (list || []).forEach(to => {
+      if (!to || !to.to_number || !to.complete_time) return;
+      const log = getSacasLog(to.current_station_id);
+      if (log.has(to.to_number)) return;
+      log.set(to.to_number, {
+        to_number:         to.to_number,
+        complete_time:     to.complete_time,
+        pack_name:         to.pack_name || '',
+        quantity:          to.quantity || 0,
+        weight:            to.weight || 0,
+        dest_station_name: to.dest_station_name || to.receiver || '',
+        operator:          to.operator || '',
+        status:            to.status || 'Packed',
+      });
+      added++;
+    });
+    if (added) { pruneSacasLog(); scheduleSacasLogSave(); }
+  }
+
   // ── TO detail on-demand (relay) ─────────────────────────────────────
   // O dashboard nao tem sessao no SPX, entao nao consegue chamar a API de
   // detalhe de pacotes de uma TO diretamente. Em vez disso: o dashboard
@@ -1052,6 +1130,7 @@
           const incoming = JSON.parse(body);
           mergeToRecords(toPackedMap, incoming.list, toEvictedSets.packed);
           toPackedCache = snapshotToCache(toPackedMap, incoming.fetchedAt || Date.now());
+          recordSacasLog(incoming.list);
           console.log(`[tos-packed] +${incoming.list?.length || 0} recebidos, ${toPackedMap.size} acumulados`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -1086,6 +1165,17 @@
       }
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify(filterByStationField(toPackedCache, 'current_station_id', stationParam(req))));
+      return;
+    }
+
+    // GET /api/sacas-history?station=X — histórico acumulado (não podado por eviction) de TOs
+    // Packed, usado pelo dashboard de produtividade de SACAS pra calcular %SACA por dia
+    // operacional/turno. Ver recordSacasLog() acima — populado a partir do mesmo payload de
+    // /api/tos-packed-data, então não precisa de nenhum script Tampermonkey novo.
+    if (urlPath === '/api/sacas-history') {
+      const log = getSacasLog(stationParam(req));
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ list: [...log.values()], total: log.size, fetchedAt: Date.now() }));
       return;
     }
 
