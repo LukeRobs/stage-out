@@ -952,8 +952,8 @@ function operationalHourSlots(baseDateObj) {
   const baseStr = calDateStrOf(baseDateObj);
   const nextStr = calDateStrOf(nextDateObj);
   const slots = [];
-  for (let h = 6; h <= 23; h++) slots.push({ h, realDateStr: baseStr, planDateStr: baseStr, wrap: false });
-  for (let h = 0; h <= 5; h++)  slots.push({ h, realDateStr: nextStr, planDateStr: baseStr, wrap: true });
+  for (let h = 6; h <= 23; h++) slots.push({ h, realDateStr: baseStr, planDateStr: baseStr });
+  for (let h = 0; h <= 5; h++)  slots.push({ h, realDateStr: nextStr, planDateStr: baseStr });
   return slots;
 }
 function calDateStrOf(d) { return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`; }
@@ -979,7 +979,7 @@ function renderHourly() {
   const planBySlot = slots.map(s => planMap.get(`${s.planDateStr}|${s.h}`) ?? null);
 
   const chart = ensureHourlyChart();
-  chart.data.labels = slots.map(s => s.wrap ? `${pad2(s.h)}h (${s.realDateStr.slice(0, 5)})` : `${pad2(s.h)}h`);
+  chart.data.labels = slots.map(s => `${pad2(s.h)}h`);
   chart.data.datasets[0].data = planBySlot;
   chart.data.datasets[1].data = realBySlot.map(r => r.saca);
   chart.data.datasets[2].data = slots.map((s, i) => {
@@ -995,7 +995,7 @@ function renderHourly() {
     const eficiencia = plan ? (real.pac / plan * 100) : null;
     const pct = plan ? (real.saca / plan * 100) : null;
     const pctColor = pct == null ? 'var(--faint)' : (pct >= HOURLY_TARGET_PCT ? 'var(--green)' : 'var(--red)');
-    const hourLabel = s.wrap ? `${pad2(s.h)}h <span style="color:var(--faint);font-size:10px">(${s.realDateStr.slice(0, 5)})</span>` : `${pad2(s.h)}h`;
+    const hourLabel = `${pad2(s.h)}h`;
     return `<tr>
       <td class="mono">${hourLabel}</td>
       <td class="mono">${plan != null ? plan.toLocaleString('pt-BR') : '—'}</td>
