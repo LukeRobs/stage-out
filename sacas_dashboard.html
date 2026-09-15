@@ -941,13 +941,19 @@ function ensureHourlyChart() {
 // seguinte) — mesma regra usada no resto do dashboard (operationalDayKey/turnoOf), só que
 // aqui precisamos da data de CALENDÁRIO de cada hora (não só a chave do dia operacional)
 // pra casar com a aba "Planejamento", que é indexada por data/hora de calendário.
+// ATENÇÃO: a aba "Planejamento" já grava a cauda 00h-05h com a MESMA data do dia
+// operacional selecionado (ex.: "14/09" hora 0-5, Turno=T3) — confirmado direto na
+// planilha, ela NÃO rola pra data de calendário seguinte. Já os dados REAIS (sacasLog)
+// usam timestamp de verdade, então 00h-05h da operacional "14/09" aconteceram de fato
+// no calendário 15/09. Por isso cada slot guarda duas chaves de data diferentes:
+// realDateStr (pra casar com o timestamp real) e planDateStr (pra casar com a planilha).
 function operationalHourSlots(baseDateObj) {
   const nextDateObj = new Date(baseDateObj.getFullYear(), baseDateObj.getMonth(), baseDateObj.getDate() + 1);
   const baseStr = calDateStrOf(baseDateObj);
   const nextStr = calDateStrOf(nextDateObj);
   const slots = [];
-  for (let h = 6; h <= 23; h++) slots.push({ h, dateStr: baseStr, wrap: false });
-  for (let h = 0; h <= 5; h++)  slots.push({ h, dateStr: nextStr, wrap: true });
+  for (let h = 6; h <= 23; h++) slots.push({ h, realDateStr: baseStr, planDateStr: baseStr, wrap: false });
+  for (let h = 0; h <= 5; h++)  slots.push({ h, realDateStr: nextStr, planDateStr: baseStr, wrap: true });
   return slots;
 }
 function calDateStrOf(d) { return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`; }
@@ -957,7 +963,7 @@ function renderHourly() {
   if (!dateInput || !dateInput.value) return;
   const [y, m, dd] = dateInput.value.split('-').map(Number);
   const slots = operationalHourSlots(new Date(y, m - 1, dd));
-  const slotIndex = new Map(slots.map((s, i) => [`${s.dateStr}|${s.h}`, i]));
+  const slotIndex = new Map(slots.map((s, i) => [`${s.realDateStr}|${s.h}`, i]));
 
   const realBySlot = slots.map(() => ({ pac: 0, saca: 0 }));
   rawList.forEach(r => {
@@ -970,10 +976,10 @@ function renderHourly() {
   });
 
   const planMap = new Map(planejamento.map(p => [`${p.data}|${p.hora}`, p.planejadoGeral]));
-  const planBySlot = slots.map(s => planMap.get(`${s.dateStr}|${s.h}`) ?? null);
+  const planBySlot = slots.map(s => planMap.get(`${s.planDateStr}|${s.h}`) ?? null);
 
   const chart = ensureHourlyChart();
-  chart.data.labels = slots.map(s => s.wrap ? `${pad2(s.h)}h (${s.dateStr.slice(0, 5)})` : `${pad2(s.h)}h`);
+  chart.data.labels = slots.map(s => s.wrap ? `${pad2(s.h)}h (${s.realDateStr.slice(0, 5)})` : `${pad2(s.h)}h`);
   chart.data.datasets[0].data = planBySlot;
   chart.data.datasets[1].data = realBySlot.map(r => r.saca);
   chart.data.datasets[2].data = slots.map((s, i) => {
@@ -989,7 +995,7 @@ function renderHourly() {
     const eficiencia = plan ? (real.pac / plan * 100) : null;
     const pct = plan ? (real.saca / plan * 100) : null;
     const pctColor = pct == null ? 'var(--faint)' : (pct >= HOURLY_TARGET_PCT ? 'var(--green)' : 'var(--red)');
-    const hourLabel = s.wrap ? `${pad2(s.h)}h <span style="color:var(--faint);font-size:10px">(${s.dateStr.slice(0, 5)})</span>` : `${pad2(s.h)}h`;
+    const hourLabel = s.wrap ? `${pad2(s.h)}h <span style="color:var(--faint);font-size:10px">(${s.realDateStr.slice(0, 5)})</span>` : `${pad2(s.h)}h`;
     return `<tr>
       <td class="mono">${hourLabel}</td>
       <td class="mono">${plan != null ? plan.toLocaleString('pt-BR') : '—'}</td>
