@@ -1452,6 +1452,32 @@
       return;
     }
 
+    // POST /api/sacas-backfill-data — TOs que já saíram de Packed (Transporting/Transported/
+    // Received/Partially Received/LHPacking/LHPacked) mas cujo complete_time original ainda
+    // está gravado no registro. Alimenta SÓ o recordSacasLog (histórico de SACAS) — nunca
+    // toPackedMap/toPackingMap, que continuam servindo exclusivamente tos_packed.html/
+    // tos_packing.html, sem nenhum risco de interferência entre os dois fluxos.
+    // current_station_id já vem sobrescrito pelo tos_sync.user.js com a estação confirmada
+    // via Packing/Packed (esses status pós-Packed podem trazer o current_station_id do
+    // destino, não de quem empacotou de verdade).
+    if (urlPath === '/api/sacas-backfill-data' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const incoming = JSON.parse(body);
+          recordSacasLog(incoming.list);
+          console.log(`[sacas-backfill] +${incoming.list?.length || 0} recebidos (status pós-Packed)`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
     // GET /api/tos-packing?station=X — serves packing data to dashboard (recortado por estacao;
     // o merge em si continua global — ver toPackingMap acima)
     if (urlPath === '/api/tos-packing') {

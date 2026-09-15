@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Management → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @description  Sincroniza TOs Packing e Packed com o dashboard local
@@ -59,9 +59,10 @@
   // Uma falha transitória (timeout, rate limit) num dia anterior não deve apagar
   // dados que já tínhamos coletado com sucesso — em vez de mandar [] pro servidor
   // e sobrescrever o cache bom, reaproveitamos o último resultado válido daquele dia.
-  const dayResultCache = { 1: new Map(), 2: new Map() }; // status -> Map(dateKey -> list)
+  const dayResultCache = {}; // status -> Map(dateKey -> list) — criado sob demanda por status
 
   async function fetchAll(status) {
+    if (!dayResultCache[status]) dayResultCache[status] = new Map();
     const cache = dayResultCache[status];
     const days  = Array.from({ length: DAYS_BACK }, (_, daysAgo) => getDayBounds(daysAgo));
     const validKeys = new Set(days.map(d => d.key));
@@ -109,6 +110,13 @@
     });
   }
 
+  // Estação inferida a partir do resultado (confiável) de Packing/Packed — usada pelo
+  // backfill de SACAS abaixo pra sobrescrever o current_station_id de status pós-Packed,
+  // que pode já apontar pro destino em vez de quem empacotou de verdade (confirmado: TOs
+  // em "Partially Received" mostram current_station_id do destino, mas sender continua
+  // sendo a estação de origem).
+  let myStationId = null;
+
   async function sync() {
     dot.textContent    = '🔄 Sincronizando TOs...';
     dot.style.background = '#ee4d2d';
@@ -119,10 +127,41 @@
       ]);
       sendToServer('/api/tos-packing-data', packing, 'Packing');
       sendToServer('/api/tos-packed-data',  packed,  'Packed');
+      myStationId = packing.list[0]?.current_station_id ?? packed.list[0]?.current_station_id ?? myStationId;
     } catch (e) {
       dot.textContent    = '⚠️ Erro API TOs';
       dot.style.background = '#cc7700';
       console.error('[TO Sync]', e);
+    }
+  }
+
+  // ── Backfill de SACAS ──────────────────────────────────────────────────
+  // status=2 (Packed) sozinho perde TOs que saem desse status rápido demais entre um
+  // ciclo de 60s e outro (confirmado: buracos de 7-18% na produção real). Esses status
+  // pós-Packed mantêm o complete_time (horário real de conclusão) gravado pra sempre —
+  // buscando eles também, fechamos os buracos retroativamente (dentro da janela de
+  // DAYS_BACK dias), sem depender de "flagrar" a TO ainda em Packed.
+  //   4  = Transporting        9  = Partially Received
+  //   5  = Transported         10 = LHPacking
+  //   6  = Received            11 = LHPacked
+  // Roda num intervalo bem mais espaçado que o sync principal — não precisa ser em tempo
+  // real (é um "preenchimento de buraco" por natureza) e evita multiplicar por 4x a carga
+  // de requisições contra o SPX a cada 60s.
+  const BACKFILL_STATUSES     = [4, 5, 6, 9, 10, 11];
+  const BACKFILL_INTERVAL_MS  = 5 * 60 * 1000; // 5min
+
+  async function syncBackfill() {
+    if (myStationId == null) return; // ainda não sabemos a estação — espera o próximo sync() normal
+    try {
+      const lists  = await Promise.all(BACKFILL_STATUSES.map(s => fetchAll(s)));
+      const merged = [];
+      lists.forEach(r => merged.push(...r.list));
+      // Sobrescreve current_station_id com o valor confiável (ver myStationId acima) —
+      // nunca confia no current_station_id que vem nesses status específicos.
+      const tagged = merged.map(to => ({ ...to, current_station_id: myStationId }));
+      sendToServer('/api/sacas-backfill-data', { list: tagged, total: tagged.length, fetchedAt: Date.now() }, 'SACAS Backfill');
+    } catch (e) {
+      console.error('[TO Sync] Backfill de SACAS falhou:', e.message);
     }
   }
 
@@ -185,4 +224,6 @@
   // ── Run ─────────────────────────────────────────────────────────────
   sync();
   setInterval(sync, INTERVAL);
+  setTimeout(syncBackfill, 5000); // primeira leva logo após o 1º sync (já ter myStationId)
+  setInterval(syncBackfill, BACKFILL_INTERVAL_MS);
 })();
