@@ -625,7 +625,7 @@
   // loadSacasLogFromSheet() lê ela de volta e recompõe a memória — ver mais abaixo.
   const SACAS_SHEET_ID       = '1rOT258Ndy3Olv4XHoL8kZhNTvzhbooTiAIYCFQJ-sWc';
   const SACAS_SHEET_RANGE    = 'db!A:J';
-  const SACAS_SHEET_FLUSH_MS = 10 * 60 * 1000; // 10min — janela curta de perda em caso de restart
+  const SACAS_SHEET_FLUSH_MS = 60 * 1000; // 60s — bem abaixo da cota do Sheets (60 writes/min/usuário), reduz a janela de perda em caso de restart
   let sacasPendingRows = []; // linhas já formatadas, aguardando o próximo flush
 
   // O servidor roda em UTC (Render); o horário de Brasília é fixo em UTC-3 (sem horário de
