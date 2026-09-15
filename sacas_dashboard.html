@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -474,7 +475,7 @@ table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,
       <div class="filter-row" style="margin-bottom:12px">
         <input type="date" class="date-input" id="hourlyDate" aria-label="Dia para visão hora a hora">
         <span class="date-sep">|</span>
-        <span style="color:var(--faint);font-size:11px">Planejado = soma da capacidade planejada de todas as esteiras naquela hora (aba "Planejamento") &middot; % = pacotes reais em saca / planejado</span>
+        <span style="color:var(--faint);font-size:11px">Dia operacional: 06:00 do dia selecionado at&eacute; 05:59 do dia seguinte &middot; Planejado = soma da capacidade planejada de todas as esteiras naquela hora (aba "Planejamento") &middot; % = pacotes reais em saca / planejado</span>
       </div>
       <div class="evo-chart-card">
         <div class="evo-chart-wrap"><canvas id="hourlyCanvas" role="img" aria-label="Gráfico hora a hora de planejado versus realizado de sacas"></canvas></div>
@@ -884,21 +885,28 @@ function ensureHourlyChart() {
   if (hourlyChart) return hourlyChart;
   const ctx = document.getElementById('hourlyCanvas').getContext('2d');
   hourlyChart = new Chart(ctx, {
+    plugins: [ChartDataLabels],
     data: {
       labels: [],
       datasets: [
-        { type: 'bar', label: 'Planejado', data: [], backgroundColor: 'rgba(191,191,195,.28)', borderRadius: 4, maxBarThickness: 28, order: 3 },
-        { type: 'bar', label: 'Real (Sacas)', data: [], backgroundColor: '#FA4C00', borderRadius: 4, maxBarThickness: 28, order: 2 },
+        { type: 'bar', label: 'Planejado', data: [], backgroundColor: 'rgba(191,191,195,.28)', borderRadius: 4, maxBarThickness: 28, order: 3, datalabels: { display: false } },
+        { type: 'bar', label: 'Real (Sacas)', data: [], backgroundColor: '#FA4C00', borderRadius: 4, maxBarThickness: 28, order: 2, datalabels: { display: false } },
         { type: 'line', label: '% Sacas / Planejado', data: [], yAxisID: 'y1', borderColor: '#FA4C00', backgroundColor: '#FA4C00',
           tension: .3, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: '#0D0D0D', pointBorderColor: '#FA4C00',
-          pointBorderWidth: 2, borderWidth: 2, spanGaps: true, order: 1 },
+          pointBorderWidth: 2, borderWidth: 2, spanGaps: true, order: 1,
+          datalabels: {
+            display: true, align: 'top', anchor: 'end', offset: 6,
+            color: '#FA4C00', font: { family: "'Fira Code',monospace", size: 10, weight: '700' },
+            formatter: v => v == null ? '' : v.toFixed(1) + '%',
+          } },
         { type: 'line', label: `Meta ${HOURLY_TARGET_PCT}%`, data: [], yAxisID: 'y1', borderColor: 'rgba(191,191,195,.5)',
-          borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5, order: 0 },
+          borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5, order: 0, datalabels: { display: false } },
       ],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 18 } },
       plugins: {
         legend: { labels: { color: '#96969b', font: { family: "'Fira Sans',sans-serif", size: 10.5 }, usePointStyle: true, boxWidth: 8 } },
         tooltip: {
@@ -929,45 +937,61 @@ function ensureHourlyChart() {
   return hourlyChart;
 }
 
+// Monta a sequência de 24 horas do DIA OPERACIONAL (06:00 do dia escolhido até 05:59 do dia
+// seguinte) — mesma regra usada no resto do dashboard (operationalDayKey/turnoOf), só que
+// aqui precisamos da data de CALENDÁRIO de cada hora (não só a chave do dia operacional)
+// pra casar com a aba "Planejamento", que é indexada por data/hora de calendário.
+function operationalHourSlots(baseDateObj) {
+  const nextDateObj = new Date(baseDateObj.getFullYear(), baseDateObj.getMonth(), baseDateObj.getDate() + 1);
+  const baseStr = calDateStrOf(baseDateObj);
+  const nextStr = calDateStrOf(nextDateObj);
+  const slots = [];
+  for (let h = 6; h <= 23; h++) slots.push({ h, dateStr: baseStr, wrap: false });
+  for (let h = 0; h <= 5; h++)  slots.push({ h, dateStr: nextStr, wrap: true });
+  return slots;
+}
+function calDateStrOf(d) { return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`; }
+
 function renderHourly() {
   const dateInput = document.getElementById('hourlyDate');
   if (!dateInput || !dateInput.value) return;
-  const [y, m, dd] = dateInput.value.split('-');
-  const ddmmyyyy = `${dd}/${m}/${y}`;
+  const [y, m, dd] = dateInput.value.split('-').map(Number);
+  const slots = operationalHourSlots(new Date(y, m - 1, dd));
+  const slotIndex = new Map(slots.map((s, i) => [`${s.dateStr}|${s.h}`, i]));
 
-  const realByHour = Array.from({ length: 24 }, () => ({ pac: 0, saca: 0 }));
+  const realBySlot = slots.map(() => ({ pac: 0, saca: 0 }));
   rawList.forEach(r => {
     if (!(r.complete_time > 0)) return;
-    if (calDateDDMMYYYY(r.complete_time) !== ddmmyyyy) return;
-    const h = calHour(r.complete_time);
+    const idx = slotIndex.get(`${calDateDDMMYYYY(r.complete_time)}|${calHour(r.complete_time)}`);
+    if (idx === undefined) return;
     const q = r.quantity || 0;
-    realByHour[h].pac += q;
-    if (classify(r.pack_name) === 'SACA') realByHour[h].saca += q;
+    realBySlot[idx].pac += q;
+    if (classify(r.pack_name) === 'SACA') realBySlot[idx].saca += q;
   });
 
-  const planByHour = {};
-  planejamento.forEach(p => { if (p.data === ddmmyyyy) planByHour[p.hora] = p.planejadoGeral; });
+  const planMap = new Map(planejamento.map(p => [`${p.data}|${p.hora}`, p.planejadoGeral]));
+  const planBySlot = slots.map(s => planMap.get(`${s.dateStr}|${s.h}`) ?? null);
 
-  const hours = Array.from({ length: 24 }, (_, h) => h);
   const chart = ensureHourlyChart();
-  chart.data.labels = hours.map(h => `${pad2(h)}h`);
-  chart.data.datasets[0].data = hours.map(h => planByHour[h] ?? null);
-  chart.data.datasets[1].data = hours.map(h => realByHour[h].saca);
-  chart.data.datasets[2].data = hours.map(h => {
-    const plan = planByHour[h];
-    return plan ? Math.round((realByHour[h].saca / plan) * 1000) / 10 : null;
+  chart.data.labels = slots.map(s => s.wrap ? `${pad2(s.h)}h (${s.dateStr.slice(0, 5)})` : `${pad2(s.h)}h`);
+  chart.data.datasets[0].data = planBySlot;
+  chart.data.datasets[1].data = realBySlot.map(r => r.saca);
+  chart.data.datasets[2].data = slots.map((s, i) => {
+    const plan = planBySlot[i];
+    return plan ? Math.round((realBySlot[i].saca / plan) * 1000) / 10 : null;
   });
-  chart.data.datasets[3].data = hours.map(() => HOURLY_TARGET_PCT);
+  chart.data.datasets[3].data = slots.map(() => HOURLY_TARGET_PCT);
   chart.update();
 
-  document.getElementById('hourlyTblBody').innerHTML = hours.map(h => {
-    const plan = planByHour[h];
-    const real = realByHour[h];
+  document.getElementById('hourlyTblBody').innerHTML = slots.map((s, i) => {
+    const plan = planBySlot[i];
+    const real = realBySlot[i];
     const eficiencia = plan ? (real.pac / plan * 100) : null;
     const pct = plan ? (real.saca / plan * 100) : null;
     const pctColor = pct == null ? 'var(--faint)' : (pct >= HOURLY_TARGET_PCT ? 'var(--green)' : 'var(--red)');
+    const hourLabel = s.wrap ? `${pad2(s.h)}h <span style="color:var(--faint);font-size:10px">(${s.dateStr.slice(0, 5)})</span>` : `${pad2(s.h)}h`;
     return `<tr>
-      <td class="mono">${pad2(h)}h</td>
+      <td class="mono">${hourLabel}</td>
       <td class="mono">${plan != null ? plan.toLocaleString('pt-BR') : '—'}</td>
       <td class="mono">${real.pac.toLocaleString('pt-BR')}</td>
       <td class="mono">${eficiencia != null ? eficiencia.toFixed(1) + '%' : '—'}</td>
