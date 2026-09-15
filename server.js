@@ -861,6 +861,56 @@
   ensureSacasSheetHeader();
   loadSacasLogFromSheet();
 
+  // ── Planejamento (aba "Planejamento" na MESMA planilha de SACAS) ────────────
+  // Capacidade planejada por esteira/hora, preenchida manualmente. Colunas reais:
+  // A=Data (dd/mm/aaaa), B=Hora (0-23), C=Tipo processo (nome da esteira/rolete),
+  // D=capacidade, E=Turno (não usado aqui). O "Planejado" que o dashboard mostra é a
+  // SOMA de "capacidade" de todas as esteiras (linha C) numa mesma Data+Hora — já
+  // agregado aqui no servidor pra não precisar mandar todas as linhas cruas pro cliente.
+  // O lado "Realizado Saca" NÃO vem dessa planilha — vem do sacasLogByStation (dado real
+  // já capturado); o dashboard só cruza os dois pra calcular Realizado Saca / Planejado.
+  //
+  // Atenção: os números dessa aba usam VÍRGULA como separador de MILHAR (ex.: "8,500" =
+  // 8500), ao contrário do padrão pt-BR (vírgula decimal) usado por parsePtNumber() em
+  // outras planilhas do projeto — confirmado batendo a soma real (18.818) com o usuário.
+  const PLANEJAMENTO_RANGE = 'Planejamento!A:D';
+  const PLANEJAMENTO_TTL   = 5 * 60 * 1000; // 5 min
+  let planejamentoCache     = null;
+  let planejamentoFetchedAt = 0;
+
+  function parseCapacidade(s) {
+    return parseFloat(String(s || '0').replace(/,/g, '')) || 0;
+  }
+
+  async function getPlanejamentoData() {
+    if (planejamentoCache && Date.now() - planejamentoFetchedAt < PLANEJAMENTO_TTL) return planejamentoCache;
+    if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+
+    const token = await getServiceAccountToken();
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(PLANEJAMENTO_RANGE)}`;
+    const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
+
+    const rows = ((await resp.json()).values || []).slice(1); // pula cabeçalho
+    const byKey = new Map(); // "dd/mm/aaaa|hora" -> soma de capacidade de todas as esteiras
+    rows.forEach(r => {
+      const data = (r[0] || '').trim();
+      const hora = parseInt(r[1], 10);
+      if (!data || !Number.isInteger(hora)) return;
+      const key = `${data}|${hora}`;
+      byKey.set(key, (byKey.get(key) || 0) + parseCapacidade(r[3]));
+    });
+    const list = [...byKey.entries()].map(([key, planejadoGeral]) => {
+      const [data, horaStr] = key.split('|');
+      return { data, hora: Number(horaStr), planejadoGeral };
+    });
+
+    const result = { list, fetchedAt: Date.now() };
+    planejamentoCache     = result;
+    planejamentoFetchedAt = Date.now();
+    return result;
+  }
+
   async function flushSacasSheet() {
     if (!sacasPendingRows.length) return;
     const batch = sacasPendingRows;
@@ -1436,6 +1486,27 @@
       const log = getSacasLog(stationParam(req));
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify({ list: [...log.values()], total: log.size, fetchedAt: Date.now() }));
+      return;
+    }
+
+    // GET /api/sacas-planejamento — meta/planejado por hora (aba "Planejamento"), usado pela
+    // visão hora-a-hora do dashboard de SACAS pra comparar Planejado x Real.
+    if (urlPath === '/api/sacas-planejamento') {
+      if (!SERVICE_ACCOUNT) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Service Account não configurado' }));
+        return;
+      }
+      getPlanejamentoData()
+        .then(data => {
+          res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+          res.end(JSON.stringify(data));
+        })
+        .catch(err => {
+          console.error('[sacas-planejamento] Erro:', err.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        });
       return;
     }
 
