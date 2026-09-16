@@ -767,6 +767,25 @@
     return '';
   }
 
+  // Mapa inverso (código -> nome), usado pelo destino-lookup do Inbound Staging: o campo
+  // third_party_sorting_code de cada PACOTE (não da TO) vem como "SOC-PE4--HUB-LRN-03" —
+  // a parte depois do "--" é o mesmo código dessa tabela, só que na direção oposta.
+  const NAME_BY_SORT_CODE = new Map(SORT_CODE_TABLE.map(([name, code]) => [String(code).toUpperCase().trim(), name]));
+  const sortCodeNameMisses = new Set();
+  function nameFromSortCode(rawCode) {
+    if (!rawCode) return '';
+    // "SOC-PE4--HUB-LRN-03" -> "HUB-LRN-03" (pega depois do último "--")
+    const parts = String(rawCode).split('--');
+    const code = parts[parts.length - 1].toUpperCase().trim();
+    const name = NAME_BY_SORT_CODE.get(code);
+    if (name) return name;
+    if (!sortCodeNameMisses.has(code)) {
+      sortCodeNameMisses.add(code);
+      console.warn(`[destino-lookup] sort code sem nome cadastrado: "${code}" (bruto: "${rawCode}")`);
+    }
+    return code; // sem tradução conhecida — mostra o código cru mesmo, melhor que nada
+  }
+
   function buildSacasSheetRow(to) {
     const destino = to.dest_station_name || to.receiver || '';
     return [
@@ -945,12 +964,15 @@
   // nem destino (confirmado por diagnóstico, inclusive testando o endpoint de "detail" da
   // rua, que também não devolve lista de TOs). A planilha "Report" já traz o to_number de
   // cada TO em cada rua (ver getReportData/byAreaTOs) — usamos isso pra pedir o detalhe de
-  // cada TO pelo MESMO relay do modal (to_detail_sync.user.js → general_to/detail/search,
-  // que já devolve dest_station_name/receiver pra qualquer to_number, independente do
-  // status atual). Fila própria, separada da manual e da auto-revalidação, pra não competir
-  // com elas. Cacheado por to_number pra sempre (com TTL de segurança) — o destino de uma
-  // TO não muda depois de criada, não precisa reconsultar a mesma TO duas vezes.
-  const toDestinoCache      = new Map(); // to_number -> { dest_station_name, receiver, fetchedAt }
+  // cada TO pelo MESMO relay do modal (to_detail_sync.user.js → general_to/detail/search).
+  // IMPORTANTE: dest_station_name/receiver no nível TO é sempre a NOSSA estação (destino da
+  // perna que trouxe a TO até aqui) — o próximo destino de verdade vem no nível PACOTE, no
+  // campo third_party_sorting_code (ex: "SOC-PE4--HUB-LRN-03", onde a parte depois de "--" é
+  // o Sort Code da tabela SORT_CODE_TABLE). O cliente agrega os pacotes por código bruto e o
+  // servidor traduz pro nome via nameFromSortCode(). Fila própria, separada da manual e da
+  // auto-revalidação, pra não competir com elas. Cacheado por to_number pra sempre (com TTL
+  // de segurança) — o destino de uma TO não muda depois de criada.
+  const toDestinoCache      = new Map(); // to_number -> { destinoBreakdown: {nome: qtdPacotes}, fetchedAt }
   const destinoLookupPending = new Map(); // to_number -> requestedAt
   const DESTINO_CACHE_MAX_AGE_MS   = 15 * 24 * 60 * 60 * 1000; // 15 dias
   const DESTINO_PENDING_TTL_MS     = 5 * 60 * 1000; // 5min — libera pra re-pedir se não resolveu
@@ -1711,19 +1733,20 @@
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          const { to_number, data, error } = JSON.parse(body);
+          const { to_number, sortCodeCounts, error } = JSON.parse(body);
           if (!to_number) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'to_number obrigatório' }));
             return;
           }
           destinoLookupPending.delete(to_number);
-          if (data) {
-            toDestinoCache.set(to_number, {
-              dest_station_name: data.dest_station_name || data.receiver || '',
-              receiver: data.receiver || '',
-              fetchedAt: Date.now(),
-            });
+          if (sortCodeCounts && typeof sortCodeCounts === 'object') {
+            const destinoBreakdown = {};
+            for (const [rawCode, count] of Object.entries(sortCodeCounts)) {
+              const name = nameFromSortCode(rawCode) || rawCode;
+              destinoBreakdown[name] = (destinoBreakdown[name] || 0) + count;
+            }
+            toDestinoCache.set(to_number, { destinoBreakdown, fetchedAt: Date.now() });
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
@@ -1738,7 +1761,7 @@
     // GET /api/destino-lookup-cache — dashboard busca tudo que já foi descoberto até agora
     if (urlPath === '/api/destino-lookup-cache') {
       const items = {};
-      for (const [to, r] of toDestinoCache) items[to] = { dest_station_name: r.dest_station_name, receiver: r.receiver };
+      for (const [to, r] of toDestinoCache) items[to] = { destinoBreakdown: r.destinoBreakdown || {} };
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
       res.end(JSON.stringify({ items, total: toDestinoCache.size, fetchedAt: Date.now() }));
       return;

@@ -174,7 +174,16 @@
       setStatus('destino', `⏳ ${to_number}`);
       try {
         const data = await fetchToDetail(to_number);
-        await gmPostJson(DESTINO_RESULT_URL, { to_number, data });
+        // O próximo destino de cada TO não vem no nível TO (dest_station_name/receiver ali é
+        // sempre a nossa própria estação) — vem no nível PACOTE, em third_party_sorting_code
+        // (ex: "SOC-PE4--HUB-LRN-03"). Agrega por código bruto aqui; o servidor traduz pro nome
+        // via a tabela de Sort Code que já existe (nameFromSortCode em server.js).
+        const sortCodeCounts = {};
+        for (const pkg of data.list || []) {
+          const code = pkg.third_party_sorting_code || '(sem código)';
+          sortCodeCounts[code] = (sortCodeCounts[code] || 0) + 1;
+        }
+        await gmPostJson(DESTINO_RESULT_URL, { to_number, sortCodeCounts });
         setStatus('destino', `✅ ${to_number}`);
       } catch (e) {
         await gmPostJson(DESTINO_RESULT_URL, { to_number, error: e.message }).catch(() => {});

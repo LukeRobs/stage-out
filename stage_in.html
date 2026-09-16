@@ -923,7 +923,7 @@ let tableZoneFilter = '';
 let expandedAreas  = new Set();
 let currentPage    = 1;
 let pageSize       = 10;
-let destinoCache   = {};    // to_number -> { dest_station_name }
+let destinoCache   = {};    // to_number -> { destinoBreakdown: {nome: qtdPacotes} }
 let destinoZoneFilter = 'all';
 
 // ── Histogram bins ─────────────────────────────────────────────────────
@@ -2483,11 +2483,15 @@ function buildDestino() {
   let knownPacotes = 0, unknownPacotes = 0, unknownTOs = 0;
   const byDestino = {};
   scoped.forEach(t => {
-    const pac  = t.pacotes || 0;
-    const dest = destinoCache[t.to]?.dest_station_name;
-    if (!dest) { unknownPacotes += pac; unknownTOs++; return; }
-    byDestino[dest] = (byDestino[dest] || 0) + pac;
-    knownPacotes += pac;
+    const pac = t.pacotes || 0;
+    const breakdown = destinoCache[t.to]?.destinoBreakdown;
+    if (!breakdown || !Object.keys(breakdown).length) { unknownPacotes += pac; unknownTOs++; return; }
+    // Cada TO pode ter pacotes com destinos diferentes — soma cada um pro seu próprio destino
+    // (a contagem já vem por pacote real, resolvida via third_party_sorting_code).
+    Object.entries(breakdown).forEach(([dest, qty]) => {
+      byDestino[dest] = (byDestino[dest] || 0) + qty;
+      knownPacotes += qty;
+    });
   });
 
   const totalTOs = scoped.length;
