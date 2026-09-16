@@ -2430,16 +2430,19 @@ function buildOperacional() {
 // mesmo relay usado pelo modal de detalhe (to_detail_sync.user.js), numa fila própria
 // (não compete com as filas manual/auto já existentes). Ver server.js: /api/destino-lookup-*.
 function allInboundTOs() {
-  // achata reportData.byAreaTOs, juntando a zona de cada rua (vem de allAreas)
+  // achata reportData.byAreaTOs, juntando a zona de cada rua (vem de allAreas).
+  // A planilha "Report" acumula várias linhas pro mesmo to_number ao longo do tempo
+  // (confirmado: 7.999 linhas pra só ~800 TOs únicas, batendo com o total real da dash) —
+  // dedupe por to_number aqui, mantendo a última ocorrência (mais recente na planilha).
   if (!reportData?.byAreaTOs) return [];
   const zoneByArea = {};
   allAreas.forEach(a => { zoneByArea[a.area_name] = (a.staging_group_name || 'OUTRAS').trim(); });
-  const out = [];
+  const byTo = new Map();
   Object.entries(reportData.byAreaTOs).forEach(([areaName, tos]) => {
     const zone = zoneByArea[areaName] || 'OUTRAS';
-    (tos || []).forEach(t => out.push({ ...t, zone }));
+    (tos || []).forEach(t => { if (t.to) byTo.set(t.to, { ...t, zone }); });
   });
-  return out;
+  return [...byTo.values()];
 }
 
 async function requestMissingDestinos() {
