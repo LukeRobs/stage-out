@@ -940,6 +940,27 @@
     }
   }
 
+  // ── Destino Lookup (share de fanouts do Inbound Staging) ────────────────────
+  // A API de inbound_staging_area só devolve contagens agregadas por rua — sem to_number
+  // nem destino (confirmado por diagnóstico, inclusive testando o endpoint de "detail" da
+  // rua, que também não devolve lista de TOs). A planilha "Report" já traz o to_number de
+  // cada TO em cada rua (ver getReportData/byAreaTOs) — usamos isso pra pedir o detalhe de
+  // cada TO pelo MESMO relay do modal (to_detail_sync.user.js → general_to/detail/search,
+  // que já devolve dest_station_name/receiver pra qualquer to_number, independente do
+  // status atual). Fila própria, separada da manual e da auto-revalidação, pra não competir
+  // com elas. Cacheado por to_number pra sempre (com TTL de segurança) — o destino de uma
+  // TO não muda depois de criada, não precisa reconsultar a mesma TO duas vezes.
+  const toDestinoCache      = new Map(); // to_number -> { dest_station_name, receiver, fetchedAt }
+  const destinoLookupPending = new Map(); // to_number -> requestedAt
+  const DESTINO_CACHE_MAX_AGE_MS   = 15 * 24 * 60 * 60 * 1000; // 15 dias
+  const DESTINO_PENDING_TTL_MS     = 5 * 60 * 1000; // 5min — libera pra re-pedir se não resolveu
+
+  function pruneDestinoCache() {
+    const now = Date.now();
+    for (const [key, r] of toDestinoCache) if (now - r.fetchedAt > DESTINO_CACHE_MAX_AGE_MS) toDestinoCache.delete(key);
+    for (const [key, t] of destinoLookupPending) if (now - t > DESTINO_PENDING_TTL_MS) destinoLookupPending.delete(key);
+  }
+
   // ── Revalidação automática em segundo plano ──────────────────────────
   // A busca em massa do SPX (outbound/search) fica desatualizada numa escala bem maior
   // do que "sender != current_station_name" sozinho detecta — conferido manualmente pelo
@@ -1641,6 +1662,85 @@
       if (entry.result) { res.end(JSON.stringify({ status: 'done', data: entry.result })); return; }
       if (entry.error)  { res.end(JSON.stringify({ status: 'error', error: entry.error })); return; }
       res.end(JSON.stringify({ status: 'pending' }));
+      return;
+    }
+
+    // POST /api/destino-lookup-request — stage_in.html pede o destino de uma leva de TOs
+    // (as que aparecem nas ruas de inbound staging, via to_number da planilha Report).
+    // Só enfileira quem ainda não está em cache nem já pendente.
+    if (urlPath === '/api/destino-lookup-request' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { to_numbers } = JSON.parse(body);
+          if (!Array.isArray(to_numbers)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'to_numbers deve ser um array' }));
+            return;
+          }
+          pruneDestinoCache();
+          const now = Date.now();
+          let enqueued = 0;
+          to_numbers.forEach(to => {
+            if (!to || toDestinoCache.has(to) || destinoLookupPending.has(to)) return;
+            destinoLookupPending.set(to, now);
+            enqueued++;
+          });
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, enqueued }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/destino-lookup-pending — to_detail_sync busca quais TOs aguardam lookup de destino
+    if (urlPath === '/api/destino-lookup-pending') {
+      pruneDestinoCache();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, no-cache, must-revalidate' });
+      res.end(JSON.stringify({ pending: [...destinoLookupPending.keys()] }));
+      return;
+    }
+
+    // POST /api/destino-lookup-result — to_detail_sync devolve o detalhe buscado no SPX
+    if (urlPath === '/api/destino-lookup-result' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const { to_number, data, error } = JSON.parse(body);
+          if (!to_number) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'to_number obrigatório' }));
+            return;
+          }
+          destinoLookupPending.delete(to_number);
+          if (data) {
+            toDestinoCache.set(to_number, {
+              dest_station_name: data.dest_station_name || data.receiver || '',
+              receiver: data.receiver || '',
+              fetchedAt: Date.now(),
+            });
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/destino-lookup-cache — dashboard busca tudo que já foi descoberto até agora
+    if (urlPath === '/api/destino-lookup-cache') {
+      const items = {};
+      for (const [to, r] of toDestinoCache) items[to] = { dest_station_name: r.dest_station_name, receiver: r.receiver };
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify({ items, total: toDestinoCache.size, fetchedAt: Date.now() }));
       return;
     }
 

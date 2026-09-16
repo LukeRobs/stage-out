@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX TO Detail → Dashboard Relay
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/to_detail_sync.user.js
 // @description  Atende sob demanda pedidos de detalhe de TO (tos_packed/packing) e de rua (stage_out) vindos do dashboard
@@ -21,10 +21,15 @@
   const RUA_PENDING_URL = SERVER_BASE + '/api/rua-detail-pending';
   const RUA_RESULT_URL  = SERVER_BASE + '/api/rua-detail-result';
   const RUA_DETAIL_URL  = '/api/in-station/outbound/outbound_staging_area/details';
+  const DESTINO_PENDING_URL = SERVER_BASE + '/api/destino-lookup-pending';
+  const DESTINO_RESULT_URL  = SERVER_BASE + '/api/destino-lookup-result';
   const POLL_INTERVAL = 3000; // 3s — precisa ser responsivo, o usuário está esperando o modal abrir
   // O servidor só enfileira uma nova leva de revalidação a cada 10min — checar a cada 4s era
   // desperdício de conexão/CPU na mesma aba, competindo com os syncs normais (TOs/Trips/Queue).
   const AUTO_POLL_INTERVAL = 20000; // 20s
+  // Fila de lookup de destino (share de fanouts do Inbound Staging) — pode ter centenas de
+  // TOs de uma vez, então roda num ritmo próprio, sem disputar com as outras filas.
+  const DESTINO_POLL_INTERVAL = 20000; // 20s
   const PAGE_SIZE     = 200;  // cobre TOs com bastante pacotes numa unica pagina
 
   function getCsrf() {
@@ -152,6 +157,33 @@
     }
   }
 
+  // Fila de lookup de destino (share de fanouts do Inbound Staging) — reaproveita o mesmo
+  // fetchToDetail() já usado acima; só muda pra onde o resultado é enviado. Roda totalmente
+  // independente das outras filas, com a mesma pausa de 1s entre itens.
+  async function processDestinoPending() {
+    let pendingData;
+    try { pendingData = await gmGetJson(bust(DESTINO_PENDING_URL)); }
+    catch (e) { return; }
+    const pending = pendingData?.pending || [];
+    if (!pending.length) {
+      setStatus('destino', '—');
+      return;
+    }
+
+    for (const to_number of pending) {
+      setStatus('destino', `⏳ ${to_number}`);
+      try {
+        const data = await fetchToDetail(to_number);
+        await gmPostJson(DESTINO_RESULT_URL, { to_number, data });
+        setStatus('destino', `✅ ${to_number}`);
+      } catch (e) {
+        await gmPostJson(DESTINO_RESULT_URL, { to_number, error: e.message }).catch(() => {});
+        setStatus('destino', `⚠️ ${to_number}`);
+      }
+      await sleep(1000);
+    }
+  }
+
   // Busca TOs/gaiolas alocadas numa rua (staging_area_id), com paginação
   async function fetchRuaDetail(staging_area_id) {
     let pageno  = 1;
@@ -258,12 +290,12 @@
 
   // ── Indicador visual — um único badge combinado (evita empilhar 3 badges no hub) ──
   const relayDot = registerSyncDot('📦 Relay', '#475569');
-  relayDot.title = 'TO Detail (clique manual) · Rua Detail (clique manual) · Revalidação (segundo plano)';
+  relayDot.title = 'TO Detail (clique manual) · Rua Detail (clique manual) · Revalidação (segundo plano) · Destino (share Inbound Staging)';
 
-  const status = { to: '—', rua: '—', auto: '—' };
+  const status = { to: '—', rua: '—', auto: '—', destino: '—' };
   function setStatus(key, text) {
     status[key] = text;
-    relayDot.textContent = `📦${status.to} 🛣${status.rua} 🔄${status.auto}`;
+    relayDot.textContent = `📦${status.to} 🛣${status.rua} 🔄${status.auto} 🎯${status.destino}`;
     const anyBusy = Object.values(status).some(s => s.startsWith('⏳'));
     const anyErr  = Object.values(status).some(s => s.startsWith('⚠️'));
     relayDot.style.background = anyBusy ? '#0ea5e9' : anyErr ? '#cc7700' : '#475569';
@@ -273,7 +305,9 @@
   processPending();
   processRuaPending();
   processAutoPending();
+  processDestinoPending();
   setInterval(processPending, POLL_INTERVAL);
   setInterval(processRuaPending, POLL_INTERVAL);
   setInterval(processAutoPending, AUTO_POLL_INTERVAL);
+  setInterval(processDestinoPending, DESTINO_POLL_INTERVAL);
 })();

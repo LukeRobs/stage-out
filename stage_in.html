@@ -326,6 +326,17 @@ table.main-table tr:last-child td { border-bottom: none; }
 }
 .pag-size select:focus { border-color: var(--accent); }
 
+/* ── Destino share (Inbound Staging) ── */
+.dest-row { display:flex; align-items:center; gap:12px; padding:8px 4px; border-bottom:1px solid var(--border); }
+.dest-row:last-child { border-bottom:none; }
+.dest-rank { min-width:22px; color:var(--muted); font-size:11px; font-family:monospace; }
+.dest-name { min-width:220px; max-width:280px; font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dest-bar-wrap { flex:1; background:var(--surface2); border-radius:4px; height:11px; overflow:hidden; }
+.dest-bar { height:100%; border-radius:4px; background:var(--accent); transition:width .4s ease; }
+.dest-val { min-width:150px; text-align:right; font-family:monospace; font-size:12px; }
+.dest-val strong { color:var(--text); }
+.dest-val .dest-pct { color:var(--accent); font-weight:700; margin-left:6px; }
+
 /* ── VOLUMOSO specific ── */
 .vol-row { display:flex; align-items:center; gap:10px; padding:6px 4px; border-bottom:1px solid var(--border); border-radius:6px; cursor:pointer; transition:background .15s; }
 .vol-row:last-child { border-bottom:none; }
@@ -555,6 +566,17 @@ table.main-table tr:last-child td { border-bottom: none; }
 
 <div id="operacionalView" style="display:none">
   <div class="op-grid" id="opGrid"></div>
+</div>
+
+<div id="destinoView" style="display:none;padding:20px 24px 40px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+    <div class="section-label" style="margin-bottom:0">Share de Destinos (Fanout) · TOs no Inbound Staging</div>
+    <span id="destinoStatusLine" style="font-size:11px;color:var(--muted)">—</span>
+  </div>
+  <div class="filter-pills" id="destinoZonePills" style="margin-bottom:16px"></div>
+  <div class="panel" id="destinoListWrap">
+    <div id="destinoList"></div>
+  </div>
 </div>
 
 <div id="defaultView">
@@ -901,6 +923,8 @@ let tableZoneFilter = '';
 let expandedAreas  = new Set();
 let currentPage    = 1;
 let pageSize       = 10;
+let destinoCache   = {};    // to_number -> { dest_station_name }
+let destinoZoneFilter = 'all';
 
 // ── Histogram bins ─────────────────────────────────────────────────────
 const BINS = [
@@ -949,12 +973,14 @@ function buildZoneTabs() {
   });
   tabs.unshift({ key: 'all', label: 'Todas', count: totalCount });
   tabs.push({ key: '__op__', label: '📺 Operacional', count: null });
+  tabs.push({ key: '__dest__', label: '🎯 Destinos', count: null });
 
   const container = document.getElementById('zoneTabs');
   container.innerHTML = tabs.map(t => {
-    const isOp = t.key === '__op__';
-    return `<button class="zone-tab${t.key === activeZone ? ' active' : ''}${isOp ? ' tab-op-btn' : ''}" data-zone="${t.key}">
-      ${t.label}${!isOp ? `<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>` : ''}
+    const isAction = t.key === '__op__' || t.key === '__dest__';
+    const isFirstAction = t.key === '__op__'; // só a primeira aba de ação leva a borda separadora
+    return `<button class="zone-tab${t.key === activeZone ? ' active' : ''}${isFirstAction ? ' tab-op-btn' : ''}" data-zone="${t.key}">
+      ${t.label}${!isAction ? `<span class="tab-count">${t.count.toLocaleString('pt-BR')}</span>` : ''}
     </button>`;
   }).join('');
   container.querySelectorAll('.zone-tab').forEach(btn => {
@@ -2397,18 +2423,119 @@ function buildOperacional() {
   document.getElementById('opGrid').innerHTML = cards;
 }
 
+// ── Destino (share de fanout do Inbound Staging) ────────────────────────
+// A API de inbound_staging_area não expõe TO nem destino, só contagens agregadas por
+// rua. A planilha "Report" já traz o to_number de cada TO em cada rua (byAreaTOs) — a
+// partir daí pedimos o destino de cada TO ao servidor, que enfileira e resolve via o
+// mesmo relay usado pelo modal de detalhe (to_detail_sync.user.js), numa fila própria
+// (não compete com as filas manual/auto já existentes). Ver server.js: /api/destino-lookup-*.
+function allInboundTOs() {
+  // achata reportData.byAreaTOs, juntando a zona de cada rua (vem de allAreas)
+  if (!reportData?.byAreaTOs) return [];
+  const zoneByArea = {};
+  allAreas.forEach(a => { zoneByArea[a.area_name] = (a.staging_group_name || 'OUTRAS').trim(); });
+  const out = [];
+  Object.entries(reportData.byAreaTOs).forEach(([areaName, tos]) => {
+    const zone = zoneByArea[areaName] || 'OUTRAS';
+    (tos || []).forEach(t => out.push({ ...t, zone }));
+  });
+  return out;
+}
+
+async function requestMissingDestinos() {
+  const tos = allInboundTOs();
+  const missing = [...new Set(tos.map(t => t.to).filter(to => to && !destinoCache[to]))];
+  if (!missing.length) return;
+  try {
+    await fetch('/api/destino-lookup-request', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to_numbers: missing }),
+    });
+  } catch (e) { /* tenta de novo no próximo ciclo */ }
+}
+
+async function loadDestinoCache() {
+  try {
+    const res = await fetch('/api/destino-lookup-cache');
+    if (!res.ok) return;
+    const data = await res.json();
+    destinoCache = data.items || {};
+    if (activeZone === '__dest__') buildDestino();
+  } catch (e) {}
+}
+
+function buildDestino() {
+  const tos = allInboundTOs();
+
+  // Pills de zona (mesmo padrão do buildTableZonePills)
+  const zones = [...new Set(tos.map(t => t.zone))];
+  const pillsEl = document.getElementById('destinoZonePills');
+  const pills = [{ key: 'all', label: 'Todas' }, ...zones.map(z => ({ key: z, label: zoneShort(z) }))];
+  pillsEl.innerHTML = pills.map(p => `
+    <button class="fpill${p.key === destinoZoneFilter ? ' active' : ''}" data-zone="${p.key}">${p.label}</button>
+  `).join('');
+  pillsEl.querySelectorAll('.fpill').forEach(btn => {
+    btn.addEventListener('click', () => { destinoZoneFilter = btn.dataset.zone; buildDestino(); });
+  });
+
+  const scoped = destinoZoneFilter === 'all' ? tos : tos.filter(t => t.zone === destinoZoneFilter);
+
+  let knownPacotes = 0, unknownPacotes = 0, unknownTOs = 0;
+  const byDestino = {};
+  scoped.forEach(t => {
+    const pac  = t.pacotes || 0;
+    const dest = destinoCache[t.to]?.dest_station_name;
+    if (!dest) { unknownPacotes += pac; unknownTOs++; return; }
+    byDestino[dest] = (byDestino[dest] || 0) + pac;
+    knownPacotes += pac;
+  });
+
+  const totalTOs = scoped.length;
+  const knownTOs = totalTOs - unknownTOs;
+  document.getElementById('destinoStatusLine').textContent =
+    `${knownTOs.toLocaleString('pt-BR')} de ${totalTOs.toLocaleString('pt-BR')} TOs com destino conhecido` +
+    (unknownTOs ? ` · ${unknownTOs.toLocaleString('pt-BR')} ainda sendo buscadas em segundo plano` : '');
+
+  const rows = Object.entries(byDestino).sort((a, b) => b[1] - a[1]);
+  const listEl = document.getElementById('destinoList');
+  if (!rows.length) {
+    listEl.innerHTML = `<div style="color:var(--muted);text-align:center;padding:24px 0">
+      ${totalTOs === 0 ? 'Nenhuma TO nesta zona.' : 'Ainda buscando os destinos… volte em alguns instantes.'}
+    </div>`;
+    requestMissingDestinos();
+    return;
+  }
+  const maxPac = rows[0][1];
+  listEl.innerHTML = rows.map(([dest, pac], i) => {
+    const pct = knownPacotes ? (pac / knownPacotes * 100) : 0;
+    const barPct = maxPac ? (pac / maxPac * 100) : 0;
+    return `<div class="dest-row">
+      <span class="dest-rank">${i + 1}</span>
+      <span class="dest-name" title="${dest}">${dest}</span>
+      <div class="dest-bar-wrap"><div class="dest-bar" style="width:${barPct.toFixed(1)}%"></div></div>
+      <span class="dest-val"><strong>${pac.toLocaleString('pt-BR')}</strong> pac. <span class="dest-pct">${pct.toFixed(1)}%</span></span>
+    </div>`;
+  }).join('');
+
+  requestMissingDestinos();
+}
+
 // ── Render ──────────────────────────────────────────────────────────────
 function render() {
   const areas = filteredAreas();
   buildZoneTabs();
-  const vol = isVolumoso();
-  const op  = activeZone === '__op__';
-  document.getElementById('defaultView').style.display     = (!op && !vol) ? '' : 'none';
+  const vol  = isVolumoso();
+  const op   = activeZone === '__op__';
+  const dest = activeZone === '__dest__';
+  document.getElementById('defaultView').style.display     = (!op && !vol && !dest) ? '' : 'none';
   document.getElementById('volumosoView').style.display    = vol ? '' : 'none';
   document.getElementById('operacionalView').style.display = op ? '' : 'none';
-  document.getElementById('detailSection').style.display   = op ? 'none' : '';
+  document.getElementById('destinoView').style.display     = dest ? '' : 'none';
+  document.getElementById('detailSection').style.display   = (op || dest) ? 'none' : '';
   if (op) {
     buildOperacional();
+  } else if (dest) {
+    buildDestino();
   } else if (vol) {
     buildVolumoso();
   } else {
@@ -2420,7 +2547,7 @@ function render() {
     buildOccByZone(areas);
     buildTurnoDonut();
   }
-  if (!op) {
+  if (!op && !dest) {
     buildAgingCrit();
     buildTableZonePills();
     buildMainTable(areas);
@@ -2465,7 +2592,9 @@ async function loadData() {
 }
 
 loadData();
+loadDestinoCache();
 setInterval(loadData, 15000);
+setInterval(loadDestinoCache, 15000);
 </script>
 </body>
 </html>
