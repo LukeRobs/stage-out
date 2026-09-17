@@ -928,7 +928,7 @@ function ensureHourlyChart() {
         x: { grid: { display: false }, ticks: { color: '#96969b', font: { family: "'Fira Sans',sans-serif", size: 10.5 } } },
         y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' },
              ticks: { color: '#96969b', font: { family: "'Fira Code',monospace", size: 10 } } },
-        y1: { position: 'right', min: 0, max: 100, grid: { display: false },
+        y1: { position: 'right', min: 0, suggestedMax: 100, grid: { display: false },
               ticks: { color: '#FA4C00', font: { family: "'Fira Code',monospace", size: 10 }, callback: v => v + '%' } },
       },
       animation: { duration: 280 },
