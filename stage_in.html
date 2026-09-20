@@ -2566,7 +2566,7 @@ async function loadData() {
   try {
     const [stageRes, reportRes, profileRes] = await Promise.all([
       fetch(`/api/stage-in?station=${STATION}`),
-      fetch('/api/report-data').catch(() => null),
+      fetch(`/api/report-data?station=${STATION}`).catch(() => null),
       fetch('/api/profile-data').catch(() => null),
     ]);
 

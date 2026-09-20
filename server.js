@@ -1106,11 +1106,13 @@
   const REPORT_SPREADSHEET_ID = '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E';
   const REPORT_RANGE          = 'Report!A:I';
   const REPORT_TTL            = 5 * 60 * 1000; // 5 min
-  let   reportCache           = null;
-  let   reportFetchedAt       = 0;
+  // Coluna C (STATION) da planilha usa esses códigos, não o station_id numérico
+  const STATION_SHEET_CODE    = { '10963': 'SOC-PE2', '15000': 'SOC-PE4' };
+  let   reportRowsCache       = null; // linhas cruas da planilha (todas as estações)
+  let   reportRowsFetchedAt   = 0;
 
-  async function getReportData() {
-    if (reportCache && Date.now() - reportFetchedAt < REPORT_TTL) return reportCache;
+  async function fetchReportRows() {
+    if (reportRowsCache && Date.now() - reportRowsFetchedAt < REPORT_TTL) return reportRowsCache;
     if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
 
     const token = await getServiceAccountToken();
@@ -1121,14 +1123,28 @@
     const raw  = await resp.json();
     const rows = (raw.values || []).slice(1); // pula cabeçalho
 
+    // Só cacheia se tiver dados reais — evita envenar o cache com resultado
+    // vazio quando a planilha ainda está calculando após reinício do servidor
+    if (rows.length > 0) {
+      reportRowsCache     = rows;
+      reportRowsFetchedAt = Date.now();
+    } else {
+      console.warn('[report] rowCount=0 — resultado não cacheado, próxima req tentará novamente');
+    }
+    return rows;
+  }
+
+  function buildReportResult(rows, stationCode) {
     // Colunas: A=TO, B=ZONA, C=STATION, D=QTD PACOTES, E=RUA, F=AGING_HOURS, G=Hora now, H=Hora endereçamento, I=Turno
+    const matched = rows.filter(r => (r[2] || '').trim().toUpperCase() === stationCode);
+
     const byZone = {}; // { "ZONA VOLUMOSO": { tos, pacotes } }
     const byArea = {}; // { "IN-05":          { tos, pacotes } }
 
     const byTurno   = {}; // { "T1": { tos, pacotes } }
     const byAreaTOs = {}; // { "IN-05": [ { to, pacotes, aging_h, hora_end, turno }, ... ] }
 
-    rows.forEach(r => {
+    matched.forEach(r => {
       const zona    = (r[1] || '').trim();
       const rua     = (r[4] || '').trim();
       const pacotes = parseInt(r[3]) || 0;
@@ -1158,18 +1174,15 @@
       }
     });
 
-    const result = { byZone, byArea, byTurno, byAreaTOs, rowCount: rows.length, fetchedAt: Date.now() };
-    console.log(`[report] ${rows.length} linhas lidas — ${Object.keys(byZone).length} zonas, ${Object.keys(byArea).length} ruas`);
+    console.log(`[report] station ${stationCode || '?'}: ${matched.length}/${rows.length} linhas — ${Object.keys(byZone).length} zonas, ${Object.keys(byArea).length} ruas`);
+    return { byZone, byArea, byTurno, byAreaTOs, rowCount: matched.length, fetchedAt: Date.now() };
+  }
 
-    // Só cacheia se tiver dados reais — evita envenar o cache com resultado
-    // vazio quando a planilha ainda está calculando após reinício do servidor
-    if (rows.length > 0) {
-      reportCache     = result;
-      reportFetchedAt = Date.now();
-    } else {
-      console.warn('[report] rowCount=0 — resultado não cacheado, próxima req tentará novamente');
-    }
-    return result;
+  // station: station_id numérico ('10963'/'15000'); sem código mapeado → resultado vazio
+  async function getReportData(station) {
+    const stationCode = STATION_SHEET_CODE[String(station ?? DEFAULT_STATION)];
+    const rows         = await fetchReportRows();
+    return buildReportResult(rows, stationCode);
   }
   // ── Profile sheet (perfil de pacote por TO, aba "db") ──────────────────
   const PROFILE_SPREADSHEET_ID = '16do3FeFUI32Zp4asu5u_iMd1fp0Wt2XADBwBhgRr8Ik';
@@ -1998,14 +2011,14 @@
       return;
     }
 
-    // GET /api/report-data — serves package data from Report sheet
+    // GET /api/report-data?station=X — serves package data from Report sheet
     if (urlPath === '/api/report-data') {
       if (!SERVICE_ACCOUNT) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Service Account não configurado — configure GOOGLE_SERVICE_ACCOUNT no Render' }));
         return;
       }
-      getReportData()
+      getReportData(stationParam(req))
         .then(data => {
           res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
           res.end(JSON.stringify(data));
