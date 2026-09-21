@@ -856,7 +856,11 @@
   // boot. weight/operator/status não são colunas da planilha — ficam com valor neutro ao
   // recarregar (o dashboard de SACAS não usa esses campos, só quantity/pack_name/complete_time
   // /dest_station_name). Cada planilha pertence a UMA estação só, então usamos a própria
-  // estação do loop em vez de reler a coluna "Estação" linha a linha.
+  // estação do loop em vez de reler a coluna "Estação" linha a linha — EXCETO que a
+  // planilha do Jaboatão (10963) é a antiga planilha compartilhada, que ainda tem linhas
+  // históricas das DUAS estações misturadas (gravadas antes do Recife04 ganhar planilha
+  // própria) — por isso ainda filtramos pela coluna J nela, pra não importar TOs do
+  // Recife04 pro histórico do Jaboatão.
   async function loadSacasLogFromSheet(station, spreadsheetId) {
     if (!SERVICE_ACCOUNT) return;
     try {
@@ -871,6 +875,7 @@
         const complete_time = parseDtComplete(r[0]);
         const to_number     = r[1];
         if (!complete_time || !to_number) return;
+        if (String(r[9] || DEFAULT_STATION) !== String(station)) return; // linha de outra estação (planilha antiga era compartilhada)
         if (log.has(to_number)) return; // já tem em memória (mais recente/completo) — não sobrescreve
         log.set(to_number, {
           to_number,
