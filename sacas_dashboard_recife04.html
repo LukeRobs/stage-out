@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0D0D0D">
+<title>Produtividade de Sacas · Recife 04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0D0D0D;
+  --bg-elevated: #131315;
+  --surface: #1A1A1C;
+  --surface2: #2A2A2C;
+  --surface-hover: #232325;
+  --border: #2A2A2C;
+  --border2: #3a3a3e;
+  --hairline: rgba(255,255,255,.07);
+  --text: #F5F5F6;
+  --muted: #BFBFC3;
+  --dim: #96969b;
+  --faint: #6b6b70;
+  --orange: #FA4C00;
+  --orange-soft: rgba(250,76,0,.14);
+  --orange-glow: rgba(250,76,0,.35);
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #f59e0b;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --ease: cubic-bezier(.16,1,.3,1);
+  --font-ui: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', 'SFMono-Regular', Consolas, monospace;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-2: 0 4px 16px rgba(0,0,0,.35);
+  --shadow-3: 0 12px 32px rgba(0,0,0,.45);
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background:
+    radial-gradient(1100px 480px at 12% -8%, rgba(250,76,0,.05), transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, rgba(59,130,246,.035), transparent 50%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--orange-soft); color: var(--text); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 8px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+a, button, input, [tabindex] { font-family: inherit; }
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible, a:focus-visible {
+  outline: 2px solid var(--orange); outline-offset: 2px; border-radius: 4px;
+}
+
+/* ── Header ── */
+.header {
+  background: linear-gradient(180deg, var(--bg-elevated), var(--surface));
+  border-bottom: 1px solid var(--hairline);
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+.header-icon {
+  width: 38px; height: 38px;
+  background: linear-gradient(155deg, #ff6a30, var(--orange));
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; color: #fff;
+  box-shadow: 0 4px 14px var(--orange-glow), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.header-icon svg { width: 20px; height: 20px; }
+.header-title h1 { font-size: 15.5px; font-weight: 800; letter-spacing: -.01em; }
+.header-title p  { font-size: 10.5px; color: var(--dim); letter-spacing: .3px; margin-top: 1px; }
+.header-right    { margin-left: auto; display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-family: var(--font-mono); }
+.live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); flex-shrink: 0; }
+.live-dot.on { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,.18); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.meta-tag {
+  font-size: 11px; color: var(--muted); font-family: var(--font-mono);
+  background: var(--surface2); padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--hairline); white-space: nowrap;
+}
+
+/* ── Filter bar ── */
+.filter-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--hairline);
+  padding: 12px 24px;
+  position: sticky; top: 65px; z-index: 99;
+  display: flex; flex-direction: column; gap: 10px;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+.filter-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.chip {
+  background: var(--surface2); border: 1px solid var(--hairline); color: var(--muted);
+  padding: 7px 14px; border-radius: 20px; font-size: 12px; cursor: pointer;
+  transition: background .18s var(--ease), border-color .18s var(--ease), color .18s var(--ease), transform .12s var(--ease);
+  white-space: nowrap; font-weight: 600; -webkit-tap-highlight-color: transparent;
+}
+.chip:hover { color: var(--text); border-color: var(--border2); background: var(--surface-hover); }
+.chip:active { transform: scale(.96); }
+.chip.active { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); }
+.chip.chip-t1.active { background: rgba(59,130,246,.14); border-color: var(--blue); color: #7fb2ff; }
+.chip.chip-t2.active { background: rgba(139,92,246,.14); border-color: var(--purple); color: #b79bfa; }
+.chip.chip-t3.active { background: var(--orange-soft); border-color: var(--orange); color: var(--orange); }
+.date-input {
+  background: var(--surface2); border: 1px solid var(--hairline); color: var(--text);
+  padding: 7px 10px; border-radius: var(--radius-sm); font-size: 12px; outline: none;
+  font-family: var(--font-mono); transition: border-color .18s var(--ease);
+  color-scheme: dark;
+}
+.date-sep { color: var(--faint); font-size: 12px; }
+.search-wrap { position: relative; display: inline-flex; align-items: center; }
+.search-wrap svg { position: absolute; left: 11px; width: 14px; height: 14px; color: var(--faint); pointer-events: none; }
+.search-input {
+  background: var(--surface2); border: 1px solid var(--hairline); color: var(--text);
+  padding: 7px 12px 7px 32px; border-radius: var(--radius-sm); font-size: 12px; outline: none;
+  min-width: 190px; transition: border-color .18s var(--ease);
+}
+.search-input::placeholder { color: var(--faint); }
+.search-input:focus, .date-input:focus { border-color: var(--orange); }
+.clear-btn {
+  background: none; border: 1px solid var(--hairline); color: var(--dim);
+  padding: 7px 14px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: color .18s var(--ease), border-color .18s var(--ease);
+}
+.clear-btn svg { width: 13px; height: 13px; }
+.clear-btn:hover { color: var(--text); border-color: var(--border2); }
+.filter-summary {
+  font-size: 11px; color: var(--muted); margin-left: auto; text-align: right; font-family: var(--font-mono);
+}
+.filter-summary b { color: var(--orange); font-weight: 600; }
+
+/* ── Content ── */
+.content { padding: 22px 24px 48px; max-width: 1680px; margin: 0 auto; }
+.section { margin-bottom: 28px; animation: fadeUp .35s var(--ease) both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+.section-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 12px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--hairline);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+}
+
+/* ── KPI cards ── */
+.kpi-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; }
+.kpi-card {
+  background: linear-gradient(160deg, var(--bg-elevated), var(--surface));
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  padding: 18px 20px; position: relative; overflow: hidden; cursor: pointer;
+  transition: border-color .2s var(--ease), transform .2s var(--ease), box-shadow .2s var(--ease);
+  box-shadow: var(--shadow-1);
+}
+.kpi-card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.kpi-card:active { transform: translateY(-2px) scale(.99); }
+.kpi-card.kpi-active { border-color: var(--orange); box-shadow: 0 0 0 1px var(--orange), var(--shadow-2); }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius: var(--radius) var(--radius) 0 0; }
+.kpi-card.k-total::before { background: linear-gradient(90deg, var(--blue), #60a5fa); }
+.kpi-card.k-saca::before  { background: linear-gradient(90deg, var(--orange), #ff8a50); }
+.kpi-card.k-nao::before   { background: linear-gradient(90deg, var(--purple), #b79bfa); }
+.kpi-card.k-pct::before   { background: linear-gradient(90deg, var(--orange), #ff8a50); }
+.kpi-card.k-pctn::before  { background: linear-gradient(90deg, var(--muted), #dcdce0); }
+.kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: .7px; color: var(--dim); margin-bottom: 9px; font-weight: 600; }
+.kpi-value { font-size: 32px; font-weight: 800; line-height: 1; font-family: var(--font-mono); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.k-total .kpi-value { color: var(--blue); }
+.k-saca  .kpi-value { color: var(--orange); }
+.k-nao   .kpi-value { color: #b79bfa; }
+.k-pct   .kpi-value { color: var(--orange); }
+.k-pctn  .kpi-value { color: var(--muted); }
+.kpi-sub { font-size: 11px; color: var(--faint); margin-top: 7px; }
+
+/* ── Warning banner ── */
+.warn-banner {
+  margin-top: 12px; background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.3);
+  color: var(--yellow); border-radius: var(--radius); padding: 13px 16px; font-size: 12px;
+  cursor: pointer; display: flex; align-items: center; gap: 11px;
+  transition: background .18s var(--ease), border-color .18s var(--ease);
+}
+.warn-banner svg { width: 18px; height: 18px; flex-shrink: 0; }
+.warn-banner b { font-weight: 700; }
+.warn-banner:hover { background: rgba(245,158,11,.12); border-color: rgba(245,158,11,.45); }
+.warn-banner.kpi-active { box-shadow: 0 0 0 1px var(--yellow); }
+
+/* ── Tables (shared) ── */
+.turno-table-wrap {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow-1);
+}
+.tbl-scroll-x { overflow-x: auto; }
+table.data-tbl { width: 100%; border-collapse: collapse; min-width: 560px; }
+table.data-tbl th {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--dim); padding: 11px 15px; text-align: left;
+  background: var(--surface2); border-bottom: 1px solid var(--hairline); font-weight: 700;
+  white-space: nowrap;
+}
+table.data-tbl td { padding: 11px 15px; border-bottom: 1px solid var(--hairline); vertical-align: middle; font-size: 12.5px; }
+table.data-tbl tr:last-child td { border-bottom: none; }
+table.data-tbl tbody tr[data-clickable] { cursor: pointer; transition: background .16s var(--ease); }
+table.data-tbl tbody tr[data-clickable]:hover td { background: rgba(255,255,255,.025); }
+table.data-tbl tbody tr.row-active td { background: var(--orange-soft); box-shadow: inset 3px 0 0 var(--orange); }
+table.data-tbl tr.row-total td { font-weight: 700; background: rgba(255,255,255,.02); }
+.pct-cell { font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pct-bar-wrap { display:inline-block; width:64px; height:5px; background:var(--surface2); border-radius:3px; overflow:hidden; margin-left:9px; vertical-align:middle; }
+.pct-bar { height:100%; background: linear-gradient(90deg, var(--orange), #ff8a50); border-radius: 3px; transition: width .4s var(--ease); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* ── Evolution chart ── */
+.evo-legend { display:flex; gap:18px; padding: 2px 2px 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.evo-legend span { display:inline-flex; align-items:center; gap:7px; }
+.evo-legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+.evo-chart-card {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
+  padding: 16px 14px 8px; box-shadow: var(--shadow-1);
+}
+.evo-chart-wrap { position: relative; height: 260px; }
+.evo-empty { text-align: center; padding: 40px 20px; color: var(--faint); font-size: 12.5px; }
+
+/* ── Matrix (heatmap) ── */
+.matrix-cell { cursor: pointer; border-radius: 8px; padding: 6px 10px !important; text-align: center; font-family: var(--font-mono); font-weight: 600; transition: box-shadow .16s var(--ease), transform .12s var(--ease); }
+.matrix-cell:hover { box-shadow: inset 0 0 0 1px var(--border2); }
+.matrix-cell:active { transform: scale(.96); }
+.matrix-cell.active { box-shadow: inset 0 0 0 2px var(--orange) !important; }
+.matrix-cell.empty-cell { color: var(--faint); font-weight: 400; cursor: default; }
+.matrix-legend { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--faint); margin-top: 10px; }
+.matrix-legend-bar { flex: 1; max-width: 180px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(250,76,0,.06), rgba(250,76,0,.9)); }
+
+/* ── Validation panel ── */
+.val-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.val-card {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 15px 17px;
+  box-shadow: var(--shadow-1); transition: border-color .18s var(--ease);
+}
+.val-card .vtitle { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--dim); margin-bottom: 7px; font-weight: 600; }
+.val-card .vval { font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 7px; }
+.val-card .vval svg { width: 17px; height: 17px; flex-shrink: 0; }
+.val-card.ok { border-color: rgba(34,197,94,.25); }
+.val-card.ok .vval { color: var(--green); }
+.val-card.err { border-color: rgba(239,68,68,.35); }
+.val-card.err .vval { color: var(--red); }
+.val-card .vsub { font-size: 10.5px; color: var(--faint); margin-top: 5px; font-family: var(--font-mono); }
+
+/* ── All TOs table ── */
+.tbl-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 11px; flex-wrap: wrap; }
+.tbl-toolbar .search-wrap { flex: 1; min-width: 220px; }
+.tbl-toolbar .search-input { width: 100%; }
+.export-btn {
+  background: var(--surface2); border: 1px solid var(--hairline); color: var(--muted);
+  padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; font-weight: 600;
+  transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+}
+.export-btn svg { width: 14px; height: 14px; }
+.export-btn:hover { color: var(--text); border-color: var(--border2); background: var(--surface-hover); }
+.tbl-scroll { max-height: 540px; overflow: auto; background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); box-shadow: var(--shadow-1); }
+.tbl-scroll table.data-tbl th { position: sticky; top: 0; z-index: 1; }
+.pill { display:inline-flex; align-items:center; padding: 3px 10px; border-radius: 20px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.pill-saca { background: var(--orange-soft); color: var(--orange); border: 1px solid rgba(250,76,0,.3); }
+.pill-nao  { background: rgba(139,92,246,.14); color: #b79bfa; border: 1px solid rgba(139,92,246,.3); }
+.pill-sem  { background: rgba(245,158,11,.14); color: var(--yellow); border: 1px solid rgba(245,158,11,.3); }
+.turno-pill { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 8px; font-family: var(--font-mono); }
+.turno-pill.t1 { background: rgba(59,130,246,.14); color: #7fb2ff; }
+.turno-pill.t2 { background: rgba(139,92,246,.14); color: #b79bfa; }
+.turno-pill.t3 { background: var(--orange-soft); color: var(--orange); }
+.tbl-count { font-size: 11px; color: var(--faint); margin-top: 7px; text-align: right; font-family: var(--font-mono); }
+
+/* ── Empty / skeleton states ── */
+.empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+.empty svg { width: 42px; height: 42px; color: var(--faint); margin-bottom: 14px; }
+.empty h2 { font-size: 17px; margin-bottom: 8px; color: var(--text); font-weight: 700; }
+.empty code {
+  display: inline-block; background: var(--surface); border: 1px solid var(--hairline);
+  padding: 12px 20px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 16px;
+  text-align: left; line-height: 1.9; font-family: var(--font-mono); color: var(--muted);
+}
+
+.skeleton-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; padding: 22px 24px; max-width: 1680px; margin: 0 auto; }
+.skel-card { height: 108px; border-radius: var(--radius); background: linear-gradient(100deg, var(--surface) 30%, var(--surface2) 50%, var(--surface) 70%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+@keyframes shimmer { 0% { background-position: 160% 0; } 100% { background-position: -60% 0; } }
+@media (prefers-reduced-motion: reduce) { .skel-card { animation: none; opacity: .6; } }
+
+/* ── Responsive ── */
+@media (max-width: 1180px) {
+  .kpi-row { grid-template-columns: repeat(3,1fr); }
+  .skeleton-row { grid-template-columns: repeat(3,1fr); }
+}
+@media (max-width: 760px) {
+  .header { padding: 12px 16px; gap: 10px; }
+  .header-title p { display: none; }
+  .filter-bar { padding: 10px 16px; top: 61px; }
+  .content { padding: 16px 14px 40px; }
+  .kpi-row { grid-template-columns: repeat(2,1fr); gap: 10px; }
+  .skeleton-row { grid-template-columns: repeat(2,1fr); padding: 16px 14px; }
+  .val-grid { grid-template-columns: repeat(2,1fr); }
+  .kpi-value { font-size: 26px; }
+  .filter-summary { width: 100%; text-align: left; margin-left: 0; order: 10; }
+  .date-input, .search-input { font-size: 16px; } /* evita zoom automatico no iOS */
+  .tbl-toolbar .search-wrap { flex-basis: 100%; }
+}
+@media (max-width: 420px) {
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .val-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+  </div>
+  <div class="header-title">
+    <h1>Produtividade de Sacas</h1>
+    <p>SPX EXPRESS &middot; % DE PACOTES EM SACA SOBRE O TOTAL EMBALADO &middot; POR DIA OPERACIONAL E TURNO &middot; SoC_PE_Recife_04</p>
+  </div>
+  <div class="header-right">
+    <span class="meta-tag" id="metaTag">&mdash;</span>
+    <div class="live-badge">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="lastUpdated">Aguardando...</span>
+    </div>
+  </div>
+</header>
+
+<div class="filter-bar">
+  <div class="filter-row">
+    <button class="chip" data-preset="today">Hoje</button>
+    <button class="chip" data-preset="yesterday">Ontem</button>
+    <button class="chip" data-preset="7d">Últimos 7 dias</button>
+    <button class="chip" data-preset="30d">Últimos 30 dias</button>
+    <button class="chip" data-preset="all">Tudo</button>
+    <span class="date-sep">|</span>
+    <input type="date" class="date-input" id="fromDate" aria-label="Data inicial">
+    <span class="date-sep">&rarr;</span>
+    <input type="date" class="date-input" id="toDate" aria-label="Data final">
+  </div>
+  <div class="filter-row">
+    <button class="chip active" data-turno="ALL">Turno: TOTAL</button>
+    <button class="chip chip-t1" data-turno="T1">T1 (06&ndash;14h)</button>
+    <button class="chip chip-t2" data-turno="T2">T2 (14&ndash;22h)</button>
+    <button class="chip chip-t3" data-turno="T3">T3 (22&ndash;06h)</button>
+    <span class="date-sep">|</span>
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" class="search-input" id="destinoFilter" placeholder="Filtrar por destino..." aria-label="Filtrar por destino">
+    </div>
+    <button class="clear-btn" id="clearFiltersBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="m19 6-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      Limpar filtros
+    </button>
+    <span class="filter-summary" id="filterSummary"></span>
+  </div>
+</div>
+
+<div id="skeletonRoot" class="skeleton-row" aria-hidden="true">
+  <div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div>
+</div>
+
+<div class="content" id="content" style="display:none">
+  <div class="empty" id="emptyState" style="display:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4"/><path d="M12 16h.01"/><circle cx="12" cy="12" r="10"/></svg>
+    <h2>Aguardando dados</h2>
+    <p>Nenhuma TO Packed recebida ainda para esta estação.</p>
+    <code>
+      Este dashboard reaproveita o mesmo fluxo do <b>tos_sync.user.js</b> (TOs Packed).<br>
+      Nenhum script novo é necessário &mdash; basta manter uma aba do SPX aberta<br>
+      com o Tampermonkey ativo e aguardar a sincronização.
+    </code>
+  </div>
+
+  <div id="dashBody" style="display:none">
+    <!-- KPIs -->
+    <div class="section">
+      <div class="kpi-row">
+        <div class="kpi-card k-total" data-cls="ALL" tabindex="0" role="button" aria-label="Total de pacotes">
+          <div class="kpi-label">Total de Pacotes</div>
+          <div class="kpi-value" id="kpiTotal">0</div>
+          <div class="kpi-sub" id="kpiTotalSub">no período/turno selecionado</div>
+        </div>
+        <div class="kpi-card k-saca" data-cls="SACA" tabindex="0" role="button" aria-label="Pacotes em saca">
+          <div class="kpi-label">Pacotes em Saca</div>
+          <div class="kpi-value" id="kpiSaca">0</div>
+          <div class="kpi-sub" id="kpiSacaSub">classificados como saca</div>
+        </div>
+        <div class="kpi-card k-nao" data-cls="NAO_SACA" tabindex="0" role="button" aria-label="Pacotes em outro unitizador">
+          <div class="kpi-label">Pacotes em Outro Unitizador</div>
+          <div class="kpi-value" id="kpiNao">0</div>
+          <div class="kpi-sub" id="kpiNaoSub">demais tipos de embalagem</div>
+        </div>
+        <div class="kpi-card k-pct" data-cls="SACA" tabindex="0" role="button" aria-label="Percentual de sacas">
+          <div class="kpi-label">% Sacas</div>
+          <div class="kpi-value" id="kpiPct">0%</div>
+          <div class="kpi-sub">pacotes saca / (saca + outro unitizador)</div>
+        </div>
+        <div class="kpi-card k-pctn" data-cls="NAO_SACA" tabindex="0" role="button" aria-label="Percentual de outro unitizador">
+          <div class="kpi-label">% Outro Unitizador</div>
+          <div class="kpi-value" id="kpiPctN">0%</div>
+          <div class="kpi-sub">outro unitizador / (saca + outro unitizador)</div>
+        </div>
+      </div>
+      <div class="warn-banner" id="semClassBanner" data-cls="SEM_CLASS" style="display:none" tabindex="0" role="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        <span><b id="semClassCount">0</b> sem classificação de tipo de unitizador (SPX não informou o campo) &mdash; <u>não entram</u> no cálculo de % Sacas. Clique para ver a lista.</span>
+      </div>
+    </div>
+
+    <!-- Turno comparison -->
+    <div class="section">
+      <div class="section-title">Comparação por Turno &mdash; clique numa linha para filtrar</div>
+      <div class="turno-table-wrap tbl-scroll-x">
+        <table class="data-tbl">
+          <thead><tr>
+            <th>Turno</th><th>TOs</th><th>Total Pacotes</th><th>Pacotes Saca</th><th>Pacotes Não Saca</th><th>% Saca</th>
+          </tr></thead>
+          <tbody id="turnoTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Evolution -->
+    <div class="section">
+      <div class="section-title">Evolução por Dia Operacional</div>
+      <div class="evo-legend">
+        <span><i style="background:var(--orange)"></i> Pacotes em Saca</span>
+        <span><i style="background:#4b4b52"></i> Pacotes em Outro Unitizador</span>
+        <span><i style="background:var(--orange);border-radius:50%;width:8px;height:8px"></i> % Sacas (linha)</span>
+        <span style="color:var(--faint);margin-left:auto">clique numa barra para isolar o dia</span>
+      </div>
+      <div class="evo-chart-card">
+        <div class="evo-chart-wrap"><canvas id="evoCanvas" role="img" aria-label="Gráfico de evolução de pacotes em saca por dia operacional"></canvas></div>
+        <div class="evo-empty" id="evoEmpty" style="display:none">Sem dias no período selecionado.</div>
+      </div>
+    </div>
+
+    <!-- Hora a hora: Planejado x Realizado -->
+    <div class="section">
+      <div class="section-title">
+        <span>Produção Hora a Hora &mdash; Planejado &times; Realizado (Sacas)</span>
+        <span style="color:var(--faint);font-weight:600">meta: 70%</span>
+      </div>
+      <div class="filter-row" style="margin-bottom:12px">
+        <input type="date" class="date-input" id="hourlyDate" aria-label="Dia para visão hora a hora">
+        <span class="date-sep">|</span>
+        <span style="color:var(--faint);font-size:11px">Dia operacional: 06:00 do dia selecionado at&eacute; 05:59 do dia seguinte &middot; Planejado = soma da capacidade planejada de todas as esteiras naquela hora (aba "Planejamento") &middot; % = pacotes reais em saca / planejado</span>
+      </div>
+      <div class="evo-chart-card">
+        <div class="evo-chart-wrap"><canvas id="hourlyCanvas" role="img" aria-label="Gráfico hora a hora de planejado versus realizado de sacas"></canvas></div>
+      </div>
+      <div class="turno-table-wrap tbl-scroll-x" style="margin-top:14px">
+        <table class="data-tbl">
+          <thead><tr>
+            <th>Hora</th><th>Planejado</th><th>Real Total</th><th>Eficiência</th><th>Real Sacas</th><th>% Sacas / Planejado</th>
+          </tr></thead>
+          <tbody id="hourlyTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Day x Turno matrix -->
+    <div class="section">
+      <div class="section-title">Dia Operacional &times; Turno &mdash; % Sacas por Pacotes (clique numa célula para filtrar)</div>
+      <div class="turno-table-wrap tbl-scroll-x">
+        <table class="data-tbl">
+          <thead><tr><th>Dia Operacional</th><th>T1</th><th>T2</th><th>T3</th><th>Total</th></tr></thead>
+          <tbody id="matrixTblBody"></tbody>
+        </table>
+      </div>
+      <div class="matrix-legend"><span>0%</span><div class="matrix-legend-bar"></div><span>100%</span></div>
+    </div>
+
+    <!-- Validation -->
+    <div class="section">
+      <div class="section-title">Validação da Regra</div>
+      <div class="val-grid" id="valGrid"></div>
+    </div>
+
+    <!-- All TOs -->
+    <div class="section">
+      <div class="section-title" style="border-bottom:none;margin-bottom:8px">
+        <span>TOs no Cálculo &mdash; Auditoria / Drill-down</span>
+      </div>
+      <div class="tbl-toolbar">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" class="search-input" id="tableSearch" placeholder="Buscar por TO, destino, operador..." aria-label="Buscar na tabela de auditoria">
+        </div>
+        <button class="chip active" data-clsfilter="ALL">Todas</button>
+        <button class="chip" data-clsfilter="SACA">Só Saca</button>
+        <button class="chip" data-clsfilter="NAO_SACA">Só Não Saca</button>
+        <button class="chip" data-clsfilter="SEM_CLASS">Só Sem Classificação</button>
+        <button class="export-btn" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+      </div>
+      <div class="tbl-scroll">
+        <table class="data-tbl">
+          <thead><tr>
+            <th>TO</th><th>Tipo</th><th>Pacotes</th><th>Status</th><th>Concluído (PACKED)</th>
+            <th>Dia Operacional</th><th>Turno</th><th>Destino</th><th>Estação</th>
+          </tr></thead>
+          <tbody id="allTblBody"></tbody>
+        </table>
+      </div>
+      <div class="tbl-count" id="tblCount"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Estação exibida por este arquivo (mesmo padrão dos demais dashboards: cada
+// estação tem sua própria cópia deste HTML, mudando só essas duas constantes) ──
+const STATION       = '15000';
+const STATION_LABEL = 'SoC_PE_Recife_04';
+
+// ── Regra de dia operacional / turno (06:00–05:59:59) ───────────────────────
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function operationalDayKey(ts) {
+  const shifted = new Date(ts * 1000 - 6 * 3600 * 1000);
+  return `${shifted.getFullYear()}-${pad2(shifted.getMonth() + 1)}-${pad2(shifted.getDate())}`;
+}
+function turnoOf(ts) {
+  const h = new Date(ts * 1000).getHours();
+  if (h >= 6  && h < 14) return 'T1';
+  if (h >= 14 && h < 22) return 'T2';
+  return 'T3';
+}
+function dayKeyOffset(key, offsetDays) {
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + offsetDays);
+  return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}`;
+}
+function fmtDayShort(key) {
+  const [y, m, d] = key.split('-');
+  return `${d}/${m}`;
+}
+function fmtDateTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function classify(pack_name) {
+  const n = (pack_name || '').trim().toLowerCase();
+  if (!n) return 'SEM_CLASS';
+  return n === 'saca' ? 'SACA' : 'NAO_SACA';
+}
+function todayOpKey() { return operationalDayKey(Math.floor(Date.now() / 1000)); }
+
+// ── State ────────────────────────────────────────────────────────────────
+let rawList   = [];   // registros crus vindos do servidor (deduplicados por to_number)
+let enriched  = [];   // + dayKey, turno, cls
+let lastAt    = null;
+let firstLoadDone = false;
+
+const filters = {
+  from: dayKeyOffset(todayOpKey(), -6),
+  to:   todayOpKey(),
+  turno: 'ALL',       // ALL | T1 | T2 | T3
+  destino: '',
+  kpiCls: 'ALL',      // filtro disparado ao clicar num KPI/turno-linha — afeta a tabela de auditoria
+  matrixDay: null,    // dia isolado ao clicar na matriz (combinado com turno)
+};
+
+// ── Carga de dados ───────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch(`/api/sacas-history?station=${STATION}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    if (data.fetchedAt === lastAt) return;
+    lastAt = data.fetchedAt;
+    applyData(data);
+  } catch (e) { /* mantém última tela renderizada */ }
+  finally {
+    if (!firstLoadDone) {
+      firstLoadDone = true;
+      document.getElementById('skeletonRoot').style.display = 'none';
+      document.getElementById('content').style.display = '';
+    }
+  }
+}
+
+function applyData(data) {
+  // Dedup defensivo por to_number (o servidor já deduplica, mas validamos aqui de novo
+  // — ver painel de Validação, que reporta duplicados encontrados para auditoria).
+  const seen = new Map();
+  let dupCount = 0;
+  (data.list || []).forEach(r => {
+    if (!r || !r.to_number) return;
+    if (seen.has(r.to_number)) { dupCount++; return; }
+    seen.set(r.to_number, r);
+  });
+  rawList = [...seen.values()];
+  window.__dupCount = dupCount;
+
+  // Só entram no cálculo TOs com timestamp de conclusão válido (> 0)
+  const invalid = rawList.filter(r => !(r.complete_time > 0)).length;
+  window.__invalidCount = invalid;
+
+  enriched = rawList
+    .filter(r => r.complete_time > 0)
+    .map(r => ({
+      ...r,
+      dayKey: operationalDayKey(r.complete_time),
+      turno:  turnoOf(r.complete_time),
+      cls:    classify(r.pack_name),
+    }));
+
+  document.getElementById('emptyState').style.display = enriched.length ? 'none' : '';
+  document.getElementById('dashBody').style.display    = enriched.length ? '' : 'none';
+  if (!enriched.length) return;
+
+  const t  = new Date(data.fetchedAt);
+  const ts = t.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('lastUpdated').textContent = ts;
+  document.getElementById('liveDot').className       = 'live-dot on';
+  document.getElementById('metaTag').textContent     = `${STATION_LABEL} · ${enriched.length} TOs no histórico · ${ts}`;
+
+  render();
+  renderHourly();
+}
+
+// ── Pipeline de filtro ───────────────────────────────────────────────────
+function inRange(dayKey) {
+  if (filters.from && dayKey < filters.from) return false;
+  if (filters.to   && dayKey > filters.to)   return false;
+  return true;
+}
+
+function baseFiltered() {
+  const destino = filters.destino.trim().toLowerCase();
+  return enriched.filter(r => {
+    if (filters.matrixDay) { if (r.dayKey !== filters.matrixDay) return false; }
+    else if (!inRange(r.dayKey)) return false;
+    if (filters.turno !== 'ALL' && r.turno !== filters.turno) return false;
+    if (destino && !(r.dest_station_name || '').toLowerCase().includes(destino)) return false;
+    return true;
+  });
+}
+
+// A métrica de negócio é sobre PACOTES dentro do unitizador, não sobre contagem de TOs
+// (uma TO pode carregar dezenas de pacotes num único saco/carrinho) — ex.: 20.000 pacotes
+// no período, 15.000 em saca = 75% de sacas, mesmo que o número de TOs saca/não-saca seja
+// bem diferente disso. Contagem de TOs é mantida como informação secundária (tos/tosSaca/
+// tosNao/tosSem), útil operacionalmente, mas nunca entra no cálculo de %.
+function aggregate(list) {
+  let saca = 0, nao = 0, sem = 0, pac = 0;
+  let tosSaca = 0, tosNao = 0, tosSem = 0;
+  list.forEach(r => {
+    const q = r.quantity || 0;
+    pac += q;
+    if (r.cls === 'SACA')          { saca += q; tosSaca++; }
+    else if (r.cls === 'NAO_SACA') { nao  += q; tosNao++;  }
+    else                            { sem  += q; tosSem++;  }
+  });
+  const denom = saca + nao;
+  return {
+    pac, saca, nao, sem,
+    tos: list.length, tosSaca, tosNao, tosSem,
+    pctSaca: denom ? (saca / denom * 100) : 0,
+    pctNao:  denom ? (nao  / denom * 100) : 0,
+  };
+}
+
+// ── Acessibilidade: torna elementos data-clickable/matrix-cell operáveis via teclado ──
+function makeKeyboardClickable(root) {
+  root.querySelectorAll('[data-clickable], .matrix-cell:not(.empty-cell)').forEach(el => {
+    if (el.dataset.kbdReady) return;
+    el.dataset.kbdReady = '1';
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+    });
+  });
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function render() {
+  const scoped = baseFiltered();
+  const agg    = aggregate(scoped);
+
+  document.getElementById('kpiTotal').textContent = agg.pac.toLocaleString('pt-BR');
+  document.getElementById('kpiTotalSub').textContent = `${agg.tos.toLocaleString('pt-BR')} TOs no período/turno`;
+  document.getElementById('kpiSaca').textContent  = agg.saca.toLocaleString('pt-BR');
+  document.getElementById('kpiSacaSub').textContent = `${agg.tosSaca.toLocaleString('pt-BR')} TOs classificadas como saca`;
+  document.getElementById('kpiNao').textContent   = agg.nao.toLocaleString('pt-BR');
+  document.getElementById('kpiNaoSub').textContent = `${agg.tosNao.toLocaleString('pt-BR')} TOs com outro tipo`;
+  document.getElementById('kpiPct').textContent   = agg.pctSaca.toFixed(1) + '%';
+  document.getElementById('kpiPctN').textContent  = agg.pctNao.toFixed(1) + '%';
+
+  const banner = document.getElementById('semClassBanner');
+  if (agg.sem > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('semClassCount').textContent =
+      `${agg.sem.toLocaleString('pt-BR')} pacotes (${agg.tosSem.toLocaleString('pt-BR')} TOs)`;
+  } else banner.style.display = 'none';
+
+  document.querySelectorAll('.kpi-card[data-cls]').forEach(el => {
+    el.classList.toggle('kpi-active', filters.kpiCls === el.dataset.cls);
+  });
+  banner.classList.toggle('kpi-active', filters.kpiCls === 'SEM_CLASS');
+
+  renderTurnoTable(scoped);
+  renderEvolution();
+  renderMatrix();
+  renderValidation(scoped, agg);
+  renderAllTable(scoped);
+  renderFilterSummary();
+}
+
+function renderTurnoTable(scoped) {
+  const turnos = ['T1', 'T2', 'T3'];
+  const rows = turnos.map(tk => {
+    const list = scoped.filter(r => r.turno === tk);
+    const a = aggregate(list);
+    const active = filters.turno === tk;
+    return `<tr data-clickable class="${active ? 'row-active' : ''}" onclick="setTurnoFilter('${tk}')">
+      <td><span class="turno-pill ${tk.toLowerCase()}">${tk}</span></td>
+      <td class="mono">${a.tos}</td>
+      <td class="mono">${a.pac}</td>
+      <td class="mono">${a.saca}</td>
+      <td class="mono">${a.nao}</td>
+      <td class="pct-cell">${a.pctSaca.toFixed(1)}%<span class="pct-bar-wrap"><span class="pct-bar" style="width:${Math.min(100,a.pctSaca)}%"></span></span></td>
+    </tr>`;
+  }).join('');
+  const totalAgg = aggregate(scoped);
+  const totalRow = `<tr class="row-total" data-clickable onclick="setTurnoFilter('ALL')">
+    <td>TOTAL</td><td class="mono">${totalAgg.tos}</td><td class="mono">${totalAgg.pac}</td><td class="mono">${totalAgg.saca}</td>
+    <td class="mono">${totalAgg.nao}</td>
+    <td class="pct-cell">${totalAgg.pctSaca.toFixed(1)}%<span class="pct-bar-wrap"><span class="pct-bar" style="width:${Math.min(100,totalAgg.pctSaca)}%"></span></span></td>
+  </tr>`;
+  const tbody = document.getElementById('turnoTblBody');
+  tbody.innerHTML = rows + totalRow;
+  makeKeyboardClickable(tbody);
+}
+
+function daysInWindow() {
+  // Quando um dia foi isolado via matriz, mostra só ele; senão, todo o range do/até.
+  if (filters.matrixDay) return [filters.matrixDay];
+  const days = [...new Set(enriched.filter(r => inRange(r.dayKey)).map(r => r.dayKey))].sort();
+  return days;
+}
+
+// ── Gráfico de evolução (Chart.js) ──────────────────────────────────────
+let evoChart = null;
+function ensureEvoChart() {
+  if (evoChart) return evoChart;
+  const ctx = document.getElementById('evoCanvas').getContext('2d');
+  evoChart = new Chart(ctx, {
+    data: {
+      labels: [],
+      datasets: [
+        { type: 'bar', label: 'Pacotes em Saca', data: [], backgroundColor: '#FA4C00', stack: 'vol', borderRadius: 4, maxBarThickness: 46, order: 2 },
+        { type: 'bar', label: 'Pacotes em Outro Unitizador', data: [], backgroundColor: '#4b4b52', stack: 'vol', borderRadius: 4, maxBarThickness: 46, order: 2 },
+        { type: 'line', label: '% Sacas', data: [], yAxisID: 'y1', borderColor: '#FA4C00', backgroundColor: '#FA4C00',
+          tension: .35, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: '#0D0D0D', pointBorderColor: '#FA4C00',
+          pointBorderWidth: 2, borderWidth: 2, order: 1 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      onClick(evt, _els, chart) {
+        const pts = chart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+        if (pts.length) { const dk = chart.$dayKeys[pts[0].index]; if (dk) isolateDay(dk); }
+      },
+      onHover(evt, _els, chart) { evt.native.target.style.cursor = 'pointer'; },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1A1A1C', borderColor: '#2A2A2C', borderWidth: 1,
+          titleColor: '#F5F5F6', bodyColor: '#BFBFC3', padding: 11, cornerRadius: 8,
+          titleFont: { family: "'Fira Sans',sans-serif", weight: '700', size: 12 },
+          bodyFont: { family: "'Fira Code',monospace", size: 11.5 },
+          callbacks: {
+            label(item) {
+              if (item.dataset.label === '% Sacas') return `% Sacas: ${item.parsed.y.toFixed(1)}%`;
+              return `${item.dataset.label}: ${item.parsed.y.toLocaleString('pt-BR')} pacotes`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { color: '#96969b', font: { family: "'Fira Sans',sans-serif", size: 10.5 } } },
+        y: { stacked: true, beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' },
+             ticks: { color: '#96969b', font: { family: "'Fira Code',monospace", size: 10 } } },
+        y1: { position: 'right', min: 0, max: 100, grid: { display: false },
+              ticks: { color: '#FA4C00', font: { family: "'Fira Code',monospace", size: 10 }, callback: v => v + '%' } },
+      },
+      animation: { duration: 320, easing: 'easeOutQuint' },
+    },
+  });
+  return evoChart;
+}
+
+function renderEvolution() {
+  const days = daysInWindow();
+  const wrap  = document.getElementById('evoCanvas').parentElement;
+  const empty = document.getElementById('evoEmpty');
+  if (!days.length) { wrap.style.display = 'none'; empty.style.display = 'block'; return; }
+  wrap.style.display = ''; empty.style.display = 'none';
+
+  const perDay = days.map(dk => {
+    const list = enriched.filter(r => r.dayKey === dk && (filters.turno === 'ALL' || r.turno === filters.turno) &&
+      (!filters.destino.trim() || (r.dest_station_name || '').toLowerCase().includes(filters.destino.trim().toLowerCase())));
+    return { dk, agg: aggregate(list) };
+  });
+
+  const chart = ensureEvoChart();
+  chart.$dayKeys = perDay.map(d => d.dk);
+  chart.data.labels = perDay.map(d => fmtDayShort(d.dk));
+  chart.data.datasets[0].data = perDay.map(d => d.agg.saca);
+  chart.data.datasets[1].data = perDay.map(d => d.agg.nao);
+  chart.data.datasets[2].data = perDay.map(d => Math.round(d.agg.pctSaca * 10) / 10);
+  const activeColors = perDay.map(d => filters.matrixDay === d.dk);
+  chart.data.datasets[0].backgroundColor = activeColors.map(a => a ? '#ff7a3d' : '#FA4C00');
+  chart.data.datasets[1].backgroundColor = activeColors.map(a => a ? '#6a6a70' : '#4b4b52');
+  chart.update();
+}
+
+// ── Produção Hora a Hora (Planejado × Realizado) ────────────────────────────
+// Diferente do resto do dashboard (que usa dia OPERACIONAL 06:00–05:59:59), essa visão
+// casa com a aba "Planejamento" da planilha, que é indexada por DATA/HORA de CALENDÁRIO
+// (ex.: hora 0 do dia 14/09 é literalmente 00:00–00:59 de 14/09, não faz parte do dia
+// operacional 13/09 aqui). Por isso usa funções de data/hora de calendário próprias
+// (calDateDDMMYYYY/calHour), em vez de operationalDayKey/turnoOf.
+let planejamento = [];
+const HOURLY_TARGET_PCT = 70;
+
+function calDateDDMMYYYY(ts) {
+  const d = new Date(ts * 1000);
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+function calHour(ts) { return new Date(ts * 1000).getHours(); }
+
+async function loadPlanejamento() {
+  try {
+    const res = await fetch('/api/sacas-planejamento');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.error) return;
+    planejamento = data.list || [];
+    renderHourly();
+  } catch (e) { /* mantém última tela renderizada */ }
+}
+
+let hourlyChart = null;
+function ensureHourlyChart() {
+  if (hourlyChart) return hourlyChart;
+  const ctx = document.getElementById('hourlyCanvas').getContext('2d');
+  hourlyChart = new Chart(ctx, {
+    plugins: [ChartDataLabels],
+    data: {
+      labels: [],
+      datasets: [
+        { type: 'bar', label: 'Planejado', data: [], backgroundColor: 'rgba(191,191,195,.28)', borderRadius: 4, maxBarThickness: 28, order: 3, datalabels: { display: false } },
+        { type: 'bar', label: 'Real (Sacas)', data: [], backgroundColor: '#FA4C00', borderRadius: 4, maxBarThickness: 28, order: 2, datalabels: { display: false } },
+        { type: 'line', label: '% Sacas / Planejado', data: [], yAxisID: 'y1', borderColor: '#FA4C00', backgroundColor: '#FA4C00',
+          tension: .3, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: '#0D0D0D', pointBorderColor: '#FA4C00',
+          pointBorderWidth: 2, borderWidth: 2, spanGaps: true, order: 1,
+          datalabels: {
+            display: true, align: 'top', anchor: 'end', offset: 6,
+            color: '#FA4C00', font: { family: "'Fira Code',monospace", size: 10, weight: '700' },
+            formatter: v => v == null ? '' : v.toFixed(1) + '%',
+          } },
+        { type: 'line', label: `Meta ${HOURLY_TARGET_PCT}%`, data: [], yAxisID: 'y1', borderColor: 'rgba(191,191,195,.5)',
+          borderDash: [6, 4], pointRadius: 0, borderWidth: 1.5, order: 0, datalabels: { display: false } },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      layout: { padding: { top: 18 } },
+      plugins: {
+        legend: { labels: { color: '#96969b', font: { family: "'Fira Sans',sans-serif", size: 10.5 }, usePointStyle: true, boxWidth: 8 } },
+        tooltip: {
+          backgroundColor: '#1A1A1C', borderColor: '#2A2A2C', borderWidth: 1,
+          titleColor: '#F5F5F6', bodyColor: '#BFBFC3', padding: 11, cornerRadius: 8,
+          titleFont: { family: "'Fira Sans',sans-serif", weight: '700', size: 12 },
+          bodyFont: { family: "'Fira Code',monospace", size: 11.5 },
+          callbacks: {
+            label(item) {
+              if (item.dataset.label.startsWith('%') || item.dataset.label.startsWith('Meta')) {
+                return item.parsed.y == null ? `${item.dataset.label}: —` : `${item.dataset.label}: ${item.parsed.y.toFixed(1)}%`;
+              }
+              return item.parsed.y == null ? `${item.dataset.label}: —` : `${item.dataset.label}: ${item.parsed.y.toLocaleString('pt-BR')} pacotes`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#96969b', font: { family: "'Fira Sans',sans-serif", size: 10.5 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.05)' },
+             ticks: { color: '#96969b', font: { family: "'Fira Code',monospace", size: 10 } } },
+        y1: { position: 'right', min: 0, suggestedMax: 100, grid: { display: false },
+              ticks: { color: '#FA4C00', font: { family: "'Fira Code',monospace", size: 10 }, callback: v => v + '%' } },
+      },
+      animation: { duration: 280 },
+    },
+  });
+  return hourlyChart;
+}
+
+// Monta a sequência de 24 horas do DIA OPERACIONAL (06:00 do dia escolhido até 05:59 do dia
+// seguinte) — mesma regra usada no resto do dashboard (operationalDayKey/turnoOf), só que
+// aqui precisamos da data de CALENDÁRIO de cada hora (não só a chave do dia operacional)
+// pra casar com a aba "Planejamento", que é indexada por data/hora de calendário.
+// ATENÇÃO: a aba "Planejamento" já grava a cauda 00h-05h com a MESMA data do dia
+// operacional selecionado (ex.: "14/09" hora 0-5, Turno=T3) — confirmado direto na
+// planilha, ela NÃO rola pra data de calendário seguinte. Já os dados REAIS (sacasLog)
+// usam timestamp de verdade, então 00h-05h da operacional "14/09" aconteceram de fato
+// no calendário 15/09. Por isso cada slot guarda duas chaves de data diferentes:
+// realDateStr (pra casar com o timestamp real) e planDateStr (pra casar com a planilha).
+function operationalHourSlots(baseDateObj) {
+  const nextDateObj = new Date(baseDateObj.getFullYear(), baseDateObj.getMonth(), baseDateObj.getDate() + 1);
+  const baseStr = calDateStrOf(baseDateObj);
+  const nextStr = calDateStrOf(nextDateObj);
+  const slots = [];
+  for (let h = 6; h <= 23; h++) slots.push({ h, realDateStr: baseStr, planDateStr: baseStr });
+  for (let h = 0; h <= 5; h++)  slots.push({ h, realDateStr: nextStr, planDateStr: baseStr });
+  return slots;
+}
+function calDateStrOf(d) { return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`; }
+
+function renderHourly() {
+  const dateInput = document.getElementById('hourlyDate');
+  if (!dateInput || !dateInput.value) return;
+  const [y, m, dd] = dateInput.value.split('-').map(Number);
+  const slots = operationalHourSlots(new Date(y, m - 1, dd));
+  const slotIndex = new Map(slots.map((s, i) => [`${s.realDateStr}|${s.h}`, i]));
+
+  const realBySlot = slots.map(() => ({ pac: 0, saca: 0 }));
+  rawList.forEach(r => {
+    if (!(r.complete_time > 0)) return;
+    const idx = slotIndex.get(`${calDateDDMMYYYY(r.complete_time)}|${calHour(r.complete_time)}`);
+    if (idx === undefined) return;
+    const q = r.quantity || 0;
+    realBySlot[idx].pac += q;
+    if (classify(r.pack_name) === 'SACA') realBySlot[idx].saca += q;
+  });
+
+  const planMap = new Map(planejamento.map(p => [`${p.data}|${p.hora}`, p.planejadoGeral]));
+  const planBySlot = slots.map(s => planMap.get(`${s.planDateStr}|${s.h}`) ?? null);
+
+  const chart = ensureHourlyChart();
+  chart.data.labels = slots.map(s => `${pad2(s.h)}h`);
+  chart.data.datasets[0].data = planBySlot;
+  chart.data.datasets[1].data = realBySlot.map(r => r.saca);
+  chart.data.datasets[2].data = slots.map((s, i) => {
+    const plan = planBySlot[i];
+    return plan ? Math.round((realBySlot[i].saca / plan) * 1000) / 10 : null;
+  });
+  chart.data.datasets[3].data = slots.map(() => HOURLY_TARGET_PCT);
+  chart.update();
+
+  document.getElementById('hourlyTblBody').innerHTML = slots.map((s, i) => {
+    const plan = planBySlot[i];
+    const real = realBySlot[i];
+    const eficiencia = plan ? (real.pac / plan * 100) : null;
+    const pct = plan ? (real.saca / plan * 100) : null;
+    const pctColor = pct == null ? 'var(--faint)' : (pct >= HOURLY_TARGET_PCT ? 'var(--green)' : 'var(--red)');
+    const hourLabel = `${pad2(s.h)}h`;
+    return `<tr>
+      <td class="mono">${hourLabel}</td>
+      <td class="mono">${plan != null ? plan.toLocaleString('pt-BR') : '—'}</td>
+      <td class="mono">${real.pac.toLocaleString('pt-BR')}</td>
+      <td class="mono">${eficiencia != null ? eficiencia.toFixed(1) + '%' : '—'}</td>
+      <td class="mono" style="color:var(--orange)">${real.saca.toLocaleString('pt-BR')}</td>
+      <td class="pct-cell" style="color:${pctColor}">${pct != null ? pct.toFixed(1) + '%' : '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function heatBg(pct, hasData) {
+  if (!hasData) return 'transparent';
+  const t = Math.max(0, Math.min(1, pct / 100));
+  const alpha = .1 + t * .38;
+  return `rgba(250,76,0,${alpha.toFixed(2)})`;
+}
+
+function renderMatrix() {
+  const days = filters.matrixDay
+    ? [filters.matrixDay]
+    : [...new Set(enriched.filter(r => inRange(r.dayKey)).map(r => r.dayKey))].sort();
+  const destino = filters.destino.trim().toLowerCase();
+  function pctFor(dk, turno) {
+    const list = enriched.filter(r => r.dayKey === dk &&
+      (turno === 'ALL' || r.turno === turno) &&
+      (!destino || (r.dest_station_name || '').toLowerCase().includes(destino)));
+    return aggregate(list);
+  }
+  const tbody = document.getElementById('matrixTblBody');
+  tbody.innerHTML = days.map(dk => {
+    const cells = ['T1', 'T2', 'T3', 'ALL'].map(tk => {
+      const a = pctFor(dk, tk);
+      const hasData = a.pac > 0;
+      const active = filters.matrixDay === dk && (filters.turno === tk || (tk === 'ALL' && filters.turno === 'ALL'));
+      const label = hasData ? a.pctSaca.toFixed(0) + '%' : '—';
+      const cls = `matrix-cell${active ? ' active' : ''}${hasData ? '' : ' empty-cell'}`;
+      const bg = heatBg(a.pctSaca, hasData);
+      return `<td class="${cls}" style="background:${bg}" title="${a.saca}/${a.saca + a.nao} pacotes (${a.tos} TOs)" onclick="clickMatrixCell('${dk}','${tk}')">${label}</td>`;
+    }).join('');
+    return `<tr><td>${fmtDayShort(dk)} <span style="color:var(--faint);font-size:10px">(${dk})</span></td>${cells}</tr>`;
+  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--faint)">Sem dias no período</td></tr>`;
+  makeKeyboardClickable(tbody);
+}
+
+const iconOk = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const iconErr = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
+function renderValidation(scoped, agg) {
+  const grid   = document.getElementById('valGrid');
+  const sumOk  = (agg.saca + agg.nao + agg.sem) === agg.pac;
+  const outOfRange = enriched.length - baseFiltered().length; // apenas informativo: quantos ficaram fora do filtro atual
+  grid.innerHTML = `
+    <div class="val-card ${sumOk ? 'ok' : 'err'}">
+      <div class="vtitle">Total Pacotes = Saca + Não Saca + Sem Classificação</div>
+      <div class="vval">${sumOk ? iconOk : iconErr}${sumOk ? 'Consistente' : 'Inconsistente'}</div>
+      <div class="vsub">${agg.pac} = ${agg.saca} + ${agg.nao} + ${agg.sem}</div>
+    </div>
+    <div class="val-card ${window.__invalidCount ? 'err' : 'ok'}">
+      <div class="vtitle">TOs sem timestamp válido de PACKED</div>
+      <div class="vval">${window.__invalidCount || 0}</div>
+      <div class="vsub">excluídas do cálculo (não entram em nenhum dia/turno)</div>
+    </div>
+    <div class="val-card ${window.__dupCount ? 'err' : 'ok'}">
+      <div class="vtitle">TOs duplicadas detectadas</div>
+      <div class="vval">${window.__dupCount || 0}</div>
+      <div class="vsub">mesma TO recebida mais de uma vez (deduplicada por to_number)</div>
+    </div>
+    <div class="val-card ok">
+      <div class="vtitle">Fora do filtro atual</div>
+      <div class="vval">${outOfRange}</div>
+      <div class="vsub">TOs válidas no histórico, fora do período/turno/destino selecionado</div>
+    </div>
+  `;
+}
+
+function renderAllTable(scoped) {
+  const q = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
+  let list = scoped;
+  if (filters.kpiCls !== 'ALL') list = list.filter(r => r.cls === filters.kpiCls);
+  if (q) {
+    list = list.filter(r => [r.to_number, r.dest_station_name, r.operator, r.pack_name]
+      .some(v => (v || '').toLowerCase().includes(q)));
+  }
+  list = [...list].sort((a, b) => b.complete_time - a.complete_time);
+
+  const pillOf = cls => cls === 'SACA' ? 'pill-saca' : cls === 'NAO_SACA' ? 'pill-nao' : 'pill-sem';
+  const labelOf = cls => cls === 'SACA' ? 'Saca' : cls === 'NAO_SACA' ? 'Não Saca' : 'Sem Classificação';
+
+  document.getElementById('allTblBody').innerHTML = list.slice(0, 3000).map(r => `
+    <tr>
+      <td class="mono" style="font-weight:700">${r.to_number}</td>
+      <td><span class="pill ${pillOf(r.cls)}">${labelOf(r.cls)}</span></td>
+      <td class="mono">${r.quantity || 0}</td>
+      <td style="color:var(--muted)">${r.status || '—'}</td>
+      <td class="mono" style="color:var(--muted)">${fmtDateTime(r.complete_time)}</td>
+      <td class="mono">${fmtDayShort(r.dayKey)}</td>
+      <td><span class="turno-pill ${r.turno.toLowerCase()}">${r.turno}</span></td>
+      <td style="color:var(--muted)">${r.dest_station_name || '—'}</td>
+      <td style="color:var(--faint)">${STATION_LABEL}</td>
+    </tr>`).join('');
+
+  const countLbl = document.getElementById('tblCount');
+  countLbl.textContent = list.length > 3000
+    ? `mostrando 3000 de ${list.length} TOs (refine os filtros para ver o restante)`
+    : `${list.length} TOs`;
+}
+
+function renderFilterSummary() {
+  const parts = [];
+  parts.push(filters.matrixDay ? fmtDayShort(filters.matrixDay) : `${fmtDayShort(filters.from)}–${fmtDayShort(filters.to)}`);
+  if (filters.turno !== 'ALL') parts.push(filters.turno);
+  if (filters.destino.trim()) parts.push(`destino: "${filters.destino.trim()}"`);
+  if (filters.kpiCls !== 'ALL') parts.push(filters.kpiCls === 'SEM_CLASS' ? 'sem classificação' : filters.kpiCls === 'SACA' ? 'só saca' : 'só não saca');
+  document.getElementById('filterSummary').innerHTML = `Mostrando: <b>${parts.join(' · ')}</b>`;
+}
+
+// ── Interações de filtro ─────────────────────────────────────────────────
+function setTurnoFilter(tk) {
+  filters.turno = tk;
+  document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === tk));
+  render();
+}
+function isolateDay(dk) {
+  filters.matrixDay = filters.matrixDay === dk ? null : dk;
+  render();
+}
+function clickMatrixCell(dk, tk) {
+  filters.matrixDay = dk;
+  filters.turno = tk;
+  document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === tk));
+  render();
+}
+function setKpiClsFilter(cls) {
+  filters.kpiCls = filters.kpiCls === cls ? 'ALL' : cls;
+  render();
+  document.getElementById('dashBody').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+document.querySelectorAll('.kpi-card[data-cls]').forEach(el => {
+  el.addEventListener('click', () => setKpiClsFilter(el.dataset.cls));
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+});
+document.getElementById('semClassBanner').addEventListener('click', () => setKpiClsFilter('SEM_CLASS'));
+document.getElementById('semClassBanner').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } });
+document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(el => {
+  el.addEventListener('click', () => {
+    filters.kpiCls = el.dataset.clsfilter;
+    document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(c => c.classList.toggle('active', c === el));
+    render();
+  });
+});
+
+document.querySelectorAll('.chip[data-preset]').forEach(el => {
+  el.addEventListener('click', () => {
+    const today = todayOpKey();
+    filters.matrixDay = null;
+    if (el.dataset.preset === 'today')     { filters.from = today; filters.to = today; }
+    if (el.dataset.preset === 'yesterday') { const y = dayKeyOffset(today, -1); filters.from = y; filters.to = y; }
+    if (el.dataset.preset === '7d')        { filters.from = dayKeyOffset(today, -6); filters.to = today; }
+    if (el.dataset.preset === '30d')       { filters.from = dayKeyOffset(today, -29); filters.to = today; }
+    if (el.dataset.preset === 'all')       {
+      const days = [...new Set(enriched.map(r => r.dayKey))].sort();
+      filters.from = days[0] || today; filters.to = days[days.length - 1] || today;
+    }
+    document.getElementById('fromDate').value = filters.from;
+    document.getElementById('toDate').value   = filters.to;
+    render();
+  });
+});
+
+document.getElementById('fromDate').addEventListener('change', e => { filters.from = e.target.value; filters.matrixDay = null; render(); });
+document.getElementById('toDate').addEventListener('change',   e => { filters.to   = e.target.value; filters.matrixDay = null; render(); });
+document.getElementById('destinoFilter').addEventListener('input', e => { filters.destino = e.target.value; render(); });
+document.getElementById('tableSearch').addEventListener('input', () => renderAllTable(baseFiltered()));
+
+document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+  filters.from = dayKeyOffset(todayOpKey(), -6);
+  filters.to = todayOpKey();
+  filters.turno = 'ALL';
+  filters.destino = '';
+  filters.kpiCls = 'ALL';
+  filters.matrixDay = null;
+  document.getElementById('fromDate').value = filters.from;
+  document.getElementById('toDate').value   = filters.to;
+  document.getElementById('destinoFilter').value = '';
+  document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === 'ALL'));
+  document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(c => c.classList.toggle('active', c.dataset.clsfilter === 'ALL'));
+  render();
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const q = (document.getElementById('tableSearch').value || '').trim().toLowerCase();
+  let list = baseFiltered();
+  if (filters.kpiCls !== 'ALL') list = list.filter(r => r.cls === filters.kpiCls);
+  if (q) list = list.filter(r => [r.to_number, r.dest_station_name, r.operator, r.pack_name].some(v => (v || '').toLowerCase().includes(q)));
+  const header = ['TO', 'Tipo', 'Pacotes', 'Status', 'Concluído (PACKED)', 'Dia Operacional', 'Turno', 'Destino', 'Estação'];
+  const rows = list.map(r => [
+    r.to_number,
+    r.cls === 'SACA' ? 'Saca' : r.cls === 'NAO_SACA' ? 'Não Saca' : 'Sem Classificação',
+    r.quantity || 0,
+    r.status || '', fmtDateTime(r.complete_time), r.dayKey, r.turno, r.dest_station_name || '', STATION_LABEL,
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+  const blob = new Blob(['﻿' + [header.join(','), ...rows].join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sacas_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+});
+
+document.getElementById('fromDate').value = filters.from;
+document.getElementById('toDate').value   = filters.to;
+
+const nowCal = new Date();
+document.getElementById('hourlyDate').value = `${nowCal.getFullYear()}-${pad2(nowCal.getMonth() + 1)}-${pad2(nowCal.getDate())}`;
+document.getElementById('hourlyDate').addEventListener('change', renderHourly);
+
+loadData();
+loadPlanejamento();
+setInterval(loadData, 30000);
+setInterval(loadPlanejamento, 5 * 60 * 1000);
+</script>
+</body>
+</html>
