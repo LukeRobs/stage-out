@@ -1618,6 +1618,38 @@
       return;
     }
 
+    // POST /api/admin/migrate-sacas-recife04 — TEMPORÁRIO, rodar uma única vez e remover
+    // depois. Copia da planilha antiga (agora exclusiva do Jaboatão) as linhas históricas
+    // que já estavam marcadas Estação=15000 (gravadas quando a planilha ainda era
+    // compartilhada) pra planilha nova dedicada do Recife04, e recarrega o log em memória.
+    if (urlPath === '/api/admin/migrate-sacas-recife04' && req.method === 'POST') {
+      (async () => {
+        try {
+          if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+          const oldId = SACAS_SHEET_ID_BY_STATION['10963'];
+          const newId = SACAS_SHEET_ID_BY_STATION['15000'];
+          const token = await getServiceAccountToken();
+          const url   = `https://sheets.googleapis.com/v4/spreadsheets/${oldId}/values/${encodeURIComponent('db!A2:J1000000')}`;
+          const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
+          const rows   = (await resp.json()).values || [];
+          const toMove = rows.filter(r => String(r[9]) === '15000');
+          for (let i = 0; i < toMove.length; i += 1000) {
+            await appendSacasRowsToSheet(newId, toMove.slice(i, i + 1000));
+          }
+          await loadSacasLogFromSheet('15000', newId); // recompõe o log em memória com o que acabou de migrar
+          console.log(`[migrate-sacas] ${toMove.length} linhas migradas pra planilha do Recife04`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, migrated: toMove.length }));
+        } catch (e) {
+          console.error('[migrate-sacas] erro:', e.message);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: e.message }));
+        }
+      })();
+      return;
+    }
+
     // POST /api/to-detail-request — dashboard pede o detalhe de pacotes de uma TO
     if (urlPath === '/api/to-detail-request' && req.method === 'POST') {
       let body = '';
