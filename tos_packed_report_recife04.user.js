@@ -38,16 +38,35 @@
     badge.style.color = color || '#aaa';
   }
 
-  /* ── Stats (mesma regra de farol do reportTab — ver tos_packed.html renderReport, que
-     usa complete_time em vez de ctime) ─────────────────────────────────────────────── */
+  // TOs "Packed sem staging" há mais de MAX_AGE_HOURS provavelmente já foram
+  // endereçadas/despachadas na vida real — ver tos_packed.html applyData().
+  const MAX_AGE_HOURS = 36;
+  // TO cujo sender ≠ current_station_name já saiu da estação (sobra de etapa anterior,
+  // staging_area_id nunca atualizado no SPX) — ver tos_packed.html jaSaiuDaEstacao().
+  const TRANSBORDO_GRACE_SEC = 2 * 60 * 60;
+  function jaSaiuDaEstacao(to, nowSec) {
+    if (!to.sender || !to.current_station_name || to.sender === to.current_station_name) return false;
+    const ageSec = to.complete_time ? nowSec - to.complete_time : Infinity;
+    return ageSec > TRANSBORDO_GRACE_SEC;
+  }
+
+  /* ── Stats (mesmos filtros do dashboard — ver tos_packed.html applyData() — e mesma regra
+     de farol do reportTab, que usa complete_time em vez de ctime) ─────────────────────── */
   async function fetchStats() {
     const res  = await fetch(`${SERVER}/api/tos-packed?station=${STATION_ID}`);
     if (!res.ok) throw new Error(`tos-packed HTTP ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
-    const nowSec = Math.floor(Date.now() / 1000);
-    const list   = data.list || [];
+    const nowSec    = Math.floor(Date.now() / 1000);
+    const maxAgeSec = MAX_AGE_HOURS * 3600;
+    // Mesmo filtro do dashboard: só TOs Packed sem staging atribuído ainda, não órfãs, e que
+    // não já saíram da estação — sem isso o report conta TOs que o dashboard nem mostra mais.
+    const list = (data.list || []).filter(to => {
+      const semStaging = !to.staging_area_id || to.staging_area_id === '-' || to.staging_area_id === '';
+      const orfa = to.complete_time && (nowSec - to.complete_time) > maxAgeSec;
+      return semStaging && !orfa && !jaSaiuDaEstacao(to, nowSec);
+    });
 
     const farol = { crit: 0, urgente: 0, atencao: 0, ok: 0 };
     let totalPacotes = 0, totalScuttle = 0, totalSacas = 0;
