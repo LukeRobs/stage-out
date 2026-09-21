@@ -1152,20 +1152,28 @@
     return rows;
   }
   // ── Report sheet (pacotes por TO) ─────────────────────────────────────
-  const REPORT_SPREADSHEET_ID = '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E';
-  const REPORT_RANGE          = 'Report!A:I';
-  const REPORT_TTL            = 5 * 60 * 1000; // 5 min
-  // Coluna C (STATION) da planilha usa esses códigos, não o station_id numérico
-  const STATION_SHEET_CODE    = { '10963': 'SOC-PE2', '15000': 'SOC-PE4' };
-  let   reportRowsCache       = null; // linhas cruas da planilha (todas as estações)
-  let   reportRowsFetchedAt   = 0;
+  // Cada estação tem sua PRÓPRIA planilha (igual ao SACAS — ver SACAS_SHEET_ID_BY_STATION)
+  // — não uma coluna STATION numa planilha compartilhada, como pensávamos antes de o usuário
+  // confirmar que a planilha original é só do Jaboatão e o Recife04 tem a dele própria.
+  const REPORT_SPREADSHEET_ID_BY_STATION = {
+    '10963': '1aIbT7ewZpgZQo_OJT_ChX3SYjNIXy7SMFrI2sXCeP0E', // SoC_PE_Jaboatão dos Guararapes
+    '15000': '1ixxOAyCQiFHUpVfNBG_cLXlWQaG7obp6KQG0HebuMJY', // SoC_PE_Recife_04
+  };
+  const REPORT_RANGE        = 'Report!A:I';
+  const REPORT_TTL          = 5 * 60 * 1000; // 5 min
+  const reportRowsByStation = new Map(); // station_id -> { rows, fetchedAt }
 
-  async function fetchReportRows() {
-    if (reportRowsCache && Date.now() - reportRowsFetchedAt < REPORT_TTL) return reportRowsCache;
+  async function fetchReportRows(station) {
+    const st           = String(station ?? DEFAULT_STATION);
+    const spreadsheetId = REPORT_SPREADSHEET_ID_BY_STATION[st];
+    if (!spreadsheetId) return []; // estação sem planilha configurada — sem dados, não erro
+
+    const cached = reportRowsByStation.get(st);
+    if (cached && Date.now() - cached.fetchedAt < REPORT_TTL) return cached.rows;
     if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
 
     const token = await getServiceAccountToken();
-    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${REPORT_SPREADSHEET_ID}/values/${encodeURIComponent(REPORT_RANGE)}`;
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(REPORT_RANGE)}`;
     const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
 
@@ -1175,25 +1183,24 @@
     // Só cacheia se tiver dados reais — evita envenar o cache com resultado
     // vazio quando a planilha ainda está calculando após reinício do servidor
     if (rows.length > 0) {
-      reportRowsCache     = rows;
-      reportRowsFetchedAt = Date.now();
+      reportRowsByStation.set(st, { rows, fetchedAt: Date.now() });
     } else {
-      console.warn('[report] rowCount=0 — resultado não cacheado, próxima req tentará novamente');
+      console.warn(`[report] estação ${st}: rowCount=0 — resultado não cacheado, próxima req tentará novamente`);
     }
     return rows;
   }
 
-  function buildReportResult(rows, stationCode) {
+  function buildReportResult(rows) {
     // Colunas: A=TO, B=ZONA, C=STATION, D=QTD PACOTES, E=RUA, F=AGING_HOURS, G=Hora now, H=Hora endereçamento, I=Turno
-    const matched = rows.filter(r => (r[2] || '').trim().toUpperCase() === stationCode);
-
+    // (C=STATION segue existindo em cada planilha, mas não filtramos mais por ela — a própria
+    // planilha já pertence a uma única estação)
     const byZone = {}; // { "ZONA VOLUMOSO": { tos, pacotes } }
     const byArea = {}; // { "IN-05":          { tos, pacotes } }
 
     const byTurno   = {}; // { "T1": { tos, pacotes } }
     const byAreaTOs = {}; // { "IN-05": [ { to, pacotes, aging_h, hora_end, turno }, ... ] }
 
-    matched.forEach(r => {
+    rows.forEach(r => {
       const zona    = (r[1] || '').trim();
       const rua     = (r[4] || '').trim();
       const pacotes = parseInt(r[3]) || 0;
@@ -1223,15 +1230,15 @@
       }
     });
 
-    console.log(`[report] station ${stationCode || '?'}: ${matched.length}/${rows.length} linhas — ${Object.keys(byZone).length} zonas, ${Object.keys(byArea).length} ruas`);
-    return { byZone, byArea, byTurno, byAreaTOs, rowCount: matched.length, fetchedAt: Date.now() };
+    return { byZone, byArea, byTurno, byAreaTOs, rowCount: rows.length, fetchedAt: Date.now() };
   }
 
-  // station: station_id numérico ('10963'/'15000'); sem código mapeado → resultado vazio
+  // station: station_id numérico ('10963'/'15000'); sem planilha configurada → resultado vazio
   async function getReportData(station) {
-    const stationCode = STATION_SHEET_CODE[String(station ?? DEFAULT_STATION)];
-    const rows         = await fetchReportRows();
-    return buildReportResult(rows, stationCode);
+    const rows = await fetchReportRows(station);
+    const result = buildReportResult(rows);
+    console.log(`[report] estação ${String(station ?? DEFAULT_STATION)}: ${result.rowCount} linhas — ${Object.keys(result.byZone).length} zonas, ${Object.keys(result.byArea).length} ruas`);
+    return result;
   }
   // ── Profile sheet (perfil de pacote por TO, aba "db") ──────────────────
   const PROFILE_SPREADSHEET_ID = '16do3FeFUI32Zp4asu5u_iMd1fp0Wt2XADBwBhgRr8Ik';
