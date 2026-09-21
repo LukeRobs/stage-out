@@ -1200,7 +1200,12 @@
     const byTurno   = {}; // { "T1": { tos, pacotes } }
     const byAreaTOs = {}; // { "IN-05": [ { to, pacotes, aging_h, hora_end, turno }, ... ] }
 
-    rows.forEach(r => {
+    // Linhas "fantasma" da planilha (fórmula arrastada além dos dados reais) podem trazer
+    // RUA preenchida sem número de TO (coluna A) — sem TO não é uma TO real, então ignora
+    // a linha inteira antes de contar em qualquer agregação.
+    const validRows = rows.filter(r => (r[0] || '').trim());
+
+    validRows.forEach(r => {
       const zona    = (r[1] || '').trim();
       const rua     = (r[4] || '').trim();
       const pacotes = parseInt(r[3]) || 0;
@@ -1230,7 +1235,7 @@
       }
     });
 
-    return { byZone, byArea, byTurno, byAreaTOs, rowCount: rows.length, fetchedAt: Date.now() };
+    return { byZone, byArea, byTurno, byAreaTOs, rowCount: validRows.length, fetchedAt: Date.now() };
   }
 
   // station: station_id numérico ('10963'/'15000'); sem planilha configurada → resultado vazio
