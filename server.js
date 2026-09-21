@@ -610,7 +610,7 @@
         status:            to.status || 'Packed',
       });
       added++;
-      sacasPendingRows.push(buildSacasSheetRow(to));
+      getSacasPendingRows(to.current_station_id).push(buildSacasSheetRow(to));
     });
     if (added) { pruneSacasLog(); scheduleSacasLogSave(); }
   }
@@ -623,10 +623,21 @@
   // planilha funciona como a cópia durável: gravamos em lote a cada SACAS_SHEET_FLUSH_MS
   // (nunca linha a linha, pra não estourar cota da API) e, no boot do processo,
   // loadSacasLogFromSheet() lê ela de volta e recompõe a memória — ver mais abaixo.
-  const SACAS_SHEET_ID       = '1rOT258Ndy3Olv4XHoL8kZhNTvzhbooTiAIYCFQJ-sWc';
+  // Cada estação tem sua PRÓPRIA planilha (não uma coluna STATION numa planilha
+  // compartilhada, como fizemos no Report) — mesma estrutura de abas em cada uma.
+  const SACAS_SHEET_ID_BY_STATION = {
+    '10963': '1rOT258Ndy3Olv4XHoL8kZhNTvzhbooTiAIYCFQJ-sWc', // SoC_PE_Jaboatão dos Guararapes
+    '15000': '17ciFbeELoDA_ugYcz2QzPBuHRDU7kI2tlg2527rl_Yo', // SoC_PE_Recife_04
+  };
   const SACAS_SHEET_RANGE    = 'db!A:J';
   const SACAS_SHEET_FLUSH_MS = 60 * 1000; // 60s — bem abaixo da cota do Sheets (60 writes/min/usuário), reduz a janela de perda em caso de restart
-  let sacasPendingRows = []; // linhas já formatadas, aguardando o próximo flush
+  const sacasPendingRowsByStation = new Map(); // station_id -> linhas já formatadas, aguardando o próximo flush
+
+  function getSacasPendingRows(station) {
+    const key = String(station ?? DEFAULT_STATION);
+    if (!sacasPendingRowsByStation.has(key)) sacasPendingRowsByStation.set(key, []);
+    return sacasPendingRowsByStation.get(key);
+  }
 
   // O servidor roda em UTC (Render); o horário de Brasília é fixo em UTC-3 (sem horário de
   // verão desde 2019), então aplicamos o offset na mão em vez de depender do timezone do
@@ -802,11 +813,11 @@
     ];
   }
 
-  async function appendSacasRowsToSheet(rows) {
+  async function appendSacasRowsToSheet(spreadsheetId, rows) {
     if (!rows.length) return;
     if (!SERVICE_ACCOUNT) { console.warn('[sacas-sheet] Service Account não configurado, pulando flush'); return; }
     const token = await getServiceAccountToken();
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(SACAS_SHEET_RANGE)}:append?valueInputOption=USER_ENTERED`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(SACAS_SHEET_RANGE)}:append?valueInputOption=USER_ENTERED`;
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -816,49 +827,50 @@
   }
 
   const SACAS_SHEET_HEADER = ['dt_complete', 'to_number', 'dest_station_name', 'orders', 'unitizador', 'Turno ajustado', 'Data ajustada', 'Canal', 'Sort Code', 'Estação'];
-  async function ensureSacasSheetHeader() {
+  async function ensureSacasSheetHeader(spreadsheetId) {
     if (!SERVICE_ACCOUNT) return;
     try {
       const token = await getServiceAccountToken();
       const headerRange = 'db!A1:J1';
-      const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(headerRange)}`;
+      const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(headerRange)}`;
       const getResp = await fetch(getUrl, { headers: { Authorization: `Bearer ${token}` } });
       if (!getResp.ok) throw new Error(`Sheets get ${getResp.status}: ${await getResp.text()}`);
       const data = await getResp.json();
       if (data.values && data.values.length) return; // já tem cabeçalho, não sobrescreve
-      const putUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(headerRange)}?valueInputOption=USER_ENTERED`;
+      const putUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(headerRange)}?valueInputOption=USER_ENTERED`;
       const putResp = await fetch(putUrl, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ values: [SACAS_SHEET_HEADER] }),
       });
       if (!putResp.ok) throw new Error(`Sheets put ${putResp.status}: ${await putResp.text()}`);
-      console.log('[sacas-sheet] cabeçalho gravado na aba "db"');
+      console.log(`[sacas-sheet] cabeçalho gravado na aba "db" (${spreadsheetId})`);
     } catch (e) { console.error('[sacas-sheet] falha ao verificar/gravar cabeçalho:', e.message); }
   }
 
-  // Recuperação pós-restart: lê a planilha inteira e recompõe sacasLogByStation com o que
-  // estiver faltando (nunca sobrescreve o que já está em memória/disco — só preenche
-  // buracos). É isso que garante que um turno inteiro não "suma" do dashboard só porque o
-  // processo reiniciou entre um flush e outro: mesmo que a memória volte vazia, a planilha
-  // (gravada a cada SACAS_SHEET_FLUSH_MS) tem quase tudo, e é recarregada aqui no boot.
-  // weight/operator/status não são colunas da planilha — ficam com valor neutro ao
+  // Recuperação pós-restart: lê a planilha da estação inteira e recompõe sacasLogByStation
+  // com o que estiver faltando (nunca sobrescreve o que já está em memória/disco — só
+  // preenche buracos). É isso que garante que um turno inteiro não "suma" do dashboard só
+  // porque o processo reiniciou entre um flush e outro: mesmo que a memória volte vazia, a
+  // planilha (gravada a cada SACAS_SHEET_FLUSH_MS) tem quase tudo, e é recarregada aqui no
+  // boot. weight/operator/status não são colunas da planilha — ficam com valor neutro ao
   // recarregar (o dashboard de SACAS não usa esses campos, só quantity/pack_name/complete_time
-  // /dest_station_name).
-  async function loadSacasLogFromSheet() {
+  // /dest_station_name). Cada planilha pertence a UMA estação só, então usamos a própria
+  // estação do loop em vez de reler a coluna "Estação" linha a linha.
+  async function loadSacasLogFromSheet(station, spreadsheetId) {
     if (!SERVICE_ACCOUNT) return;
     try {
       const token = await getServiceAccountToken();
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent('db!A2:J1000000')}`;
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent('db!A2:J1000000')}`;
       const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
       const rows = (await resp.json()).values || [];
+      const log  = getSacasLog(station);
       let restored = 0;
       rows.forEach(r => {
         const complete_time = parseDtComplete(r[0]);
         const to_number     = r[1];
         if (!complete_time || !to_number) return;
-        const log = getSacasLog(r[9] || DEFAULT_STATION);
         if (log.has(to_number)) return; // já tem em memória (mais recente/completo) — não sobrescreve
         log.set(to_number, {
           to_number,
@@ -873,12 +885,14 @@
         restored++;
       });
       pruneSacasLog();
-      if (restored) console.log(`[sacas-sheet] ${restored} registros recuperados da planilha (recomposição pós-restart)`);
-    } catch (e) { console.error('[sacas-sheet] falha ao recarregar da planilha:', e.message); }
+      if (restored) console.log(`[sacas-sheet] ${restored} registros recuperados da planilha da estação ${station} (recomposição pós-restart)`);
+    } catch (e) { console.error(`[sacas-sheet] falha ao recarregar planilha da estação ${station}:`, e.message); }
   }
 
-  ensureSacasSheetHeader();
-  loadSacasLogFromSheet();
+  for (const [station, spreadsheetId] of Object.entries(SACAS_SHEET_ID_BY_STATION)) {
+    ensureSacasSheetHeader(spreadsheetId);
+    loadSacasLogFromSheet(station, spreadsheetId);
+  }
 
   // ── Planejamento (aba "Planejamento" na MESMA planilha de SACAS) ────────────
   // Capacidade planejada por esteira/hora, preenchida manualmente. Colunas reais:
@@ -894,19 +908,25 @@
   // outras planilhas do projeto — confirmado batendo a soma real (18.818) com o usuário.
   const PLANEJAMENTO_RANGE = 'Planejamento!A:D';
   const PLANEJAMENTO_TTL   = 5 * 60 * 1000; // 5 min
-  let planejamentoCache     = null;
-  let planejamentoFetchedAt = 0;
+  const planejamentoCacheByStation = new Map(); // station_id -> { list, fetchedAt }
 
   function parseCapacidade(s) {
     return parseFloat(String(s || '0').replace(/,/g, '')) || 0;
   }
 
-  async function getPlanejamentoData() {
-    if (planejamentoCache && Date.now() - planejamentoFetchedAt < PLANEJAMENTO_TTL) return planejamentoCache;
+  // station: station_id numérico ('10963'/'15000'); sem planilha configurada pra essa
+  // estação → devolve lista vazia (planejado 0) em vez de herdar a meta de outra estação.
+  async function getPlanejamentoData(station) {
+    const st           = String(station ?? DEFAULT_STATION);
+    const spreadsheetId = SACAS_SHEET_ID_BY_STATION[st];
+    if (!spreadsheetId) return { list: [], fetchedAt: Date.now() };
+
+    const cached = planejamentoCacheByStation.get(st);
+    if (cached && Date.now() - cached.fetchedAt < PLANEJAMENTO_TTL) return cached;
     if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
 
     const token = await getServiceAccountToken();
-    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${SACAS_SHEET_ID}/values/${encodeURIComponent(PLANEJAMENTO_RANGE)}`;
+    const url   = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(PLANEJAMENTO_RANGE)}`;
     const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!resp.ok) throw new Error(`Sheets API ${resp.status}: ${await resp.text()}`);
 
@@ -925,21 +945,22 @@
     });
 
     const result = { list, fetchedAt: Date.now() };
-    planejamentoCache     = result;
-    planejamentoFetchedAt = Date.now();
+    planejamentoCacheByStation.set(st, result);
     return result;
   }
 
   async function flushSacasSheet() {
-    if (!sacasPendingRows.length) return;
-    const batch = sacasPendingRows;
-    sacasPendingRows = [];
-    try {
-      await appendSacasRowsToSheet(batch);
-      console.log(`[sacas-sheet] ${batch.length} linhas gravadas na planilha`);
-    } catch (e) {
-      console.error('[sacas-sheet] falha ao gravar, devolvendo para a fila:', e.message);
-      sacasPendingRows = batch.concat(sacasPendingRows); // tenta de novo no próximo ciclo
+    for (const [station, spreadsheetId] of Object.entries(SACAS_SHEET_ID_BY_STATION)) {
+      const batch = getSacasPendingRows(station);
+      if (!batch.length) continue;
+      sacasPendingRowsByStation.set(station, []);
+      try {
+        await appendSacasRowsToSheet(spreadsheetId, batch);
+        console.log(`[sacas-sheet] ${batch.length} linhas gravadas na planilha da estação ${station}`);
+      } catch (e) {
+        console.error(`[sacas-sheet] falha ao gravar (estação ${station}), devolvendo para a fila:`, e.message);
+        getSacasPendingRows(station).unshift(...batch); // tenta de novo no próximo ciclo
+      }
     }
   }
 
@@ -1571,15 +1592,15 @@
       return;
     }
 
-    // GET /api/sacas-planejamento — meta/planejado por hora (aba "Planejamento"), usado pela
-    // visão hora-a-hora do dashboard de SACAS pra comparar Planejado x Real.
+    // GET /api/sacas-planejamento?station=X — meta/planejado por hora (aba "Planejamento"),
+    // usado pela visão hora-a-hora do dashboard de SACAS pra comparar Planejado x Real.
     if (urlPath === '/api/sacas-planejamento') {
       if (!SERVICE_ACCOUNT) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Service Account não configurado' }));
         return;
       }
-      getPlanejamentoData()
+      getPlanejamentoData(stationParam(req))
         .then(data => {
           res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
           res.end(JSON.stringify(data));

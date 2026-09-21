@@ -871,7 +871,7 @@ function calHour(ts) { return new Date(ts * 1000).getHours(); }
 
 async function loadPlanejamento() {
   try {
-    const res = await fetch('/api/sacas-planejamento');
+    const res = await fetch(`/api/sacas-planejamento?station=${STATION}`);
     if (!res.ok) return;
     const data = await res.json();
     if (data.error) return;
