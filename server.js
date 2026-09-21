@@ -268,10 +268,22 @@
   });
 
   // ── SeaTalk report ────────────────────────────────────────────────────
-  const SEATALK_GROUP_ID = process.env.SEATALK_GROUP_ID || 'MDQ1OTMwOTc5MzYz';
+  // Os dois bots (app_id/secret) continuam únicos — só o grupo de destino muda por
+  // estação. O bot "seatalk" (Stage IN + os novos reports de Report) usa
+  // SEATALK_GROUP_ID_BY_STATION; o bot "seatalk-queue" (Queue List) usa
+  // SEATALK_QUEUE_GROUP_ID_BY_STATION. Produtividade Packing continua só no Jaboatão
+  // (não pedido pro Recife04), então seu grupo fica hardcoded como antes.
+  const SEATALK_GROUP_ID_BY_STATION = {
+    '10963': process.env.SEATALK_GROUP_ID || 'MDQ1OTMwOTc5MzYz',
+    '15000': 'ODU3MzEyNTkxODc4', // SoC_PE_Recife_04
+  };
   const SEATALK_QUEUE_APP_ID     = process.env.SEATALK_QUEUE_APP_ID     || 'MDEwMTk0MDU4NDk1';
   const SEATALK_QUEUE_APP_SECRET = process.env.SEATALK_QUEUE_APP_SECRET || 'X5zPzZyeBkL3MoK9Ks-n_BASneztngPp';
   const SEATALK_QUEUE_GROUP_ID   = process.env.SEATALK_QUEUE_GROUP_ID   || 'MzU3MzMwNjU4MjU1';
+  const SEATALK_QUEUE_GROUP_ID_BY_STATION = {
+    '10963': SEATALK_QUEUE_GROUP_ID,
+    '15000': 'ODU3MzEyNTkxODc4', // SoC_PE_Recife_04
+  };
   const SEATALK_PHRASES  = {
     todas:    'Time segue Report Geral Stage_IN',
     volumoso: 'Time segue Report SPP Volumoso',
@@ -302,12 +314,20 @@
     return data.app_access_token;
   }
 
-  async function seaTalkSendText(token, text) {
+  // Chave usada em screenshotStore/lastReportSent — igual ao "tab" original quando é a
+  // estação padrão (mantém 100% compatível com o que já existia), sufixada por estação
+  // nos outros casos, pra não colidir cooldown/screenshot entre estações.
+  function reportKey(tab, station) {
+    const st = String(station ?? DEFAULT_STATION);
+    return st === DEFAULT_STATION ? tab : `${tab}_${st}`;
+  }
+
+  async function seaTalkSendText(token, text, groupId) {
     const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
       method:  'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        group_id: SEATALK_GROUP_ID,
+        group_id: groupId,
         message:  { tag: 'text', text: { content: text } },
       }),
     }, 10000);
@@ -316,9 +336,9 @@
     return raw;
   }
 
-  async function seaTalkSendImage(token, tab) {
-    const buf = screenshotStore[tab];
-    if (!buf) { console.warn('[seatalk] sem buffer de imagem para', tab); return; }
+  async function seaTalkSendImage(token, key, groupId) {
+    const buf = screenshotStore[key];
+    if (!buf) { console.warn('[seatalk] sem buffer de imagem para', key); return; }
 
     // API do SeaTalk aceita Base64 direto no campo image.content (PNG/JPG/GIF, max 5MB)
     const b64 = buf.toString('base64');
@@ -326,7 +346,7 @@
       method:  'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        group_id: SEATALK_GROUP_ID,
+        group_id: groupId,
         message:  { tag: 'image', image: { content: b64 } },
       }),
     }, 20000);
@@ -334,8 +354,8 @@
     console.log('[seatalk] sendImg raw:', res.status, raw.substring(0, 300));
   }
 
-  async function getVolumosoStats() {
-    const data = await getReportData();
+  async function getVolumosoStats(station) {
+    const data = await getReportData(station);
     // Ruas pertencentes à ZONA VOLUMOSO
     const volRuas = Object.entries(data.byArea)
       .filter(([, d]) => d.zona === 'ZONA VOLUMOSO')
@@ -353,8 +373,11 @@
     return { totalTOs, tosGt30, agingMedio };
   }
 
-  async function sendSeaTalkReport(tab, imgBuffer, overrideText) {
+  async function sendSeaTalkReport(tab, imgBuffer, overrideText, station) {
     try {
+      const st      = String(station ?? DEFAULT_STATION);
+      const groupId = SEATALK_GROUP_ID_BY_STATION[st];
+      if (!groupId) throw new Error(`Sem grupo SeaTalk configurado pra estação ${st}`);
       const token = await getSeaTalkToken();
 
       // Texto: usa override do Tampermonkey se presente; senão calcula no servidor
@@ -362,7 +385,7 @@
       if (!text) {
         if (tab === 'volumoso') {
           try {
-            const s = await getVolumosoStats();
+            const s = await getVolumosoStats(st);
             text = `Report SPP Volumoso:\nTotal TO's: ${s.totalTOs}\nTO's > 30: ${s.tosGt30}\nAging Médio: ${s.agingMedio}h`;
           } catch (e) {
             console.error('[seatalk] Erro ao buscar stats volumoso:', e.message);
@@ -374,13 +397,13 @@
       }
 
       // 1. Imagem primeiro (contexto visual antes do texto)
-      if (imgBuffer) await seaTalkSendImage(token, tab);
+      if (imgBuffer) await seaTalkSendImage(token, reportKey(tab, st), groupId);
       await new Promise(r => setTimeout(r, 500));
 
       // 2. Texto
-      await seaTalkSendText(token, text);
+      await seaTalkSendText(token, text, groupId);
 
-      console.log(`[seatalk] ✅ Report "${tab}" enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
+      console.log(`[seatalk] ✅ Report "${tab}" (estação ${st}) enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
     } catch (e) {
       console.error(`[seatalk] ❌ Erro no report "${tab}":`, e.message);
     }
@@ -401,12 +424,12 @@
     return data.app_access_token;
   }
 
-  async function seaTalkQueueSendText(token, text) {
+  async function seaTalkQueueSendText(token, text, groupId) {
     const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
       method:  'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        group_id: SEATALK_QUEUE_GROUP_ID,
+        group_id: groupId,
         message:  { tag: 'text', text: { content: text } },
       }),
     }, 10000);
@@ -414,14 +437,14 @@
     console.log('[seatalk-queue] sendText raw:', res.status, raw.substring(0, 300));
   }
 
-  async function seaTalkQueueSendImage(token, buf) {
+  async function seaTalkQueueSendImage(token, buf, groupId) {
     if (!buf) { console.warn('[seatalk-queue] sem buffer de imagem'); return; }
     const b64 = buf.toString('base64');
     const res = await fetchWithTimeout('https://openapi.seatalk.io/messaging/v2/group_chat', {
       method:  'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body:    JSON.stringify({
-        group_id: SEATALK_QUEUE_GROUP_ID,
+        group_id: groupId,
         message:  { tag: 'image', image: { content: b64 } },
       }),
     }, 20000);
@@ -429,13 +452,13 @@
     console.log('[seatalk-queue] sendImg raw:', res.status, raw.substring(0, 300));
   }
 
-  async function sendSeaTalkQueueReport(imgBuffer, text) {
+  async function sendSeaTalkQueueReport(imgBuffer, text, groupId) {
     try {
       const token = await getSeaTalkQueueToken();
-      if (imgBuffer) await seaTalkQueueSendImage(token, imgBuffer);
+      if (imgBuffer) await seaTalkQueueSendImage(token, imgBuffer, groupId);
       await new Promise(r => setTimeout(r, 500));
-      await seaTalkQueueSendText(token, text);
-      console.log(`[seatalk-queue] ✅ Report enviado — ${new Date().toLocaleTimeString('pt-BR')}`);
+      await seaTalkQueueSendText(token, text, groupId);
+      console.log(`[seatalk-queue] ✅ Report enviado (grupo ${groupId}) — ${new Date().toLocaleTimeString('pt-BR')}`);
     } catch (e) {
       console.error('[seatalk-queue] ❌ Erro:', e.message);
     }
@@ -2077,30 +2100,34 @@
       return;
     }
 
-    // POST /api/seatalk-report — recebe screenshot do Tampermonkey e envia ao SeaTalk
+    // POST /api/seatalk-report — recebe screenshot do Tampermonkey e envia ao SeaTalk.
+    // station_id opcional no body (self-report, igual aos outros scripts que rodam por
+    // estação) — sem ele, assume DEFAULT_STATION (mantém compatível com os scripts antigos).
     if (urlPath === '/api/seatalk-report' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', async () => {
         try {
-          const { tab, image, text } = JSON.parse(body);
+          const { tab, image, text, station_id } = JSON.parse(body);
           if (!tab || !image) throw new Error('tab e image são obrigatórios');
+          const station = String(station_id ?? DEFAULT_STATION);
+          const key     = reportKey(tab, station);
           // Salva o screenshot em memória (servido como PNG na URL abaixo)
           const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
           const imgBuffer = Buffer.from(b64, 'base64');
-          screenshotStore[tab] = imgBuffer; // guardado também para servir via GET
+          screenshotStore[key] = imgBuffer; // guardado também para servir via GET
           // Cooldown: ignora se já foi enviado nos últimos 2 minutos (evita duplicatas)
           const now = Date.now();
-          if (lastReportSent[tab] && now - lastReportSent[tab] < REPORT_COOLDOWN) {
-            console.log(`[seatalk] Report "${tab}" ignorado — cooldown ativo (${Math.round((REPORT_COOLDOWN - (now - lastReportSent[tab])) / 1000)}s restantes)`);
+          if (lastReportSent[key] && now - lastReportSent[key] < REPORT_COOLDOWN) {
+            console.log(`[seatalk] Report "${key}" ignorado — cooldown ativo (${Math.round((REPORT_COOLDOWN - (now - lastReportSent[key])) / 1000)}s restantes)`);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, skipped: true }));
             return;
           }
-          lastReportSent[tab] = now;
+          lastReportSent[key] = now;
           // Dispara o envio ao SeaTalk (não bloqueia a resposta)
-          sendSeaTalkReport(tab, imgBuffer, text).catch(e => console.error('[seatalk]', e.message));
-          const url = `https://stage-out.onrender.com/api/screenshot/${tab}.png`;
+          sendSeaTalkReport(tab, imgBuffer, text, station).catch(e => console.error('[seatalk]', e.message));
+          const url = `https://stage-out.onrender.com/api/screenshot/${key}.png`;
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, url }));
         } catch (e) {
@@ -2112,26 +2139,31 @@
       return;
     }
 
-    // POST /api/seatalk-queue-report — recebe screenshot + texto do Tampermonkey e envia ao SeaTalk (Queue bot)
+    // POST /api/seatalk-queue-report — recebe screenshot + texto do Tampermonkey e envia ao
+    // SeaTalk (Queue bot). station_id opcional no body — sem ele, assume DEFAULT_STATION.
     if (urlPath === '/api/seatalk-queue-report' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
       req.on('end', async () => {
         try {
-          const { image, text } = JSON.parse(body);
+          const { image, text, station_id } = JSON.parse(body);
           if (!image) throw new Error('image é obrigatório');
+          const station = String(station_id ?? DEFAULT_STATION);
+          const key     = reportKey('queue', station);
           const b64 = image.replace(/^data:image\/[a-z]+;base64,/, '');
           const imgBuffer = Buffer.from(b64, 'base64');
-          screenshotStore['queue'] = imgBuffer;
+          screenshotStore[key] = imgBuffer;
           const now = Date.now();
-          if (lastReportSent['queue'] && now - lastReportSent['queue'] < REPORT_COOLDOWN) {
-            console.log(`[seatalk-queue] cooldown ativo`);
+          if (lastReportSent[key] && now - lastReportSent[key] < REPORT_COOLDOWN) {
+            console.log(`[seatalk-queue] cooldown ativo (${key})`);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true, cooldown: true }));
             return;
           }
-          lastReportSent['queue'] = now;
-          sendSeaTalkQueueReport(imgBuffer, text || '🚛 Queue List · Inbound').catch(e => console.error('[seatalk-queue]', e.message));
+          lastReportSent[key] = now;
+          const groupId = SEATALK_QUEUE_GROUP_ID_BY_STATION[station];
+          if (!groupId) throw new Error(`Sem grupo SeaTalk (queue) configurado pra estação ${station}`);
+          sendSeaTalkQueueReport(imgBuffer, text || '🚛 Queue List · Inbound', groupId).catch(e => console.error('[seatalk-queue]', e.message));
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
@@ -2143,7 +2175,8 @@
       return;
     }
 
-    // POST /api/seatalk-packing-report — Produtividade Packing → mesmo bot da Queue
+    // POST /api/seatalk-packing-report — Produtividade Packing → mesmo bot da Queue.
+    // Só existe pro Jaboatão (não pedido pro Recife04) — grupo fica fixo como antes.
     if (urlPath === '/api/seatalk-packing-report' && req.method === 'POST') {
       let body = '';
       req.on('data', d => { body += d; });
@@ -2162,7 +2195,7 @@
             return;
           }
           lastReportSent['packing'] = now;
-          sendSeaTalkQueueReport(imgBuffer, text || '📦 Produtividade Packing').catch(e => console.error('[seatalk-packing]', e.message));
+          sendSeaTalkQueueReport(imgBuffer, text || '📦 Produtividade Packing', SEATALK_QUEUE_GROUP_ID).catch(e => console.error('[seatalk-packing]', e.message));
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true }));
         } catch (e) {
