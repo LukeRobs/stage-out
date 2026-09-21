@@ -74,7 +74,11 @@
     const sppPerRua = [];
     for (const rua of ruas) {
       const areaData   = rd.byArea?.[rua];
-      const ruaTOs     = areaData?.to_quantity || 0; // nº real de TOs (campo correto)
+      // NOTA (só neste script Recife04 por enquanto — ver stage_in_report.user.js original,
+      // que continua com to_quantity até confirmar o formato da planilha com o usuário):
+      // /api/report-data nunca teve campo to_quantity em byArea — só tos/pacotes/zona. Cada
+      // linha da planilha Report é 1 TO (coluna A=TO), então "tos" já é a contagem certa.
+      const ruaTOs     = areaData?.tos || 0;
       if (ruaTOs === 0) continue;
       const tos        = rd.byAreaTOs?.[rua] || [];
       const ruaPacotes = tos.reduce((s, t) => s + t.pacotes, 0);
@@ -151,7 +155,7 @@
     // Breakdown por zona
     const zoneMap = {};
     for (const [rua, areaData] of Object.entries(rd.byArea || {})) {
-      const ruaTOs = areaData?.to_quantity || 0;
+      const ruaTOs = areaData?.tos || 0;
       if (ruaTOs === 0) continue;
       const zona = (areaData.zona || 'OUTRAS').replace('ZONA ', '');
       if (!zoneMap[zona]) zoneMap[zona] = { tos: 0, pac: 0, agingSum: 0, agingMax: 0, agingEntries: 0, sppVals: [] };
