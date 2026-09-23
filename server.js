@@ -1099,6 +1099,7 @@
   const queueCacheByStation = makeStationCache(); // station_id -> { list, total, pending_total, occupied_total, ..., fetchedAt }
   const tripCacheByStation        = makeStationCache(); // station_id -> { list, fetchedAt } — trip list v2
   const tripHistoryCacheByStation = makeStationCache(); // station_id -> { list, fetchedAt } — trip history (last 7 days)
+  const transbordoCdCacheByStation = makeStationCache(); // station_id -> { list, fetchedAt } — TOs com cd_flag=true (merge por to_number, via loading/list por viagem)
   const workstationCacheByStation = makeStationCache(); // station_id -> { workstations, operators, startTime, endTime, fetchedAt }
   const prodIndividualByStation = new Map(); // station_id -> { hora_key → { hora, records, total, start_time, end_time, fetchedAt } }
   function getProdIndividualSlot(station) {
@@ -2059,6 +2060,40 @@
       return;
     }
 
+    // POST /api/transbordo-cd-data — recebe TOs marcados cd_flag=true (transbordo/cross-dock),
+    // coletados pelo Tampermonkey viagem-por-viagem via /trip/history/loading/list. Merge por
+    // to_number, particionado por estacao — mesmo padrao do trip-history acima.
+    if (urlPath === '/api/transbordo-cd-data' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const incoming = JSON.parse(body);
+          const inList   = incoming.list || [];
+          const station  = String(incoming.station_id ?? DEFAULT_STATION);
+          const slot     = transbordoCdCacheByStation.get(station) || { list: [], fetchedAt: null };
+          const map = new Map(slot.list.map(t => [t.to_number, t]));
+          inList.forEach(t => { if (t.to_number) map.set(t.to_number, t); });
+          const updated = { list: Array.from(map.values()), fetchedAt: incoming.fetchedAt || Date.now() };
+          transbordoCdCacheByStation.set(station, updated);
+          console.log(`[transbordo-cd] Merged → ${updated.list.length} TOs CD (recebidos ${inList.length}, station ${station})`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, total: updated.list.length }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/transbordo-cd?station=X — serves TOs de transbordo (cd_flag) ao dashboard
+    if (urlPath === '/api/transbordo-cd') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(transbordoCdCacheByStation.get(stationParam(req)) || { list: [], fetchedAt: null }));
+      return;
+    }
+
     // GET /api/queue?station=X — serves vehicle queue to dashboard
     if (urlPath === '/api/queue') {
       const queueCache = queueCacheByStation.get(stationParam(req));
@@ -2364,7 +2399,7 @@
       return;
     }
 
-    // GET /api/transbordo?station=X — normalized alias combining trip-history + live trips + queue
+    // GET /api/transbordo?station=X — normalized alias combining trip-history + live trips + queue + TOs CD
     if (urlPath === '/api/transbordo') {
       const station = stationParam(req);
       const tripHistoryCache = tripHistoryCacheByStation.get(station) || { list: [], fetchedAt: null };
@@ -2372,6 +2407,7 @@
         list:      tripHistoryCache.list || [],
         liveTrips: tripCacheByStation.get(station)?.list  || [],
         queue:     queueCacheByStation.get(station)?.list || [],
+        cdList:    transbordoCdCacheByStation.get(station)?.list || [],
         fetchedAt: tripHistoryCache.fetchedAt,
       };
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
@@ -2387,6 +2423,7 @@
         list:      tripHistoryCache.list || [],
         liveTrips: tripCacheByStation.get(station)?.list  || [],
         queue:     queueCacheByStation.get(station)?.list || [],
+        cdList:    transbordoCdCacheByStation.get(station)?.list || [],
         fetchedAt: tripHistoryCache.fetchedAt,
       };
       const dashboard = {

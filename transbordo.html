@@ -3,212 +3,401 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transbordo · Inbound</title>
+<title>Transbordo · Control Tower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0d0f14;
-  --surface: #161920;
-  --surface2: #1e2130;
-  --border: #2a2d3e;
-  --border2: #353849;
-  --text: #e2e8f0;
-  --muted: #6b7280;
-  --green: #22c55e;
-  --yellow: #f59e0b;
-  --orange: #ee4d2d;
-  --red: #ef4444;
-  --blue: #3b82f6;
-  --purple: #8b5cf6;
-  --teal: #14b8a6;
-  --accent: #f59e0b;
-  --radius: 10px;
-  --shadow: 0 2px 8px rgba(0,0,0,.4);
+  /* Paleta base — laranja é destaque, não predominante */
+  --bg:        #0D0D0D;
+  --surface:   #1A1A1C;
+  --surface2:  #232326;
+  --surface3:  #2A2A2C;
+  --border:    #2E2E31;
+  --border2:   #3A3A3E;
+
+  --text:      #F2F2F3;
+  --text-dim:  #BFBFC3;
+  --text-mute: #7C7C81;
+
+  --accent:       #FA4C00;
+  --accent-dim:   rgba(250,76,0,.14);
+  --accent-line:  rgba(250,76,0,.35);
+
+  --green:   #22C55E;
+  --green-dim: rgba(34,197,94,.12);
+  --yellow:  #F5A623;
+  --yellow-dim: rgba(245,166,35,.12);
+  --red:     #EF4444;
+  --red-dim: rgba(239,68,68,.12);
+  --gray:    #7C7C81;
+
+  --radius:  10px;
+  --radius-sm: 7px;
+  --shadow:  0 4px 16px rgba(0,0,0,.35);
+  --ease: cubic-bezier(.4,0,.2,1);
+
+  --font-ui:   'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
 }
 [data-theme="light"] {
-  --bg: #f1f5f9; --surface: #ffffff; --surface2: #f8fafc;
-  --border: #e2e8f0; --border2: #cbd5e1; --text: #0f172a;
-  --muted: #64748b; --shadow: 0 2px 8px rgba(0,0,0,.08);
+  --bg:        #F4F4F5;
+  --surface:   #FFFFFF;
+  --surface2:  #FAFAFA;
+  --surface3:  #F0F0F1;
+  --border:    #E4E4E7;
+  --border2:   #D4D4D8;
+
+  --text:      #17171A;
+  --text-dim:  #52525B;
+  --text-mute: #8B8B92;
+
+  --accent-dim:  rgba(250,76,0,.08);
+  --accent-line: rgba(250,76,0,.30);
+  --green-dim: rgba(34,197,94,.10);
+  --yellow-dim: rgba(217,138,0,.10);
+  --red-dim: rgba(239,68,68,.10);
+
+  --shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
-body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; min-height: 100vh; transition: background .2s, color .2s; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-ui); font-size: 13px; line-height: 1.5;
+  min-height: 100vh; transition: background .2s var(--ease), color .2s var(--ease);
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font-family: inherit; }
+::selection { background: var(--accent-dim); color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
 
-/* ── Header ── */
-.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
-.header-icon { width: 34px; height: 34px; background: var(--yellow); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
-.header-title h1 { font-size: 14px; font-weight: 700; }
-.header-title p  { font-size: 11px; color: var(--muted); }
-.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-.live-dot.on { background: var(--green); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-.meta-tag { font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 8px; border-radius: 20px; border: 1px solid var(--border); }
-.theme-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 14px; color: var(--muted); transition: all .15s; line-height: 1; }
-.theme-btn:hover { border-color: var(--border2); color: var(--text); }
+svg.icon { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; display: block; }
 
-/* ── KPIs ── */
-.stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; padding: 14px 24px; }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; }
-.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
-.stat-value { font-size: 24px; font-weight: 700; line-height: 1; }
-.stat-sub   { font-size: 11px; color: var(--muted); margin-top: 4px; }
+/* ══════════════════════════ HEADER ══════════════════════════ */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 28px; display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 200; box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+.header-brand { display: flex; align-items: center; gap: 12px; }
+.header-icon {
+  width: 36px; height: 36px; background: var(--accent-dim); border: 1px solid var(--accent-line);
+  color: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.header-title { display: flex; flex-direction: column; gap: 2px; }
+.header-title h1 { font-size: 15px; font-weight: 800; letter-spacing: .3px; }
+.station-pill {
+  font-size: 10.5px; font-weight: 600; color: var(--text-dim); background: var(--surface3);
+  padding: 2px 9px; border-radius: 20px; border: 1px solid var(--border); width: fit-content;
+}
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* ── Origens badge strip ── */
-.origins-strip { padding: 0 24px 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-.origin-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,158,11,.10); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.sys-status {
+  display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-dim);
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 8px 6px 12px;
+}
+.sys-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gray); flex-shrink: 0; }
+.sys-status-dot.online  { background: var(--green); box-shadow: 0 0 0 3px var(--green-dim); animation: dotpulse 2.4s infinite; }
+.sys-status-dot.stale   { background: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-dim); }
+.sys-status-dot.offline { background: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+@keyframes dotpulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+.sys-status-label { font-weight: 700; letter-spacing: .3px; color: var(--text); }
+.sys-status-sep { width: 1px; height: 14px; background: var(--border2); }
+.sys-status-meta { display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.sys-status-meta b { color: var(--text); font-weight: 600; }
 
-/* ── Day navigation ── */
-.history-note { font-size: 11px; color: var(--muted); background: var(--surface2); padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; }
+.date-pill {
+  font-size: 11px; color: var(--text-dim); background: var(--surface2); border: 1px solid var(--border);
+  padding: 6px 12px; border-radius: 20px; font-weight: 600; white-space: nowrap;
+}
+.icon-btn {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; width: 30px; height: 30px;
+  cursor: pointer; color: var(--text-dim); display: flex; align-items: center; justify-content: center;
+  transition: all .15s var(--ease);
+}
+.icon-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
+.icon-btn:focus-visible, a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, tr[tabindex]:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
 
-/* ── Chart section ── */
-.chart-section { padding: 0 24px 20px; }
-.chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
-.chart-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.chart-title span { color: var(--text); }
-.chart-legend { display: flex; gap: 16px; margin-left: auto; align-items: center; font-size: 11px; color: var(--muted); }
-.legend-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+/* ══════════════════════════ ALERT BANNER ══════════════════════════ */
+.alert-banner {
+  margin: 14px 28px 0; padding: 10px 16px; border-radius: var(--radius-sm);
+  display: none; align-items: center; gap: 10px; font-size: 12px; font-weight: 600;
+  background: var(--yellow-dim); border: 1px solid rgba(245,166,35,.35); color: var(--yellow);
+}
+.alert-banner.show { display: flex; }
+.alert-banner svg.icon { color: var(--yellow); }
 
-.bar-chart { width: 100%; overflow-x: auto; overflow-y: visible; }
-.bar-chart-inner { min-width: 600px; overflow: visible; }
-.bars-container { display: flex; align-items: flex-end; gap: 4px; height: 160px; padding: 20px 4px 0; }
-.bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 28px; gap: 3px; }
+/* ══════════════════════════ KPI GRID ══════════════════════════ */
+.kpi-section { padding: 16px 28px 0; display: grid; grid-template-columns: 1.5fr repeat(4, 1fr); gap: 12px; }
+.kpi-hero, .kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px 18px; position: relative; overflow: hidden; transition: border-color .15s var(--ease);
+}
+.kpi-hero { display: flex; flex-direction: column; justify-content: center; border-color: var(--accent-line); background: linear-gradient(135deg, var(--accent-dim), transparent 60%); }
+.kpi-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .7px; color: var(--text-mute); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.kpi-hero .kpi-label { color: var(--accent); }
+.kpi-value { font-family: var(--font-mono); font-weight: 700; line-height: 1; margin-top: 8px; letter-spacing: -.5px; }
+.kpi-hero .kpi-value { font-size: 40px; }
+.kpi-card .kpi-value { font-size: 24px; margin-top: 6px; }
+.kpi-unit { font-size: 12px; font-weight: 500; color: var(--text-mute); margin-left: 6px; }
+.kpi-sub { font-size: 11px; color: var(--text-dim); margin-top: 8px; }
+.kpi-trend { font-size: 11px; font-weight: 700; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+.kpi-trend.up { color: var(--green); }
+.kpi-trend.down { color: var(--red); }
+.kpi-card.critical { border-color: rgba(239,68,68,.4); background: linear-gradient(135deg, var(--red-dim), transparent 60%); }
+.kpi-card.critical .kpi-value { color: var(--red); }
+.kpi-card.ok .kpi-value { color: var(--green); }
+.kpi-skel { height: 24px; border-radius: 5px; background: linear-gradient(90deg, var(--surface3) 25%, var(--surface2) 50%, var(--surface3) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ══════════════════════════ FILTERS ══════════════════════════ */
+.filters-bar {
+  margin: 16px 28px 0; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+}
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-group label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-mute); font-weight: 700; }
+.filter-input, .filter-select {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 10px;
+  border-radius: 7px; font-size: 12px; outline: none; transition: border-color .15s var(--ease); font-family: inherit;
+  min-height: 32px;
+}
+.filter-input:focus, .filter-select:focus { border-color: var(--accent); }
+.filter-select { min-width: 150px; cursor: pointer; }
+.search-group { flex: 1; min-width: 200px; max-width: 320px; }
+.search-wrap { position: relative; }
+.search-wrap svg.icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--text-mute); pointer-events: none; }
+.search-input { width: 100%; padding-left: 30px; }
+.filters-clear {
+  display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); padding: 7px 12px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all .15s var(--ease); min-height: 32px;
+}
+.filters-clear:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+.filters-clear.active { border-color: var(--accent-line); color: var(--accent); background: var(--accent-dim); }
+.filters-count { margin-left: auto; font-size: 11.5px; color: var(--text-mute); align-self: center; }
+.filters-count b { color: var(--text); font-family: var(--font-mono); }
+
+/* ══════════════════════════ CHART + ORIGINS ROW ══════════════════════════ */
+.analysis-section { padding: 16px 28px 0; display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: stretch; }
+.panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; }
+.panel-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-mute); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.panel-title .hl { color: var(--text); text-transform: none; letter-spacing: 0; font-weight: 600; margin-left: 2px; }
+.panel-title svg.icon { color: var(--accent); }
+
+.bar-chart { width: 100%; overflow-x: auto; }
+.bar-chart-inner { min-width: 560px; }
+.bars-container { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding: 18px 4px 0; }
+.bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 26px; gap: 3px; }
 .bar-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 100%; flex: 1; gap: 2px; }
-.bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: opacity .2s; cursor: default; position: relative; }
-.bar:hover { opacity: .8; }
-.bar-arrived  { background: var(--yellow); }
-.bar-expected { background: rgba(245,158,11,.3); border: 1px solid rgba(245,158,11,.4); border-bottom: none; }
-.bar-hist     { background: var(--purple); }
-.bar-label-top { font-size: 10px; font-family: monospace; color: var(--text); font-weight: 700; white-space: nowrap; }
-.bar-label-top.zero { color: var(--muted); }
-.bar-hour { font-size: 10px; color: var(--muted); margin-top: 4px; white-space: nowrap; }
-.bar-hour.now { color: var(--yellow); font-weight: 700; }
-.chart-yaxis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 160px; padding: 0 8px 0 0; align-items: flex-end; }
-.chart-yaxis span { font-size: 10px; color: var(--muted); font-family: monospace; }
+.bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px; background: var(--accent); opacity: .82; transition: opacity .15s var(--ease); cursor: default; }
+.bar:hover { opacity: 1; }
+.bar-label-top { font-size: 9.5px; font-family: var(--font-mono); color: var(--text-dim); font-weight: 600; white-space: nowrap; }
+.bar-label-top.zero { color: var(--text-mute); opacity: .5; }
+.bar-hour { font-size: 9.5px; color: var(--text-mute); margin-top: 4px; font-family: var(--font-mono); }
+.bar-hour.now { color: var(--accent); font-weight: 700; }
 .chart-row { display: flex; align-items: flex-start; }
-.chart-empty { text-align: center; padding: 40px; color: var(--muted); font-size: 12px; }
+.chart-yaxis { display: flex; flex-direction: column-reverse; justify-content: space-between; height: 150px; padding: 0 8px 0 0; align-items: flex-end; }
+.chart-yaxis span { font-size: 9.5px; color: var(--text-mute); font-family: var(--font-mono); }
 
-/* ── Toolbar ── */
-.table-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 24px 10px; }
-.search-wrap { position: relative; min-width: 220px; max-width: 320px; }
-.search-wrap svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.search-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 7px 10px 7px 30px; border-radius: 8px; font-size: 12px; outline: none; transition: border-color .15s; }
-.search-input:focus { border-color: var(--yellow); }
-.table-count { font-size: 12px; color: var(--muted); margin-left: auto; }
+.origins-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; max-height: 210px; }
+.origin-row { display: flex; align-items: center; gap: 8px; }
+.origin-name { font-size: 11.5px; color: var(--text-dim); width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.origin-bar-track { flex: 1; height: 6px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+.origin-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s var(--ease); }
+.origin-count { font-size: 11px; font-family: var(--font-mono); font-weight: 700; color: var(--text); width: 34px; text-align: right; flex-shrink: 0; }
+.panel-empty { color: var(--text-mute); font-size: 12px; text-align: center; padding: 30px 10px; }
 
-/* ── Section divider ── */
-.section-divider { padding: 4px 24px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+/* ══════════════════════════ TABLE ══════════════════════════ */
+.section-divider { padding: 20px 28px 10px; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--text-mute); display: flex; align-items: center; gap: 8px; }
 .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-/* ── Main table ── */
-.table-wrap { padding: 0 24px 32px; }
-table.main-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-table.main-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; cursor: pointer; user-select: none; white-space: normal; word-break: break-word; vertical-align: bottom; }
+.table-wrap { padding: 0 28px 32px; }
+.table-scroll { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: auto; max-height: 640px; }
+table.main-table { width: 100%; border-collapse: collapse; }
+table.main-table thead th {
+  position: sticky; top: 0; z-index: 5; background: var(--surface2);
+  font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--text-mute);
+  padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 700;
+  cursor: pointer; user-select: none; white-space: nowrap;
+}
 table.main-table th:hover { color: var(--text); }
-table.main-table th.sorted { color: var(--yellow); }
-table.main-table td { padding: 8px 10px; border-bottom: 1px solid rgba(42,45,62,.4); vertical-align: middle; white-space: normal; word-break: break-word; }
+table.main-table th.sorted { color: var(--accent); }
+table.main-table th .sa { color: var(--accent); margin-left: 3px; }
+table.main-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; white-space: nowrap; font-size: 12px; }
+table.main-table tbody tr { cursor: pointer; transition: background .12s var(--ease); }
+table.main-table tbody tr:hover td { background: var(--surface2); }
+table.main-table tbody tr:last-child td { border-bottom: none; }
+table.main-table tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.num-cell { text-align: right; font-family: var(--font-mono); }
 
-/* Column widths — 12 colunas */
-table.main-table th:nth-child(1),  table.main-table td:nth-child(1)  { width: 6%;  }
-table.main-table th:nth-child(2),  table.main-table td:nth-child(2)  { width: 9%;  }
-table.main-table th:nth-child(3),  table.main-table td:nth-child(3)  { width: 10%; }
-table.main-table th:nth-child(4),  table.main-table td:nth-child(4)  { width: 12%; }
-table.main-table th:nth-child(5),  table.main-table td:nth-child(5)  { width: 6%;  }
-table.main-table th:nth-child(6),  table.main-table td:nth-child(6)  { width: 7%;  }
-table.main-table th:nth-child(7),  table.main-table td:nth-child(7)  { width: 7%;  }
-table.main-table th:nth-child(8),  table.main-table td:nth-child(8)  { width: 8%; text-align:right; }
-table.main-table th:nth-child(9),  table.main-table td:nth-child(9)  { width: 13%; }
-table.main-table th:nth-child(10), table.main-table td:nth-child(10) { width: 7%;  }
-table.main-table th:nth-child(11), table.main-table td:nth-child(11) { width: 8%;  }
-table.main-table th:nth-child(12), table.main-table td:nth-child(12) { width: 7%;  }
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: .2px; border: 1px solid; white-space: nowrap; }
+.badge-cd  { color: var(--accent); border-color: var(--accent-line); background: var(--accent-dim); }
+.badge-exc { color: var(--red); border-color: rgba(239,68,68,.35); background: var(--red-dim); }
+.badge-ok  { color: var(--green); border-color: rgba(34,197,94,.3); background: var(--green-dim); }
+.row-flagged td:first-child { box-shadow: inset 3px 0 0 var(--red); }
 
-[data-theme="light"] table.main-table td { border-bottom-color: rgba(226,232,240,.8); }
-table.main-table tr:hover td { background: rgba(255,255,255,.03); }
-table.main-table tr:last-child td { border-bottom: none; }
+.row-skel td { padding: 12px; }
+.row-skel .kpi-skel { height: 14px; }
 
-/* ── Status pills ── */
-.st-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; white-space: nowrap; }
-.st-pending  { background: rgba(245,158,11,.12); color: var(--yellow); border: 1px solid rgba(245,158,11,.25); }
-.st-assigned { background: rgba(139,92,246,.12); color: var(--purple); border: 1px solid rgba(139,92,246,.25); }
-.st-occupied { background: rgba(34,197,94,.12);  color: var(--green);  border: 1px solid rgba(34,197,94,.25); }
-.st-hold     { background: rgba(238,77,45,.12);  color: var(--orange); border: 1px solid rgba(238,77,45,.25); }
+/* ══════════════════════════ DRAWER (drill-down) ══════════════════════════ */
+.drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); backdrop-filter: blur(1px); z-index: 500; opacity: 0; pointer-events: none; transition: opacity .2s var(--ease); }
+.drawer-overlay.show { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 380px; max-width: 92vw;
+  background: var(--surface); border-left: 1px solid var(--border); z-index: 501;
+  transform: translateX(100%); transition: transform .22s var(--ease); box-shadow: -8px 0 24px rgba(0,0,0,.35);
+  display: flex; flex-direction: column;
+}
+.drawer.show { transform: translateX(0); }
+.drawer-head { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.drawer-head h3 { font-family: var(--font-mono); font-size: 15px; font-weight: 700; }
+.drawer-close { margin-left: auto; }
+.drawer-body { padding: 18px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.drawer-field { display: flex; flex-direction: column; gap: 3px; }
+.drawer-field label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-mute); font-weight: 700; }
+.drawer-field .val { font-size: 13.5px; color: var(--text); font-weight: 600; }
+.drawer-field .val.mono { font-family: var(--font-mono); }
+.drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.drawer-exc { background: var(--red-dim); border: 1px solid rgba(239,68,68,.3); border-radius: var(--radius-sm); padding: 10px 12px; color: var(--red); font-size: 12px; font-weight: 600; display: flex; gap: 8px; align-items: flex-start; }
 
-/* ── Wait time ── */
-.wait-ok   { color: var(--green);  font-family: monospace; }
-.wait-mid  { color: var(--yellow); font-family: monospace; }
-.wait-high { color: var(--orange); font-family: monospace; font-weight: 700; }
-.wait-crit { color: var(--red);    font-family: monospace; font-weight: 700; }
+/* ══════════════════════════ EMPTY STATE ══════════════════════════ */
+.empty { text-align: center; padding: 70px 24px; color: var(--text-mute); }
+.empty svg.icon { width: 34px; height: 34px; margin: 0 auto 14px; color: var(--text-mute); stroke-width: 1.4; }
+.empty h2 { font-size: 15px; margin-bottom: 6px; color: var(--text); font-weight: 700; }
+.empty p { font-size: 12.5px; margin-bottom: 14px; }
+.empty code { display: inline-block; background: var(--surface2); border: 1px solid var(--border); padding: 12px 18px; border-radius: 8px; font-size: 11.5px; text-align: left; line-height: 2; font-family: var(--font-mono); color: var(--text-dim); }
 
-/* ── Empty ── */
-.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
-.empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
-.empty code { display: inline-block; background: var(--surface); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 12px; margin-top: 14px; text-align: left; line-height: 1.8; }
-
-@media (max-width:1200px) { .stats { grid-template-columns: repeat(3,1fr); } }
-@media (max-width:800px)  { .stats { grid-template-columns: repeat(2,1fr); } }
+/* ══════════════════════════ RESPONSIVE ══════════════════════════ */
+@media (min-width: 1600px) {
+  body { font-size: 14px; }
+  .kpi-hero .kpi-value { font-size: 46px; }
+  .kpi-card .kpi-value { font-size: 27px; }
+}
+@media (max-width: 1280px) {
+  .kpi-section { grid-template-columns: repeat(3, 1fr); }
+  .kpi-hero { grid-column: 1 / -1; }
+  .analysis-section { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .header { padding: 12px 16px; }
+  .kpi-section, .filters-bar, .analysis-section, .table-wrap, .section-divider, .alert-banner { padding-left: 16px; padding-right: 16px; margin-left: 16px; margin-right: 16px; }
+  .kpi-section { grid-template-columns: 1fr 1fr; margin: 14px 0 0; padding: 0 16px; }
+  .filters-bar { margin: 14px 0 0; }
+  .analysis-section { margin: 14px 0 0; }
+  .drawer { width: 100vw; max-width: 100vw; }
+}
 </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="header-icon">🔄</div>
-  <div class="header-title">
-    <h1>Transbordo · Inbound</h1>
-    <p>SPX EXPRESS · LINEHAUL TRANSBORDO · PACOTES POR HORA</p>
+  <div class="header-brand">
+    <div class="header-icon">
+      <svg class="icon" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h16"/></svg>
+    </div>
+    <div class="header-title">
+      <h1>TRANSBORDO</h1>
+      <span class="station-pill">SoC_PE_Jaboatão dos Guararapes</span>
+    </div>
   </div>
   <div class="header-right">
-    <span class="meta-tag" id="metaTag">—</span>
-    <span class="history-note" id="histNote">📦 Histórico: aguardando sync</span>
-    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">☀️</button>
-    <div class="live-badge">
-      <div class="live-dot" id="liveDot"></div>
-      <span id="lastUpdated">Aguardando...</span>
+    <div class="sys-status" id="sysStatus">
+      <div class="sys-status-dot" id="sysDot"></div>
+      <div class="sys-status-meta">
+        <span class="sys-status-label" id="sysLabel">CONECTANDO</span>
+        <span id="sysDetail">—</span>
+      </div>
+      <div class="sys-status-sep"></div>
+      <div class="sys-status-meta">
+        <span>Próxima atualização</span>
+        <b id="nextUpdate">—</b>
+      </div>
     </div>
+    <span class="date-pill" id="datePill">—</span>
+    <button class="icon-btn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema claro/escuro"></button>
   </div>
 </header>
 
+<!-- Alert banner — só aparece quando há algo que precise de atenção -->
+<div class="alert-banner" id="alertBanner">
+  <svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  <span id="alertText"></span>
+</div>
+
 <!-- KPIs -->
-<div class="stats">
-  <div class="stat">
-    <div class="stat-label">Total Viagens</div>
-    <div class="stat-value" id="kTotal" style="color:var(--yellow)">—</div>
-    <div class="stat-sub" id="kTotalSub">pendentes + finalizadas hoje</div>
+<div class="kpi-section" id="kpiSection">
+  <div class="kpi-hero">
+    <div class="kpi-label">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      TOs Transbordo
+    </div>
+    <div class="kpi-value" id="kTotal">—</div>
+    <div class="kpi-sub" id="kTotalSub">TOs com tag CD escaneados no dia selecionado</div>
+    <div class="kpi-trend" id="kTrend" style="display:none"></div>
   </div>
-  <div class="stat">
-    <div class="stat-label">Pendentes (ao vivo)</div>
-    <div class="stat-value" id="kPending" style="color:var(--orange)">—</div>
-    <div class="stat-sub" id="kPendingSub">aguardando descarga</div>
+  <div class="kpi-card">
+    <div class="kpi-label">Pacotes</div>
+    <div class="kpi-value" id="kPacotes">—</div>
+    <div class="kpi-sub">soma dos pacotes por TO</div>
   </div>
-  <div class="stat">
-    <div class="stat-label">Pacotes Recebidos</div>
-    <div class="stat-value" id="kReceived" style="color:var(--green)">—</div>
-    <div class="stat-sub" id="kReceivedSub">viagens finalizadas</div>
+  <div class="kpi-card">
+    <div class="kpi-label">Peso</div>
+    <div class="kpi-value" id="kPeso">—</div>
+    <div class="kpi-sub">total escaneado no dia</div>
   </div>
-  <div class="stat">
-    <div class="stat-label">Pacotes Pendentes</div>
-    <div class="stat-value" id="kPendingPkg" style="color:var(--blue)">—</div>
-    <div class="stat-sub">ao vivo · ainda não descarregados</div>
+  <div class="kpi-card">
+    <div class="kpi-label">Origens Ativas</div>
+    <div class="kpi-value" id="kOrigens">—</div>
+    <div class="kpi-sub" id="kOrigensSub">estações remetentes distintas</div>
   </div>
-  <div class="stat">
-    <div class="stat-label">Histórico 7 dias</div>
-    <div class="stat-value" id="kHistory" style="color:var(--purple)">—</div>
-    <div class="stat-sub">viagens finalizadas</div>
+  <div class="kpi-card" id="kExcCard">
+    <div class="kpi-label">Exceções</div>
+    <div class="kpi-value" id="kExc">—</div>
+    <div class="kpi-sub" id="kExcSub">TOs com etiqueta de exceção</div>
   </div>
 </div>
 
-<!-- Origens filtradas -->
-<div class="origins-strip" id="originsStrip"></div>
+<!-- Filtros -->
+<div class="filters-bar">
+  <div class="filter-group">
+    <label for="dateFilter">Data</label>
+    <input type="date" id="dateFilter" class="filter-input">
+  </div>
+  <div class="filter-group">
+    <label for="originFilter">Origem</label>
+    <select id="originFilter" class="filter-select">
+      <option value="">Todas</option>
+    </select>
+  </div>
+  <div class="filter-group search-group">
+    <label for="tableSearch">Buscar</label>
+    <div class="search-wrap">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="filter-input search-input" id="tableSearch" type="text" placeholder="TO, doca, operador, LH...">
+    </div>
+  </div>
+  <button class="filters-clear" id="clearFilters">
+    <svg class="icon" viewBox="0 0 24 24" style="width:12px;height:12px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    Limpar filtros
+  </button>
+  <span class="filters-count" id="filtersCount"></span>
+</div>
 
-<!-- Chart -->
-<div class="chart-section">
-  <div class="chart-card">
-    <div class="chart-title">
-      📦 <span id="chartTitle">Pacotes por Hora de Chegada</span>
-      <div class="chart-legend" id="chartLegend">
-        <span><span class="legend-dot" style="background:var(--yellow)"></span> Chegou (ATA)</span>
-        <span><span class="legend-dot" style="background:rgba(245,158,11,.35)"></span> Previsto</span>
-      </div>
+<!-- Análise -->
+<div class="analysis-section">
+  <div class="panel-card">
+    <div class="panel-title">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Pacotes por hora <span class="hl" id="chartHl"></span>
     </div>
     <div id="chartContainer">
       <div class="bar-chart">
@@ -221,377 +410,283 @@ table.main-table tr:last-child td { border-bottom: none; }
       </div>
     </div>
   </div>
-</div>
-
-<!-- Toolbar -->
-<div class="section-divider">Viagens ao vivo</div>
-<div class="table-toolbar">
-  <div class="search-wrap">
-    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input class="search-input" id="tableSearch" type="text" placeholder="Buscar placa, motorista, trip, origem...">
+  <div class="panel-card">
+    <div class="panel-title">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+      Top Origens
+    </div>
+    <div class="origins-list" id="originsList"></div>
   </div>
-  <span class="table-count" id="tableCount"></span>
 </div>
 
-<!-- Table -->
+<!-- Tabela -->
+<div class="section-divider">TOs de transbordo (CD) <span id="tableSectionMeta" style="text-transform:none;font-weight:500"></span></div>
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
-    <h2>⏳ Aguardando sincronização</h2>
-    <p>O Tampermonkey ainda não enviou dados de Trip List.</p>
+    <svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    <h2>Aguardando sincronização</h2>
+    <p>O Tampermonkey ainda não enviou dados de Transbordo CD.</p>
     <code>
-      1. Instale <b>trip_list_sync.user.js</b> no Tampermonkey (ao vivo)<br>
-      2. Instale <b>trip_history_sync.user.js</b> no Tampermonkey (histórico)<br>
-      3. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
-      4. Aguarde os badges <b>🚚 Trip List</b> e <b>📅 Trip History</b>
+      1. Instale transbordo_cd_sync.user.js no Tampermonkey<br>
+      2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
+      3. Aguarde o badge "Transbordo CD" sincronizar<br>
+      4. A lista cresce aos poucos, viagem por viagem
     </code>
   </div>
-  <table class="main-table" id="mainTable" style="display:none">
-    <thead>
-      <tr>
-        <th data-col="vehicle_number">Placa <span class="sa"></span></th>
-        <th data-col="trip_vehicles">Veículo <span class="sa"></span></th>
-        <th data-col="lh_trip_number">Número do LH <span class="sa"></span></th>
-        <th data-col="trip_origin">Origem <span class="sa"></span></th>
-        <th data-col="trip_eta">ETA <span class="sa"></span></th>
-        <th data-col="trip_arrived" class="sorted">Hora Chegada <span class="sa">↓</span></th>
-        <th data-col="waiting_time">T. Espera <span class="sa"></span></th>
-        <th data-col="order_quantity" style="text-align:right">Pacotes <span class="sa"></span></th>
-        <th data-col="driver_name">Motorista <span class="sa"></span></th>
-        <th data-col="assigned_dock_name">Doca <span class="sa"></span></th>
-        <th data-col="lh_status">Status LH <span class="sa"></span></th>
-        <th data-col="queue_status">Status Queue <span class="sa"></span></th>
-      </tr>
-    </thead>
-    <tbody id="mainBody"></tbody>
-  </table>
+  <div class="table-scroll" id="tableScroll" style="display:none">
+    <table class="main-table" id="mainTable">
+      <thead>
+        <tr>
+          <th data-col="to_number">TO <span class="sa"></span></th>
+          <th data-col="pack_type_name">Tipo <span class="sa"></span></th>
+          <th data-col="to_parcel_quantity" style="text-align:right">Pacotes <span class="sa"></span></th>
+          <th data-col="to_weight" style="text-align:right">Peso <span class="sa"></span></th>
+          <th data-col="loaded_station_name">Estação Remetente <span class="sa"></span></th>
+          <th data-col="unloaded_time" class="sorted">Hora do Scan <span class="sa">↓</span></th>
+          <th data-col="dock_number">Doca <span class="sa"></span></th>
+          <th data-col="operator">Operador <span class="sa"></span></th>
+          <th data-col="trip_number">LH <span class="sa"></span></th>
+          <th data-col="status">Status <span class="sa"></span></th>
+        </tr>
+      </thead>
+      <tbody id="mainBody"></tbody>
+    </table>
+  </div>
 </div>
 
+<!-- Drill-down -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3 id="drawerTitle">—</h3>
+    <button class="icon-btn drawer-close" id="drawerClose" aria-label="Fechar detalhe">
+      <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
 <script>
+// ── Icons ──────────────────────────────────────────────────────────────
+const ICON = {
+  sun:   '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>',
+  moon:  '<svg class="icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>',
+  alert: '<svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  check: '<svg class="icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+};
+
 // ── Theme ──────────────────────────────────────────────────────────────
+function applyThemeIcon() {
+  const t = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeBtn').innerHTML = t === 'light' ? ICON.moon : ICON.sun;
+}
 (function () {
   const saved = localStorage.getItem('tbTheme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
 })();
-function toggleTheme() {
+document.getElementById('themeBtn').addEventListener('click', () => {
   const html = document.documentElement;
   const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
   html.setAttribute('data-theme', next);
-  document.getElementById('themeBtn').textContent = next === 'light' ? '🌙' : '☀️';
   localStorage.setItem('tbTheme', next);
-}
-document.addEventListener('DOMContentLoaded', () => {
-  const t = document.documentElement.getAttribute('data-theme');
-  document.getElementById('themeBtn').textContent = t === 'light' ? '🌙' : '☀️';
+  applyThemeIcon();
 });
-
-// ── Origens Transbordo ─────────────────────────────────────────────────
-const TRANSBORDO_ORIGINS = new Set([
-  'SoC_SP_São Bernardo do Campo',
-  'FM Hub_PB_JoãoPessoa_Industrial',
-  'SoC_RJ_Duque de Caxias',
-  'LM Hub_PE_Caruaru_Cidade_Alta',
-  'SoC_ES_Viana',
-]);
+applyThemeIcon();
 
 // ── Helpers ────────────────────────────────────────────────────────────
-function fmtWait(min) {
-  if (!min || min <= 0) return '—';
-  if (min < 60) return `${min}min`;
-  const h = Math.floor(min / 60), m = min % 60;
-  return `${h}h${String(m).padStart(2,'0')}m`;
-}
-function waitClass(min) {
-  if (!min || min <= 0) return 'wait-ok';
-  if (min < 30)  return 'wait-ok';
-  if (min < 60)  return 'wait-mid';
-  if (min < 120) return 'wait-high';
-  return 'wait-crit';
-}
 function fmtTs(ts) {
   if (!ts) return '—';
   return new Date(ts * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
-
-// Retorna YYYY-MM-DD para um timestamp Unix (segundos) no timezone LOCAL do browser
-// IMPORTANTE: toISOString() retorna UTC — a 23:00 BRT (UTC-3) seria "dia+1" em UTC
+function fmtKg(gramas) { return ((gramas || 0) / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
 function tsToDateStr(ts) {
   if (!ts) return null;
   const d = new Date(ts * 1000);
-  const y  = d.getFullYear();
-  const m  = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-// Retorna YYYY-MM-DD para hoje no timezone local
 function todayStr() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-// Formata YYYY-MM-DD para DD/MM
-function fmtDateLabel(dateStr) {
-  const [, m, d] = dateStr.split('-');
-  return `${d}/${m}`;
+function fmtDateBR(dateStr) {
+  const [y,m,d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
 }
-
-// ── Trip helpers ───────────────────────────────────────────────────────
-
-// Verifica se a trip é transbordo — funciona para live (pre_station_name) e histórico (trip_station[0])
-// Usa trim() para ignorar espaços extras e comparação normalizada
-function normalizeOrigin(s) {
-  return (s || '').trim().replace(/\s+/g, ' ');
-}
-function isTransbordo(trip) {
-  const raw = trip.pre_station_name || trip.trip_station?.[0]?.station_name || '';
-  const origin = normalizeOrigin(raw);
-  // Testa match direto ou parcial (o nome no API pode ter sufixo/prefixo extra)
-  if (TRANSBORDO_ORIGINS.has(origin)) return true;
-  for (const o of TRANSBORDO_ORIGINS) {
-    if (origin.includes(o) || o.includes(origin)) return true;
-  }
-  return false;
-}
-
-// Origem da trip
-function getTripOrigin(trip) {
-  return trip.pre_station_name
-      || trip.trip_station?.[0]?.station_name
-      || '—';
-}
-
-// Destino (última estação) — para trips ao vivo
-function getDestStation(trip) {
-  if (!trip?.trip_station) return null;
-  return trip.trip_station.find(s => s.trip_station_status === 50 || s.trip_station_status === 60)
-      || trip.trip_station[trip.trip_station.length - 1];
-}
-
-// Timestamp de chegada real no destino (somente ATA — nunca STA/ETA)
-// Usar ATA garante que só viagens que JÁ chegaram entram no gráfico histórico
-function getArrivalTs(trip) {
-  const dest = trip.trip_station?.[trip.trip_station.length - 1];
-  if (!dest) return 0;
-  return dest.ata > 0 ? dest.ata : 0;
-}
-
-// Quantidade de pacotes — para dados históricos
-// Prioridade: order_quantity da queue (total do caminhão) > unload real > previsto > transportado > carregado
-// Nota: unload_quantity no trip_history conta pacotes escaneados na doca (subestimado),
-//       enquanto order_quantity da queue representa o total de pacotes do LH
-function getHistPackages(trip) {
-  const qPkg = queueMap[trip.trip_number]?.order_quantity;
-  if (qPkg > 0) return qPkg;
-  const dest   = trip.trip_station?.[trip.trip_station.length - 1];
-  const origin = trip.trip_station?.[0];
-  if ((dest?.unload_quantity || 0) > 0)        return dest.unload_quantity;
-  if ((dest?.expect_unload_quantity || 0) > 0) return dest.expect_unload_quantity;
-  if ((origin?.transport_quantity || 0) > 0)   return origin.transport_quantity;
-  if ((origin?.load_quantity || 0) > 0)        return origin.load_quantity;
-  if ((trip.order_packed_quantity || 0) > 0)   return trip.order_packed_quantity;
-  return 0;
-}
-
-// Timestamp de finalização do descarregamento (hora que o carro foi finalizado)
-// Usa unloaded_time da última estação; fallback para ata se ainda não disponível
-function getFinalizationTs(trip) {
-  const dest = trip.trip_station?.[trip.trip_station.length - 1];
-  if (!dest) return 0;
-  return dest.unloaded_time > 0 ? dest.unloaded_time : (dest.ata > 0 ? dest.ata : 0);
-}
+function hasException(t) { return Array.isArray(t.abnormal_labels) && t.abnormal_labels.length > 0; }
 
 // Estação que este dashboard exibe — cada estação tem sua própria cópia deste
 // arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
 const STATION = '10963'; // SoC_PE_Jaboatão dos Guararapes
-
-// ── Queue map (fonte secundária para viagens ao vivo) ──────────────────
-let queueMap = {};
-function buildQueueMap(queueList) {
-  queueMap = {};
-  (queueList || []).forEach(q => {
-    const tn = q.route_info?.lh_trip_number;
-    if (tn) queueMap[tn] = q;
-  });
-}
-function getQueueInfo(trip) {
-  const q = queueMap[trip.trip_number];
-  // Fallback: se queue não tem o trip ainda, usa order_quantity do próprio objeto
-  const fallbackQty = trip.order_quantity || 0;
-  if (!q) return { waitMins: null, orderQty: fallbackQty, assignedDock: '—', queueStatus: null };
-  return {
-    waitMins:     q.waiting_time    || 0,
-    orderQty:     q.order_quantity  || fallbackQty,
-    assignedDock: q.assigned_dock_name || '—',
-    queueStatus:  q.queue_status,
-  };
-}
-
-// Status pills
-function lhStatusPill(s) {
-  switch (s) {
-    case 50: return `<span class="st-pill st-pending">🚚 Em Trânsito</span>`;
-    case 60: return `<span class="st-pill st-occupied">📦 Descarregando</span>`;
-    default: return `<span class="st-pill" style="color:var(--muted)">—</span>`;
-  }
-}
-function queueStatusPill(s) {
-  switch (s) {
-    case 1: return `<span class="st-pill st-pending">⏳ Pendente</span>`;
-    case 2: return `<span class="st-pill st-assigned">📍 Atribuído</span>`;
-    case 3: return `<span class="st-pill st-occupied">🚛 Ocupado</span>`;
-    case 5: return `<span class="st-pill st-hold">⏸ Em Espera</span>`;
-    default: return `<span class="st-pill" style="color:var(--muted)">—</span>`;
-  }
-}
-
-// ── Cache de trip numbers transbordo (localStorage) ───────────────────
-// Persiste trip numbers vistos em liveTransb para identificar trips que
-// finalizaram na queue mas ainda não chegaram no trip_history
-const TRANSB_CACHE_KEY = 'tbTransbSeenTrips';
-let transbCache = (() => {
-  try { return new Set(JSON.parse(localStorage.getItem(TRANSB_CACHE_KEY) || '[]')); }
-  catch { return new Set(); }
-})();
-function saveTransbCache() {
-  try { localStorage.setItem(TRANSB_CACHE_KEY, JSON.stringify([...transbCache])); }
-  catch {}
-}
+const POLL_MS = 15000;
 
 // ── State ──────────────────────────────────────────────────────────────
-let allTrips      = [];   // todos trips ao vivo (não filtrados)
-let liveTransb    = [];   // trips transbordo ao vivo
-let historyTrips  = [];   // todos trips históricos (não filtrados)
-let histTransb    = [];   // trips transbordo históricos
-let sortCol       = 'trip_arrived';
+let allCd        = [];
+let sortCol       = 'unloaded_time';
 let sortAsc       = false;
 let tableSearch   = '';
-let lastLiveAt    = null;
-let lastHistAt    = null;
-let selectedDate  = todayStr(); // data exibida no gráfico
+let originFilter  = '';
+let selectedDate  = todayStr();
+let lastFetchAt   = null;   // quando o servidor gerou os dados
+let lastLoadOkAt  = null;   // quando o browser conseguiu carregar com sucesso
+let fetchFailed   = false;
+let firstLoadDone = false;
+let nextPollAt    = Date.now() + POLL_MS;
 
-// ── Origens strip ──────────────────────────────────────────────────────
-function buildOriginsStrip() {
-  document.getElementById('originsStrip').innerHTML =
-    [...TRANSBORDO_ORIGINS].map(o =>
-      `<span class="origin-badge">🔄 ${o}</span>`
-    ).join('');
-}
+document.getElementById('dateFilter').value = selectedDate;
+document.getElementById('dateFilter').max = todayStr();
 
-// ── Atualiza nota de histórico no header ──────────────────────────────
-function updateHistNote() {
-  const note = document.getElementById('histNote');
-  if (lastHistAt) {
-    const ts = new Date(lastHistAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    note.textContent = `📦 ${histTransb.length} hist · sync ${ts}`;
+// ── System status / freshness ────────────────────────────────────────
+function renderSysStatus() {
+  const dot   = document.getElementById('sysDot');
+  const label = document.getElementById('sysLabel');
+  const detail = document.getElementById('sysDetail');
+
+  if (!firstLoadDone) {
+    dot.className = 'sys-status-dot';
+    label.textContent = 'CONECTANDO';
+    detail.textContent = 'aguardando primeira sincronização';
+  } else if (fetchFailed) {
+    dot.className = 'sys-status-dot offline';
+    label.textContent = 'OFFLINE';
+    detail.textContent = 'falha ao conectar no servidor';
   } else {
-    note.textContent = '📦 Histórico: aguardando sync';
+    const staleMs = Date.now() - lastLoadOkAt;
+    const staleMin = Math.floor(staleMs / 60000);
+    const hhmm = new Date(lastFetchAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (staleMs < 5 * 60000) {
+      dot.className = 'sys-status-dot online';
+      label.textContent = 'ONLINE';
+    } else {
+      dot.className = 'sys-status-dot stale';
+      label.textContent = 'DADOS DESATUALIZADOS';
+    }
+    detail.innerHTML = `Atualizado às <b>${hhmm}</b>${staleMin > 0 ? ` · há ${staleMin}min` : ''}`;
+  }
+
+  const alertBanner = document.getElementById('alertBanner');
+  const alertText   = document.getElementById('alertText');
+  if (fetchFailed) {
+    alertBanner.classList.add('show');
+    alertText.textContent = 'Sem conexão com o servidor — os dados exibidos podem estar desatualizados.';
+  } else if (firstLoadDone && (Date.now() - lastLoadOkAt) >= 5 * 60000) {
+    alertBanner.classList.add('show');
+    alertText.textContent = 'Dados desatualizados — o Tampermonkey pode estar offline ou sem sincronizar.';
+  } else {
+    alertBanner.classList.remove('show');
   }
 }
 
-// ── Trips finalizadas na queue ainda não no trip_history (apenas hoje) ──
-function getEndedQueueTransbToday() {
-  const histNums = new Set(histTransb.map(t => t.trip_number));
-  const today    = todayStr();
-  return Object.values(queueMap).filter(q => {
-    if (q.queue_status !== 4) return false;
-    const tn = q.route_info?.lh_trip_number;
-    if (!tn || !transbCache.has(tn)) return false;  // não reconhecido como transbordo
-    if (histNums.has(tn)) return false;              // já contabilizado no histTransb
-    return tsToDateStr(q.add_to_queue_time || 0) === today;
-  });
+function renderNextUpdate() {
+  const el = document.getElementById('nextUpdate');
+  const secs = Math.max(0, Math.round((nextPollAt - Date.now()) / 1000));
+  el.textContent = firstLoadDone ? `~${secs}s` : '—';
+}
+
+function renderDatePill() {
+  const now = new Date();
+  document.getElementById('datePill').textContent = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+setInterval(() => { renderSysStatus(); renderNextUpdate(); renderDatePill(); }, 1000);
+renderDatePill();
+
+// ── Filters ────────────────────────────────────────────────────────────
+function filteredByDate() {
+  return allCd.filter(t => tsToDateStr(t.unloaded_time) === selectedDate);
+}
+function applyFilters(items) {
+  let vis = items;
+  if (originFilter) vis = vis.filter(t => t.loaded_station_name === originFilter);
+  const q = tableSearch.toLowerCase();
+  if (q) vis = vis.filter(t =>
+    (t.to_number           || '').toLowerCase().includes(q) ||
+    (t.loaded_station_name || '').toLowerCase().includes(q) ||
+    (t.operator            || '').toLowerCase().includes(q) ||
+    (t.trip_number         || '').toLowerCase().includes(q) ||
+    (t.dock_number          || '').toLowerCase().includes(q));
+  return vis;
+}
+function updateClearFiltersState() {
+  const active = originFilter || tableSearch || selectedDate !== todayStr();
+  document.getElementById('clearFilters').classList.toggle('active', !!active);
 }
 
 // ── KPIs ────────────────────────────────────────────────────────────────
 function buildKPIs() {
-  const isToday = selectedDate === todayStr();
+  const dayTos = applyFilters(filteredByDate());
 
-  // Viagens finalizadas do dia selecionado (vêm do histórico)
-  const dayFinished = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
+  const pacotes = dayTos.reduce((s, t) => s + (t.to_parcel_quantity || 0), 0);
+  const peso    = dayTos.reduce((s, t) => s + (t.to_weight || 0), 0);
+  const origens = new Set(dayTos.map(t => t.loaded_station_name).filter(Boolean));
+  const excecoes = dayTos.filter(hasException).length;
 
-  // Trips finalizadas na queue hoje que ainda não estão no histTransb (apenas hoje)
-  const endedQ = isToday ? getEndedQueueTransbToday() : [];
+  document.getElementById('kTotal').innerHTML    = fmtNum(dayTos.length);
+  document.getElementById('kPacotes').textContent = fmtNum(pacotes);
+  document.getElementById('kPeso').innerHTML      = `${fmtKg(peso)}<span class="kpi-unit">kg</span>`;
+  document.getElementById('kOrigens').textContent = origens.size;
+  document.getElementById('kOrigensSub').textContent = origens.size
+    ? [...origens].slice(0, 2).join(', ') + (origens.size > 2 ? ` +${origens.size - 2}` : '')
+    : 'nenhuma estação com TO no dia';
+  document.getElementById('kExc').textContent = excecoes;
 
-  // Pacotes finalizados: histórico + ended queue (sem duplicar)
-  const pkgReceived = dayFinished.reduce((s, t) => s + getHistPackages(t), 0)
-                    + endedQ.reduce((s, q) => s + (q.order_quantity || 0), 0);
+  const excCard = document.getElementById('kExcCard');
+  excCard.classList.toggle('critical', excecoes > 0);
+  excCard.classList.toggle('ok', excecoes === 0);
+  document.getElementById('kExcSub').textContent = excecoes > 0 ? 'requer verificação' : 'nenhuma pendência';
 
-  // Pacotes pendentes (ao vivo — ainda em trânsito ou descarregando)
-  const pkgPending = liveTransb.reduce((s, t) => s + (getQueueInfo(t).orderQty || 0), 0);
+  // Tendência vs dia anterior (só mostra se existir dado real do dia anterior)
+  const prevDate = new Date(selectedDate + 'T12:00:00');
+  prevDate.setDate(prevDate.getDate() - 1);
+  const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}-${String(prevDate.getDate()).padStart(2,'0')}`;
+  const prevCount = allCd.filter(t => tsToDateStr(t.unloaded_time) === prevStr).length;
+  const trendEl = document.getElementById('kTrend');
+  if (prevCount > 0) {
+    const diff = dayTos.length - prevCount;
+    const pct  = Math.round((diff / prevCount) * 100);
+    trendEl.style.display = 'flex';
+    trendEl.className = 'kpi-trend ' + (diff >= 0 ? 'up' : 'down');
+    trendEl.innerHTML = `${diff >= 0 ? '▲' : '▼'} ${Math.abs(pct)}% vs dia anterior (${fmtNum(prevCount)})`;
+  } else {
+    trendEl.style.display = 'none';
+  }
 
-  const finishedCount = dayFinished.length + endedQ.length;
-  const totalToday = isToday ? liveTransb.length + finishedCount : dayFinished.length;
-
-  const dayLabel = isToday ? 'hoje' : fmtDateLabel(selectedDate);
-
-  document.getElementById('kTotal').textContent      = totalToday;
-  document.getElementById('kTotalSub').textContent   = `${dayLabel} · pendentes + finalizadas`;
-  document.getElementById('kPending').textContent    = isToday ? liveTransb.length : '—';
-  document.getElementById('kPendingSub').textContent = isToday ? `${liveTransb.filter(t=>getDestStation(t)?.trip_station_status===50).length} trânsito · ${liveTransb.filter(t=>getDestStation(t)?.trip_station_status===60).length} descarregando` : 'apenas hoje';
-  document.getElementById('kReceived').textContent   = fmtNum(pkgReceived);
-  document.getElementById('kReceivedSub').textContent = `${isToday ? finishedCount : dayFinished.length} viagens · ${dayLabel}`;
-  document.getElementById('kPendingPkg').textContent = isToday ? fmtNum(pkgPending) : '—';
-  document.getElementById('kHistory').textContent    = histTransb.length;
+  const label = selectedDate === todayStr() ? 'hoje' : fmtDateBR(selectedDate);
+  document.getElementById('kTotalSub').textContent = `TOs com tag CD escaneados ${label}`;
 }
 
-// ── Bar chart ───────────────────────────────────────────────────────────
+// ── Chart ───────────────────────────────────────────────────────────────
 function buildChart() {
   const isToday = selectedDate === todayStr();
-  const nowH    = new Date().getHours();
-  const hours   = Array.from({ length: 24 }, (_, i) => i);
-
-  // Viagens finalizadas do histórico
-  const histDay = histTransb.filter(t => tsToDateStr(getArrivalTs(t)) === selectedDate);
-  // Trips finalizadas na queue ainda não no histTransb (apenas hoje)
-  const endedQ  = isToday ? getEndedQueueTransbToday() : [];
+  const nowH  = new Date().getHours();
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const dayTos = applyFilters(filteredByDate());
 
   const arrived = new Array(24).fill(0);
-  histDay.forEach(trip => {
-    const ts  = getFinalizationTs(trip); // hora de finalização (unloaded_time ou ata)
-    const pkg = getHistPackages(trip);
-    if (ts > 0 && pkg > 0) {
-      arrived[new Date(ts * 1000).getHours()] += pkg;
-    }
-  });
-  endedQ.forEach(q => {
-    const ts  = q.add_to_queue_time || 0;
-    const pkg = q.order_quantity || 0;
-    if (ts > 0 && pkg > 0) arrived[new Date(ts * 1000).getHours()] += pkg;
+  dayTos.forEach(t => {
+    const pkg = t.to_parcel_quantity || 0;
+    if (t.unloaded_time > 0 && pkg > 0) arrived[new Date(t.unloaded_time * 1000).getHours()] += pkg;
   });
 
   const maxVal = Math.max(1, ...arrived);
-  const finishedCount = histDay.length + endedQ.length;
+  document.getElementById('chartHl').textContent = dayTos.length
+    ? `— ${fmtDateBR(selectedDate)} · ${dayTos.length} TOs`
+    : `— ${fmtDateBR(selectedDate)} · sem TOs`;
 
-  // Título e legenda
-  const dayLabel = fmtDateLabel(selectedDate);
-  const modeLabel = finishedCount > 0
-    ? `${isToday ? 'Hoje' : dayLabel} — ${finishedCount} finalizadas`
-    : (isToday ? 'Hoje — aguardando finalizações' : `${dayLabel} — sem dados`);
-
-  document.getElementById('chartTitle').textContent = `PACOTES POR HORA · ${modeLabel.toUpperCase()}`;
-  document.getElementById('chartLegend').innerHTML =
-    `<span><span class="legend-dot" style="background:var(--purple)"></span> FINALIZADO</span>`;
-
-  // Y-axis
   const yLabels = [0, Math.round(maxVal * 0.33), Math.round(maxVal * 0.66), maxVal];
-  document.getElementById('chartYAxis').innerHTML = [...yLabels].reverse().map(v =>
-    `<span>${fmtNum(v)}</span>`
-  ).join('');
+  document.getElementById('chartYAxis').innerHTML = [...yLabels].reverse().map(v => `<span>${fmtNum(v)}</span>`).join('');
 
-  // Bars
   document.getElementById('barsContainer').innerHTML = hours.map(h => {
     const val  = arrived[h];
-    const barH = val > 0 ? Math.max(4, Math.round((val / maxVal) * 140)) : 0;
+    const barH = val > 0 ? Math.max(4, Math.round((val / maxVal) * 130)) : 0;
     const isNow = isToday && h === nowH;
     const hStr  = String(h).padStart(2, '0') + ':00';
-
     return `
       <div class="bar-col">
         <div class="bar-wrap">
           <span class="bar-label-top${val === 0 ? ' zero' : ''}">${val > 0 ? fmtNum(val) : ''}</span>
           ${barH > 0
-            ? `<div class="bar bar-hist" style="height:${barH}px" title="${fmtNum(val)} pacotes finalizados às ${hStr}"></div>`
+            ? `<div class="bar" style="height:${barH}px" title="${fmtNum(val)} pacotes escaneados às ${hStr}"></div>`
             : `<div style="height:2px;width:100%;background:var(--border);border-radius:2px"></div>`}
         </div>
         <span class="bar-hour${isNow ? ' now' : ''}">${isNow ? '▼' : String(h).padStart(2,'0')}</span>
@@ -599,50 +694,49 @@ function buildChart() {
   }).join('');
 }
 
-// ── Table (viagens ao vivo) ─────────────────────────────────────────────
+// ── Origins panel ─────────────────────────────────────────────────────
+function buildOriginsPanel() {
+  const dayTos = applyFilters(filteredByDate());
+  const counts = {};
+  dayTos.forEach(t => {
+    const o = t.loaded_station_name || '(sem origem)';
+    counts[o] = (counts[o] || 0) + 1;
+  });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const el = document.getElementById('originsList');
+  if (!entries.length) {
+    el.innerHTML = `<div class="panel-empty">Nenhuma TO no período selecionado</div>`;
+    return;
+  }
+  const max = entries[0][1];
+  el.innerHTML = entries.map(([name, count]) => `
+    <div class="origin-row" title="${name}">
+      <span class="origin-name">${name}</span>
+      <div class="origin-bar-track"><div class="origin-bar-fill" style="width:${Math.max(4, Math.round(count/max*100))}%"></div></div>
+      <span class="origin-count">${fmtNum(count)}</span>
+    </div>`).join('');
+}
+
+// ── Origin select options ──────────────────────────────────────────────
+function buildOriginOptions() {
+  const sel = document.getElementById('originFilter');
+  const current = sel.value;
+  const names = [...new Set(allCd.map(t => t.loaded_station_name).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todas</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (names.includes(current)) sel.value = current;
+}
+
+// ── Table ───────────────────────────────────────────────────────────────
 function sortedItems(items) {
   return [...items].sort((a, b) => {
     let av, bv;
-    if (['vehicle_number','driver_name','vehicle_type_name','trip_number'].includes(sortCol)) {
+    if (['to_number','pack_type_name','loaded_station_name','dock_number','operator','trip_number'].includes(sortCol)) {
       av = (a[sortCol] || '').toLowerCase(); bv = (b[sortCol] || '').toLowerCase();
       return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
-    if (sortCol === 'trip_vehicles') {
-      av = (a.vehicle_type_name || '').toLowerCase(); bv = (b.vehicle_type_name || '').toLowerCase();
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    }
-    if (sortCol === 'lh_trip_number') {
-      av = (a.trip_number || '').toLowerCase(); bv = (b.trip_number || '').toLowerCase();
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    }
-    if (sortCol === 'trip_origin') {
-      av = getTripOrigin(a).toLowerCase(); bv = getTripOrigin(b).toLowerCase();
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-    }
-    if (sortCol === 'trip_eta') {
-      av = getDestStation(a)?.eta || 0; bv = getDestStation(b)?.eta || 0;
+    if (sortCol === 'status') {
+      av = hasException(a) ? 1 : 0; bv = hasException(b) ? 1 : 0;
       return sortAsc ? av - bv : bv - av;
-    }
-    if (sortCol === 'trip_arrived') {
-      av = getDestStation(a)?.ata || 0; bv = getDestStation(b)?.ata || 0;
-      av = av > 0 ? av : -1; bv = bv > 0 ? bv : -1;
-      return sortAsc ? av - bv : bv - av;
-    }
-    if (sortCol === 'lh_status') {
-      av = getDestStation(a)?.trip_station_status || 0;
-      bv = getDestStation(b)?.trip_station_status || 0;
-      return sortAsc ? av - bv : bv - av;
-    }
-    if (['waiting_time','order_quantity','queue_status'].includes(sortCol)) {
-      const qa = queueMap[a.trip_number], qb = queueMap[b.trip_number];
-      av = qa?.[sortCol] ?? 0; bv = qb?.[sortCol] ?? 0;
-      return sortAsc ? av - bv : bv - av;
-    }
-    if (sortCol === 'assigned_dock_name') {
-      const qa = queueMap[a.trip_number], qb = queueMap[b.trip_number];
-      av = (qa?.assigned_dock_name || '').toLowerCase();
-      bv = (qb?.assigned_dock_name || '').toLowerCase();
-      return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
     }
     av = a[sortCol] ?? 0; bv = b[sortCol] ?? 0;
     return sortAsc ? av - bv : bv - av;
@@ -650,48 +744,50 @@ function sortedItems(items) {
 }
 
 function buildMainTable() {
-  if (allTrips.length === 0) {
-    document.getElementById('mainTable').style.display = 'none';
+  const dayTos = filteredByDate();
+  if (allCd.length === 0) {
+    document.getElementById('tableScroll').style.display = 'none';
     document.getElementById('emptyMsg').style.display  = '';
+    document.getElementById('tableSectionMeta').textContent = '';
+    document.getElementById('filtersCount').innerHTML = '';
+    updateClearFiltersState();
     return;
   }
-  document.getElementById('mainTable').style.display = '';
+  document.getElementById('tableScroll').style.display = '';
   document.getElementById('emptyMsg').style.display  = 'none';
 
-  const q = tableSearch.toLowerCase();
-  let vis = sortedItems(liveTransb);
-  if (q) vis = vis.filter(t =>
-    (t.vehicle_number    || '').toLowerCase().includes(q) ||
-    (t.driver_name       || '').toLowerCase().includes(q) ||
-    (t.trip_number       || '').toLowerCase().includes(q) ||
-    (t.trip_name         || '').toLowerCase().includes(q) ||
-    getTripOrigin(t).toLowerCase().includes(q));
+  const vis = sortedItems(applyFilters(dayTos));
+  document.getElementById('tableSectionMeta').textContent = `· ${fmtDateBR(selectedDate)}`;
+  document.getElementById('filtersCount').innerHTML = `<b>${vis.length}</b> TO${vis.length !== 1 ? 's' : ''} de ${dayTos.length} no dia`;
+  updateClearFiltersState();
 
-  document.getElementById('tableCount').textContent = `${vis.length} viagem${vis.length !== 1 ? 's' : ''} transbordo`;
+  if (!vis.length) {
+    document.getElementById('mainBody').innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-mute);padding:30px">Nenhum registro para os filtros selecionados.</td></tr>`;
+    return;
+  }
 
-  document.getElementById('mainBody').innerHTML = vis.map(trip => {
-    const dest   = getDestStation(trip);
-    const qi     = getQueueInfo(trip);
-    const origin = getTripOrigin(trip);
-    const eta    = dest?.eta ? fmtTs(dest.eta) : '—';
-    const ata    = dest?.ata || 0;
-    const ataStr = ata > 0 ? fmtTs(ata) : '—';
-
-    return `<tr>
-      <td style="font-family:monospace;font-size:12px">${trip.vehicle_number || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${trip.vehicle_type_name || '—'}</td>
-      <td style="font-family:monospace;font-size:11px;color:var(--teal)">${trip.trip_number || '—'}</td>
-      <td style="font-size:11px;color:var(--yellow);font-weight:600">${origin}</td>
-      <td style="font-size:11px;color:var(--blue)">${eta}</td>
-      <td style="font-family:monospace;font-size:11px;font-weight:600;color:${ata > 0 ? 'var(--green)' : 'var(--muted)'}">${ataStr}</td>
-      <td>${qi.waitMins ? `<span class="${waitClass(qi.waitMins)}">${fmtWait(qi.waitMins)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="text-align:right;font-family:monospace;font-weight:700;font-size:13px;color:${qi.orderQty > 0 ? 'var(--text)' : 'var(--muted)'}">${qi.orderQty > 0 ? fmtNum(qi.orderQty) : '—'}</td>
-      <td style="font-weight:600">${trip.driver_name || '—'}</td>
-      <td style="font-size:11px;color:var(--purple);font-weight:600">${qi.assignedDock}</td>
-      <td>${lhStatusPill(dest?.trip_station_status)}</td>
-      <td>${queueStatusPill(qi.queueStatus)}</td>
+  document.getElementById('mainBody').innerHTML = vis.map((t, i) => {
+    const exc = hasException(t);
+    return `<tr class="${exc ? 'row-flagged' : ''}" tabindex="0" data-idx="${i}" data-to="${t.to_number}">
+      <td class="mono" style="color:var(--accent)">${t.to_number || '—'}</td>
+      <td style="color:var(--text-dim)">${t.pack_type_name || '—'}</td>
+      <td class="num-cell" style="font-weight:700">${fmtNum(t.to_parcel_quantity)}</td>
+      <td class="num-cell mono" style="color:var(--text-dim)">${fmtKg(t.to_weight)} kg</td>
+      <td style="font-weight:600">${t.loaded_station_name || '—'}</td>
+      <td class="mono" style="font-weight:600">${fmtTs(t.unloaded_time)}</td>
+      <td style="color:var(--text-dim)">${t.dock_number || '—'}</td>
+      <td>${t.operator || '—'}</td>
+      <td class="mono" style="color:var(--text-mute)">${t.trip_number || '—'}</td>
+      <td>${exc ? '<span class="badge badge-exc">' + ICON.alert + ' Exceção</span>' : '<span class="badge badge-ok">' + ICON.check + ' OK</span>'}</td>
     </tr>`;
   }).join('');
+
+  // referência pro drill-down (evita re-buscar em allCd por índice de linha filtrada)
+  window.__visibleRows = vis;
+  document.querySelectorAll('#mainBody tr[data-idx]').forEach(tr => {
+    tr.addEventListener('click', () => openDrawer(window.__visibleRows[Number(tr.dataset.idx)]));
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter') openDrawer(window.__visibleRows[Number(tr.dataset.idx)]); });
+  });
 }
 
 // ── Sort headers ────────────────────────────────────────────────────────
@@ -709,79 +805,94 @@ document.querySelectorAll('table.main-table th[data-col]').forEach(th => {
   });
 });
 
-// ── Search ──────────────────────────────────────────────────────────────
-document.getElementById('tableSearch').addEventListener('input', e => {
-  tableSearch = e.target.value;
-  buildMainTable();
+// ── Drill-down drawer ─────────────────────────────────────────────────
+function openDrawer(t) {
+  if (!t) return;
+  document.getElementById('drawerTitle').textContent = t.to_number;
+  const exc = hasException(t);
+  document.getElementById('drawerBody').innerHTML = `
+    ${exc ? `<div class="drawer-exc">${ICON.alert} <span>${t.abnormal_labels.join(', ')}</span></div>` : ''}
+    <div class="drawer-grid">
+      <div class="drawer-field"><label>Pacotes</label><span class="val mono">${fmtNum(t.to_parcel_quantity)}</span></div>
+      <div class="drawer-field"><label>Peso</label><span class="val mono">${fmtKg(t.to_weight)} kg</span></div>
+      <div class="drawer-field"><label>Tipo</label><span class="val">${t.pack_type_name || '—'}</span></div>
+      <div class="drawer-field"><label>Hora do Scan</label><span class="val mono">${fmtTs(t.unloaded_time)}</span></div>
+    </div>
+    <div class="drawer-field"><label>Estação Remetente</label><span class="val">${t.loaded_station_name || '—'}</span></div>
+    <div class="drawer-field"><label>Estação Destino</label><span class="val">${t.unloaded_station_name || '—'}</span></div>
+    <div class="drawer-field"><label>Doca</label><span class="val">${t.dock_number || '—'}</span></div>
+    <div class="drawer-field"><label>Operador</label><span class="val">${t.operator || '—'}</span></div>
+    <div class="drawer-grid">
+      <div class="drawer-field"><label>Viagem (LH)</label><span class="val mono">${t.trip_number || '—'}</span></div>
+      <div class="drawer-field"><label>Placa</label><span class="val mono">${t.vehicle_number || '—'}</span></div>
+    </div>
+    <div class="drawer-field"><label>Motorista</label><span class="val">${t.driver_name || '—'}</span></div>
+  `;
+  document.getElementById('drawer').classList.add('show');
+  document.getElementById('drawerOverlay').classList.add('show');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('show');
+  document.getElementById('drawerOverlay').classList.remove('show');
+}
+document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+// ── Filters wiring ──────────────────────────────────────────────────────
+document.getElementById('tableSearch').addEventListener('input', e => { tableSearch = e.target.value; render(); });
+document.getElementById('originFilter').addEventListener('change', e => { originFilter = e.target.value; render(); });
+document.getElementById('dateFilter').addEventListener('change', e => { selectedDate = e.target.value || todayStr(); render(); });
+document.getElementById('clearFilters').addEventListener('click', () => {
+  tableSearch = ''; originFilter = ''; selectedDate = todayStr();
+  document.getElementById('tableSearch').value = '';
+  document.getElementById('originFilter').value = '';
+  document.getElementById('dateFilter').value = selectedDate;
+  render();
 });
 
 // ── Render all ──────────────────────────────────────────────────────────
 function render() {
-  buildOriginsStrip();
-  updateHistNote();
+  buildOriginOptions();
   buildKPIs();
   buildChart();
+  buildOriginsPanel();
   buildMainTable();
 }
 
-// ── Load live data ───────────────────────────────────────────────────────
-async function loadLive() {
-  try {
-    const [qRes, tRes] = await Promise.all([fetch(`/api/queue?station=${STATION}`), fetch(`/api/trips?station=${STATION}`)]);
-    const [qData, tData] = await Promise.all([qRes.json(), tRes.json()]);
-    if (!tData.list || tData.fetchedAt === lastLiveAt) return;
-    lastLiveAt = tData.fetchedAt;
-
-    buildQueueMap(qData.list || []);
-    allTrips   = tData.list || [];
-    liveTransb = allTrips.filter(isTransbordo);
-    liveTransb.forEach(t => transbCache.add(t.trip_number));
-    saveTransbCache();
-
-    const ts = new Date(tData.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    document.getElementById('lastUpdated').textContent = `Live: ${ts}`;
-    document.getElementById('liveDot').className       = 'live-dot on';
-    document.getElementById('metaTag').textContent     = `${liveTransb.length} transb. ao vivo · ${ts}`;
-
-    render();
-  } catch (e) {
-    console.error('[Transbordo live]', e);
-  }
+// ── Skeleton state (antes do primeiro load) ────────────────────────────
+function showSkeleton() {
+  ['kTotal','kPacotes','kPeso','kOrigens','kExc'].forEach(id => {
+    document.getElementById(id).innerHTML = '<div class="kpi-skel" style="width:70%"></div>';
+  });
 }
 
-// ── Load history data ────────────────────────────────────────────────────
-async function loadHistory() {
+// ── Load data ─────────────────────────────────────────────────────────
+async function load() {
   try {
-    const res  = await fetch(`/api/trip-history?station=${STATION}`);
+    const res  = await fetch(`/api/transbordo-cd?station=${STATION}`);
+    if (!res.ok) throw new Error('status ' + res.status);
     const data = await res.json();
-    if (!data.list || data.fetchedAt === lastHistAt) return;
-    lastHistAt   = data.fetchedAt;
-    historyTrips = data.list || [];
-    histTransb   = historyTrips.filter(isTransbordo);
-    console.log(`[Transbordo hist] ${histTransb.length} de ${historyTrips.length} viagens são transbordo`);
-
-    // Debug: origens únicas no histórico que NÃO foram reconhecidas como transbordo
-    const unmatchedOrigins = new Map();
-    historyTrips.filter(t => !isTransbordo(t)).forEach(t => {
-      const o = normalizeOrigin(t.pre_station_name || t.trip_station?.[0]?.station_name || '—');
-      unmatchedOrigins.set(o, (unmatchedOrigins.get(o) || 0) + 1);
-    });
-    if (unmatchedOrigins.size) {
-      console.log('[Transbordo hist] Origens NÃO reconhecidas (verifique se alguma é transbordo):',
-        [...unmatchedOrigins.entries()].sort((a,b)=>b[1]-a[1]).map(([o,n])=>`${o} (${n})`).join(' | '));
-    }
-    updateHistNote();
-    buildKPIs();
-    buildChart();
+    fetchFailed = false;
+    if (data.fetchedAt) lastFetchAt = data.fetchedAt;
+    lastLoadOkAt = Date.now();
+    if (data.list) allCd = data.list;
+    firstLoadDone = true;
+    nextPollAt = Date.now() + POLL_MS;
+    render();
+    renderSysStatus();
   } catch (e) {
-    console.error('[Transbordo hist]', e);
+    fetchFailed = true;
+    firstLoadDone = true;
+    nextPollAt = Date.now() + POLL_MS;
+    renderSysStatus();
+    console.error('[Transbordo CD]', e);
   }
 }
 
-loadLive();
-loadHistory();
-setInterval(loadLive,    15000); // ao vivo: a cada 15s
-setInterval(loadHistory, 30000); // histórico: a cada 30s
+showSkeleton();
+load();
+setInterval(load, POLL_MS);
 </script>
 </body>
 </html>
