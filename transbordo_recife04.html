@@ -423,15 +423,6 @@ table.main-table tbody tr:focus-visible { outline: 2px solid var(--accent); outl
 <div class="section-divider">TOs de transbordo (CD) <span id="tableSectionMeta" style="text-transform:none;font-weight:500"></span></div>
 <div class="table-wrap">
   <div class="empty" id="emptyMsg">
-    <svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-    <h2>Aguardando sincronização</h2>
-    <p>O Tampermonkey ainda não enviou dados de Transbordo CD.</p>
-    <code>
-      1. Instale transbordo_cd_sync.user.js no Tampermonkey<br>
-      2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
-      3. Aguarde o badge "Transbordo CD" sincronizar<br>
-      4. A lista cresce aos poucos, viagem por viagem
-    </code>
   </div>
   <div class="table-scroll" id="tableScroll" style="display:none">
     <table class="main-table" id="mainTable">
@@ -743,6 +734,33 @@ function sortedItems(items) {
   });
 }
 
+// Preenche o estado vazio distinguindo "nunca sincronizou" (nenhum payload chegou —
+// Tampermonkey não instalado/rodando) de "sincronizou normalmente e ainda não achou
+// nenhuma TO com tag CD" (script ok, só não há dado real pra mostrar ainda).
+function renderEmptyState() {
+  const el = document.getElementById('emptyMsg');
+  const neverSynced = lastFetchAt === null;
+
+  if (neverSynced) {
+    el.innerHTML = `
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <h2>Aguardando sincronização</h2>
+      <p>O Tampermonkey ainda não enviou dados de Transbordo CD.</p>
+      <code>
+        1. Instale transbordo_cd_sync.user.js no Tampermonkey<br>
+        2. Acesse qualquer página do SPX (spx.shopee.com.br)<br>
+        3. Aguarde o badge "Transbordo CD" sincronizar<br>
+        4. A lista cresce aos poucos, viagem por viagem
+      </code>`;
+  } else {
+    const hhmm = new Date(lastFetchAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    el.innerHTML = `
+      ${ICON.check.replace('class="icon"', 'class="icon" style="width:34px;height:34px;margin:0 auto 14px;color:var(--green)"')}
+      <h2>Sem dados de transbordo (CD)</h2>
+      <p>Sincronização ativa · última verificação às ${hhmm} · nenhuma TO com tag CD encontrada até agora.</p>`;
+  }
+}
+
 function buildMainTable() {
   const dayTos = filteredByDate();
   if (allCd.length === 0) {
@@ -751,6 +769,7 @@ function buildMainTable() {
     document.getElementById('tableSectionMeta').textContent = '';
     document.getElementById('filtersCount').innerHTML = '';
     updateClearFiltersState();
+    renderEmptyState();
     return;
   }
   document.getElementById('tableScroll').style.display = '';
@@ -886,6 +905,7 @@ async function load() {
     firstLoadDone = true;
     nextPollAt = Date.now() + POLL_MS;
     renderSysStatus();
+    if (!lastLoadOkAt) render(); // nunca carregou com sucesso — sai do skeleton e mostra o estado vazio real
     console.error('[Transbordo CD]', e);
   }
 }

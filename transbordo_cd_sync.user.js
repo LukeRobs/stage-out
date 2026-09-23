@@ -171,7 +171,10 @@
         }
       }
       if (newlyDone) saveDone(doneTrips);
-      if (allCd.length) await sendToServer(allCd);
+      // Manda mesmo com lista vazia — isso atualiza o fetchedAt no servidor, provando
+      // pro dashboard que o sync rodou com sucesso (só não achou nenhuma TO com CD ainda).
+      // Sem isso, o dashboard não tem como distinguir "nunca sincronizou" de "sincronizou e achou zero".
+      await sendToServer(allCd);
 
       dot.textContent      = `✅ CD ${allCd.length}/${toProcess.length}v ` + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       dot.style.background = '#059669';
