@@ -1222,6 +1222,11 @@
 
   ensureTransbordoCdSheetHeader();
   loadTransbordoCdFromSheet();
+  // Tentativas extras logo após o boot — a chamada é idempotente (só preenche o que estiver
+  // faltando em memória, nunca sobrescreve), então repetir é seguro. Cobre o caso de rede
+  // ainda não estar totalmente pronta bem no instante do cold start do Render.
+  setTimeout(loadTransbordoCdFromSheet, 30 * 1000);
+  setTimeout(loadTransbordoCdFromSheet, 2 * 60 * 1000);
 
   async function flushTransbordoCdSheet() {
     if (!transbordoCdPendingRows.length) return;
