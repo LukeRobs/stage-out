@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -52,7 +52,7 @@
   // (candidatas que incluíam pernas de origem) — sem isso, viagens de destino de
   // verdade ficariam presas como "concluídas" com resultado de quando a busca ainda
   // estava errada, e nunca mais seriam reconsultadas com a lógica corrigida.
-  const DONE_KEY = 'tbCdDoneTrips_v2';
+  const DONE_KEY = 'tbCdDoneTrips_v3';
   function loadDone() {
     try { return new Set(JSON.parse(GM_getValue(DONE_KEY, '[]'))); }
     catch (e) { return new Set(); }
@@ -111,7 +111,12 @@
 
   // Busca todos os TOs (paginado) de uma viagem nesta estação e devolve só os cd_flag=true
   async function fetchCdTosForTrip(trip, dest) {
-    const seq   = dest.actual_unloaded_sequence_number || dest.unloaded_sequence_number || 1;
+    // sequence_number (posição da parada na rota) é o campo confiável — vem sempre
+    // preenchido. actual_unloaded_sequence_number/unloaded_sequence_number às vezes
+    // vêm zerados nos dados que reaproveitamos de /api/trip-history (fonte genérica de
+    // viagem, não a tela específica de carregamento), mas nos exemplos reais os três
+    // sempre bateram no mesmo valor — por isso viram só fallback aqui.
+    const seq   = dest.sequence_number || dest.actual_unloaded_sequence_number || dest.unloaded_sequence_number || 1;
     const first = await fetchLoadingPage(trip.id, seq, 1);
     const total = first.total || 0;
     let list    = first.list || [];
