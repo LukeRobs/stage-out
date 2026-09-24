@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      1.7
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -52,7 +52,12 @@
   // (candidatas que incluíam pernas de origem) — sem isso, viagens de destino de
   // verdade ficariam presas como "concluídas" com resultado de quando a busca ainda
   // estava errada, e nunca mais seriam reconsultadas com a lógica corrigida.
-  const DONE_KEY = 'tbCdDoneTrips_v3';
+  // v4: o servidor reiniciou (deploy da persistencia no Sheets) e perdeu o acumulado antes
+  // da planilha existir de fato — sem isso, as viagens já dadas como concluídas no navegador
+  // nunca seriam reprocessadas, e os dados perdidos no restart nunca voltariam. Daqui pra
+  // frente isso não deve mais ser necessário: a planilha garante que um restart do servidor
+  // não perde mais nada.
+  const DONE_KEY = 'tbCdDoneTrips_v4';
   function loadDone() {
     try { return new Set(JSON.parse(GM_getValue(DONE_KEY, '[]'))); }
     catch (e) { return new Set(); }
