@@ -243,7 +243,13 @@ table.main-table tbody tr:focus-visible { outline: 2px solid var(--accent); outl
 .badge-cd  { color: var(--accent); border-color: var(--accent-line); background: var(--accent-dim); }
 .badge-exc { color: var(--red); border-color: rgba(239,68,68,.35); background: var(--red-dim); }
 .badge-ok  { color: var(--green); border-color: rgba(34,197,94,.3); background: var(--green-dim); }
+.badge-turno { color: var(--text-dim); border-color: var(--border2); background: var(--surface3); font-family: var(--font-mono); }
 .row-flagged td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+tr.turno-row { cursor: pointer; }
+tr.turno-row.active td { background: var(--accent-dim); }
+tr.turno-row.active .badge-turno { color: var(--accent); border-color: var(--accent-line); background: var(--surface2); }
+tr.turno-total td { font-weight: 700; border-top: 1px solid var(--border2); cursor: default; }
+tr.turno-total:hover td { background: transparent; }
 
 .row-skel td { padding: 12px; }
 .row-skel .kpi-skel { height: 14px; }
@@ -419,6 +425,23 @@ table.main-table tbody tr:focus-visible { outline: 2px solid var(--accent); outl
   </div>
 </div>
 
+<!-- Turno -->
+<div class="section-divider">Comparação por turno <span style="text-transform:none;font-weight:500">— clique numa linha para filtrar</span></div>
+<div class="table-wrap">
+  <div class="table-scroll" style="max-height:none">
+    <table class="main-table" id="turnoTable">
+      <thead>
+        <tr>
+          <th>Turno</th>
+          <th style="text-align:right">TOs</th>
+          <th style="text-align:right">Pacotes</th>
+        </tr>
+      </thead>
+      <tbody id="turnoBody"></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Tabela -->
 <div class="section-divider">TOs de transbordo (CD) <span id="tableSectionMeta" style="text-transform:none;font-weight:500"></span></div>
 <div class="table-wrap">
@@ -491,13 +514,18 @@ function fmtTs(ts) {
 }
 function fmtNum(n) { return (n || 0).toLocaleString('pt-BR'); }
 function fmtKg(gramas) { return ((gramas || 0) / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+// Dia operacional: 06:00 de um dia até 05:59:59 do dia seguinte (mesma regra usada no
+// SACAS/Report do projeto) — desloca -6h antes de tomar a data, então qualquer TO
+// escaneada de madrugada (turno T3) ainda conta pro dia operacional anterior.
 function tsToDateStr(ts) {
   if (!ts) return null;
   const d = new Date(ts * 1000);
+  d.setHours(d.getHours() - 6);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function todayStr() {
   const d = new Date();
+  d.setHours(d.getHours() - 6);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function fmtDateBR(dateStr) {
@@ -505,6 +533,15 @@ function fmtDateBR(dateStr) {
   return `${d}/${m}/${y}`;
 }
 function hasException(t) { return Array.isArray(t.abnormal_labels) && t.abnormal_labels.length > 0; }
+// Turno — horário de relógio normal (não desloca): T1 06:00-13:59, T2 14:00-21:59,
+// T3 22:00-05:59 (atravessa a virada, mas ainda cai no dia operacional anterior acima).
+function turnoOf(ts) {
+  if (!ts) return null;
+  const h = new Date(ts * 1000).getHours();
+  if (h >= 6 && h < 14) return 'T1';
+  if (h >= 14 && h < 22) return 'T2';
+  return 'T3';
+}
 
 // Estação que este dashboard exibe — cada estação tem sua própria cópia deste
 // arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
@@ -517,6 +554,7 @@ let sortCol       = 'unloaded_time';
 let sortAsc       = false;
 let tableSearch   = '';
 let originFilter  = '';
+let turnoFilter   = null; // null | 'T1' | 'T2' | 'T3'
 let selectedDate  = todayStr();
 let lastFetchAt   = null;   // quando o servidor gerou os dados
 let lastLoadOkAt  = null;   // quando o browser conseguiu carregar com sucesso
@@ -586,9 +624,11 @@ renderDatePill();
 function filteredByDate() {
   return allCd.filter(t => tsToDateStr(t.unloaded_time) === selectedDate);
 }
-function applyFilters(items) {
+function applyFilters(items, opts) {
+  opts = opts || {};
   let vis = items;
   if (originFilter) vis = vis.filter(t => t.loaded_station_name === originFilter);
+  if (!opts.skipTurno && turnoFilter) vis = vis.filter(t => turnoOf(t.unloaded_time) === turnoFilter);
   const q = tableSearch.toLowerCase();
   if (q) vis = vis.filter(t =>
     (t.to_number           || '').toLowerCase().includes(q) ||
@@ -599,7 +639,7 @@ function applyFilters(items) {
   return vis;
 }
 function updateClearFiltersState() {
-  const active = originFilter || tableSearch || selectedDate !== todayStr();
+  const active = originFilter || turnoFilter || tableSearch || selectedDate !== todayStr();
   document.getElementById('clearFilters').classList.toggle('active', !!active);
 }
 
@@ -706,6 +746,43 @@ function buildOriginsPanel() {
       <div class="origin-bar-track"><div class="origin-bar-fill" style="width:${Math.max(4, Math.round(count/max*100))}%"></div></div>
       <span class="origin-count">${fmtNum(count)}</span>
     </div>`).join('');
+}
+
+// ── Turno (T1 06:00-13:59 · T2 14:00-21:59 · T3 22:00-05:59) ──────────────
+function buildTurnoTable() {
+  // Ignora o próprio filtro de turno aqui — a tabela sempre mostra os 3 turnos completos
+  // do dia (com os outros filtros ativos aplicados), pra dar pra clicar e trocar de turno.
+  const dayTos = applyFilters(filteredByDate(), { skipTurno: true });
+  const agg = { T1: { tos: 0, pacotes: 0 }, T2: { tos: 0, pacotes: 0 }, T3: { tos: 0, pacotes: 0 } };
+  dayTos.forEach(t => {
+    const turno = turnoOf(t.unloaded_time);
+    if (!turno) return;
+    agg[turno].tos++;
+    agg[turno].pacotes += t.to_parcel_quantity || 0;
+  });
+  const totalTos     = agg.T1.tos + agg.T2.tos + agg.T3.tos;
+  const totalPacotes = agg.T1.pacotes + agg.T2.pacotes + agg.T3.pacotes;
+
+  const rows = ['T1', 'T2', 'T3'].map(t => `
+    <tr class="turno-row${turnoFilter === t ? ' active' : ''}" data-turno="${t}" tabindex="0">
+      <td><span class="badge badge-turno">${t}</span></td>
+      <td class="num-cell">${fmtNum(agg[t].tos)}</td>
+      <td class="num-cell">${fmtNum(agg[t].pacotes)}</td>
+    </tr>`).join('');
+
+  document.getElementById('turnoBody').innerHTML = rows + `
+    <tr class="turno-total">
+      <td>Total</td>
+      <td class="num-cell">${fmtNum(totalTos)}</td>
+      <td class="num-cell">${fmtNum(totalPacotes)}</td>
+    </tr>`;
+
+  document.querySelectorAll('#turnoBody tr.turno-row').forEach(tr => {
+    const t = tr.dataset.turno;
+    const toggle = () => { turnoFilter = turnoFilter === t ? null : t; render(); };
+    tr.addEventListener('click', toggle);
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter') toggle(); });
+  });
 }
 
 // ── Origin select options ──────────────────────────────────────────────
@@ -863,7 +940,7 @@ document.getElementById('tableSearch').addEventListener('input', e => { tableSea
 document.getElementById('originFilter').addEventListener('change', e => { originFilter = e.target.value; render(); });
 document.getElementById('dateFilter').addEventListener('change', e => { selectedDate = e.target.value || todayStr(); render(); });
 document.getElementById('clearFilters').addEventListener('click', () => {
-  tableSearch = ''; originFilter = ''; selectedDate = todayStr();
+  tableSearch = ''; originFilter = ''; turnoFilter = null; selectedDate = todayStr();
   document.getElementById('tableSearch').value = '';
   document.getElementById('originFilter').value = '';
   document.getElementById('dateFilter').value = selectedDate;
@@ -876,6 +953,7 @@ function render() {
   buildKPIs();
   buildChart();
   buildOriginsPanel();
+  buildTurnoTable();
   buildMainTable();
 }
 
