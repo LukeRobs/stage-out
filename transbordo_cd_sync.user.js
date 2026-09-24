@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -48,7 +48,11 @@
 
   // ── Viagens já totalmente descarregadas nesta estação não mudam mais — evita
   // rebater na API de novo a cada ciclo (cada viagem custa 1+ chamadas extras).
-  const DONE_KEY = 'tbCdDoneTrips';
+  // Chave versionada (v2) pra descartar marcações feitas durante os ciclos com bug
+  // (candidatas que incluíam pernas de origem) — sem isso, viagens de destino de
+  // verdade ficariam presas como "concluídas" com resultado de quando a busca ainda
+  // estava errada, e nunca mais seriam reconsultadas com a lógica corrigida.
+  const DONE_KEY = 'tbCdDoneTrips_v2';
   function loadDone() {
     try { return new Set(JSON.parse(GM_getValue(DONE_KEY, '[]'))); }
     catch (e) { return new Set(); }
