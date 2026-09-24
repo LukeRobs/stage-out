@@ -1100,6 +1100,141 @@
   const tripCacheByStation        = makeStationCache(); // station_id -> { list, fetchedAt } — trip list v2
   const tripHistoryCacheByStation = makeStationCache(); // station_id -> { list, fetchedAt } — trip history (last 7 days)
   const transbordoCdCacheByStation = makeStationCache(); // station_id -> { list, fetchedAt } — TOs com cd_flag=true (merge por to_number, via loading/list por viagem)
+
+  // ── Transbordo CD → Google Sheets (mesmo padrão do SACAS — arquivo + recuperação
+  // pós-restart) ─────────────────────────────────────────────────────────────
+  // transbordoCdCacheByStation acima já é o dado servido ao dashboard, mas só em memória —
+  // um restart no Render zera tudo. Aba "Base" de uma planilha ÚNICA (compartilhada pelas
+  // duas estações, distinguidas pela coluna station_id) funciona como cópia durável:
+  // gravamos em lote a cada TRANSBORDO_SHEET_FLUSH_MS e, no boot, lemos ela de volta pra
+  // recompor a memória (loadTransbordoCdFromSheet), sem nunca sobrescrever o que já estiver
+  // em memória (mesma regra do SACAS — a 1ª captura de cada TO é a que vale).
+  const TRANSBORDO_SHEET_ID    = '1qLU_vNPbSROjhCIG-aI724c1NQWINght8L3B4fRVdlM';
+  const TRANSBORDO_SHEET_RANGE = 'Base!A:N';
+  const TRANSBORDO_SHEET_FLUSH_MS = 60 * 1000; // 60s — mesma cadência do SACAS
+  let transbordoCdPendingRows = []; // linhas já formatadas, aguardando o próximo flush (planilha única, todas as estações)
+
+  const TRANSBORDO_SHEET_HEADER = ['dt_scan', 'to_number', 'pack_type_name', 'parcels', 'weight_kg', 'loaded_station_name', 'unloaded_station_name', 'dock_number', 'operator', 'trip_number', 'vehicle_number', 'driver_name', 'exception', 'station_id'];
+
+  function buildTransbordoCdSheetRow(to, station) {
+    return [
+      to.unloaded_time ? fmtDtComplete(to.unloaded_time) : '',
+      to.to_number || '',
+      to.pack_type_name || '',
+      to.to_parcel_quantity || 0,
+      Math.round(((to.to_weight || 0) / 1000) * 10) / 10,
+      to.loaded_station_name || '',
+      to.unloaded_station_name || '',
+      to.dock_number || '',
+      to.operator || '',
+      to.trip_number || '',
+      to.vehicle_number || '',
+      to.driver_name || '',
+      (Array.isArray(to.abnormal_labels) && to.abnormal_labels.length) ? to.abnormal_labels.join('; ') : '',
+      String(station),
+    ];
+  }
+
+  async function appendTransbordoCdRowsToSheet(rows) {
+    if (!rows.length) return;
+    if (!SERVICE_ACCOUNT) { console.warn('[transbordo-cd-sheet] Service Account não configurado, pulando flush'); return; }
+    const token = await getServiceAccountToken();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent(TRANSBORDO_SHEET_RANGE)}:append?valueInputOption=USER_ENTERED`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    });
+    if (!resp.ok) throw new Error(`Sheets append ${resp.status}: ${await resp.text()}`);
+  }
+
+  async function ensureTransbordoCdSheetHeader() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const token = await getServiceAccountToken();
+      const headerRange = 'Base!A1:N1';
+      const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent(headerRange)}`;
+      const getResp = await fetch(getUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!getResp.ok) throw new Error(`Sheets get ${getResp.status}: ${await getResp.text()}`);
+      const data = await getResp.json();
+      if (data.values && data.values.length) return; // já tem cabeçalho, não sobrescreve
+      const putUrl = `https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent(headerRange)}?valueInputOption=USER_ENTERED`;
+      const putResp = await fetch(putUrl, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [TRANSBORDO_SHEET_HEADER] }),
+      });
+      if (!putResp.ok) throw new Error(`Sheets put ${putResp.status}: ${await putResp.text()}`);
+      console.log('[transbordo-cd-sheet] cabeçalho gravado na aba "Base"');
+    } catch (e) { console.error('[transbordo-cd-sheet] falha ao verificar/gravar cabeçalho:', e.message); }
+  }
+
+  // Recuperação pós-restart: lê a aba inteira e recompõe transbordoCdCacheByStation por
+  // estação (coluna station_id), sem sobrescrever o que já estiver em memória.
+  async function loadTransbordoCdFromSheet() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const token = await getServiceAccountToken();
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent('Base!A2:N1000000')}`;
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
+      const rows = (await resp.json()).values || [];
+      const byStation = new Map(); // station_id -> Map(to_number -> record)
+      rows.forEach(r => {
+        const to_number = r[1];
+        const station   = String(r[13] || DEFAULT_STATION);
+        if (!to_number) return;
+        if (!byStation.has(station)) byStation.set(station, new Map());
+        byStation.get(station).set(to_number, {
+          to_number,
+          pack_type_name:        r[2] || '',
+          to_parcel_quantity:    parseInt(r[3], 10) || 0,
+          to_weight:             Math.round((parseFloat(String(r[4] || '0').replace(',', '.')) || 0) * 1000),
+          loaded_station_name:   r[5] || '',
+          unloaded_station_name: r[6] || '',
+          dock_number:           r[7] || '',
+          operator:              r[8] || '',
+          trip_number:           r[9] || '',
+          vehicle_number:        r[10] || '',
+          driver_name:           r[11] || '',
+          abnormal_labels:       r[12] ? r[12].split('; ') : null,
+          unloaded_time:         parseDtComplete(r[0]) || 0,
+        });
+      });
+      let restoredTotal = 0;
+      for (const [station, map] of byStation) {
+        const existing    = transbordoCdCacheByStation.get(station) || { list: [], fetchedAt: null };
+        const existingMap = new Map(existing.list.map(t => [t.to_number, t]));
+        let restored = 0;
+        for (const [to_number, rec] of map) {
+          if (existingMap.has(to_number)) continue; // já tem em memória — não sobrescreve
+          existingMap.set(to_number, rec);
+          restored++;
+        }
+        if (restored) {
+          transbordoCdCacheByStation.set(station, { list: [...existingMap.values()], fetchedAt: existing.fetchedAt || Date.now() });
+          restoredTotal += restored;
+        }
+      }
+      if (restoredTotal) console.log(`[transbordo-cd-sheet] ${restoredTotal} TOs recuperados da planilha (recomposição pós-restart)`);
+    } catch (e) { console.error('[transbordo-cd-sheet] falha ao recarregar planilha:', e.message); }
+  }
+
+  ensureTransbordoCdSheetHeader();
+  loadTransbordoCdFromSheet();
+
+  async function flushTransbordoCdSheet() {
+    if (!transbordoCdPendingRows.length) return;
+    const batch = transbordoCdPendingRows;
+    transbordoCdPendingRows = [];
+    try {
+      await appendTransbordoCdRowsToSheet(batch);
+      console.log(`[transbordo-cd-sheet] ${batch.length} linhas gravadas na planilha`);
+    } catch (e) {
+      console.error('[transbordo-cd-sheet] falha ao gravar, devolvendo para a fila:', e.message);
+      transbordoCdPendingRows.unshift(...batch); // tenta de novo no próximo ciclo
+    }
+  }
   const workstationCacheByStation = makeStationCache(); // station_id -> { workstations, operators, startTime, endTime, fetchedAt }
   const prodIndividualByStation = new Map(); // station_id -> { hora_key → { hora, records, total, start_time, end_time, fetchedAt } }
   function getProdIndividualSlot(station) {
@@ -2073,7 +2208,13 @@
           const station  = String(incoming.station_id ?? DEFAULT_STATION);
           const slot     = transbordoCdCacheByStation.get(station) || { list: [], fetchedAt: null };
           const map = new Map(slot.list.map(t => [t.to_number, t]));
-          inList.forEach(t => { if (t.to_number) map.set(t.to_number, t); });
+          inList.forEach(t => {
+            if (!t.to_number) return;
+            // Só enfileira pra planilha na 1ª vez que essa TO aparece — evita linha duplicada
+            // a cada ciclo (o Tampermonkey reenvia a mesma TO enquanto a viagem não termina).
+            if (!map.has(t.to_number)) transbordoCdPendingRows.push(buildTransbordoCdSheetRow(t, station));
+            map.set(t.to_number, t);
+          });
           const updated = { list: Array.from(map.values()), fetchedAt: incoming.fetchedAt || Date.now() };
           transbordoCdCacheByStation.set(station, updated);
           console.log(`[transbordo-cd] Merged → ${updated.list.length} TOs CD (recebidos ${inList.length}, station ${station})`);
@@ -2581,5 +2722,10 @@
     flushSacasSheet().catch(e => console.error('[sacas-sheet] erro inesperado (ignorado):', e.message));
   }
   setInterval(safeFlushSacasSheet, SACAS_SHEET_FLUSH_MS);
+
+  function safeFlushTransbordoCdSheet() {
+    flushTransbordoCdSheet().catch(e => console.error('[transbordo-cd-sheet] erro inesperado (ignorado):', e.message));
+  }
+  setInterval(safeFlushTransbordoCdSheet, TRANSBORDO_SHEET_FLUSH_MS);
 
   server.listen(PORT, () => console.log(`Dashboard → http://localhost:${PORT}`));
