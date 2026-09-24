@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -75,6 +75,7 @@
     ]);
     const map = new Map();
     [...(liveData.list || []), ...(histData.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
+    console.log(`[TransbordoCD] fontes: /api/trips=${liveData.list?.length || 0} viagens, /api/trip-history=${histData.list?.length || 0} viagens`);
     // Só interessam viagens que já chegaram (ata>0) nesta estação especificamente
     return [...map.values()]
       .map(trip => ({ trip, dest: findDestEntry(trip) }))
