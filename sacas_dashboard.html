@@ -1149,6 +1149,12 @@ document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(el => {
   });
 });
 
+// Chips de turno no topo (Turno: TOTAL / T1 / T2 / T3) — reaproveita o mesmo setTurnoFilter()
+// já usado pelas linhas da tabela "Comparação por turno".
+document.querySelectorAll('.filter-row .chip[data-turno]').forEach(el => {
+  el.addEventListener('click', () => setTurnoFilter(el.dataset.turno));
+});
+
 document.querySelectorAll('.chip[data-preset]').forEach(el => {
   el.addEventListener('click', () => {
     const today = todayOpKey();
@@ -1163,12 +1169,21 @@ document.querySelectorAll('.chip[data-preset]').forEach(el => {
     }
     document.getElementById('fromDate').value = filters.from;
     document.getElementById('toDate').value   = filters.to;
+    document.querySelectorAll('.chip[data-preset]').forEach(c => c.classList.toggle('active', c === el));
     render();
   });
 });
 
-document.getElementById('fromDate').addEventListener('change', e => { filters.from = e.target.value; filters.matrixDay = null; render(); });
-document.getElementById('toDate').addEventListener('change',   e => { filters.to   = e.target.value; filters.matrixDay = null; render(); });
+document.getElementById('fromDate').addEventListener('change', e => {
+  filters.from = e.target.value; filters.matrixDay = null;
+  document.querySelectorAll('.chip[data-preset]').forEach(c => c.classList.remove('active'));
+  render();
+});
+document.getElementById('toDate').addEventListener('change', e => {
+  filters.to = e.target.value; filters.matrixDay = null;
+  document.querySelectorAll('.chip[data-preset]').forEach(c => c.classList.remove('active'));
+  render();
+});
 document.getElementById('destinoFilter').addEventListener('input', e => { filters.destino = e.target.value; render(); });
 document.getElementById('tableSearch').addEventListener('input', () => renderAllTable(baseFiltered()));
 
@@ -1183,6 +1198,7 @@ document.getElementById('clearFiltersBtn').addEventListener('click', () => {
   document.getElementById('toDate').value   = filters.to;
   document.getElementById('destinoFilter').value = '';
   document.querySelectorAll('.filter-row .chip[data-turno]').forEach(c => c.classList.toggle('active', c.dataset.turno === 'ALL'));
+  document.querySelectorAll('.chip[data-preset]').forEach(c => c.classList.remove('active'));
   document.querySelectorAll('.tbl-toolbar .chip[data-clsfilter]').forEach(c => c.classList.toggle('active', c.dataset.clsfilter === 'ALL'));
   render();
 });
