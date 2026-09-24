@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -15,14 +15,15 @@
 (function () {
   'use strict';
 
-  const SERVER_URL    = 'https://stage-out.onrender.com/api/transbordo-cd-data';
-  const TRIP_LIST_URL = '/api/admin/transportation/trip/history/list';
-  const LOADING_URL   = '/api/admin/transportation/trip/history/loading/list';
-  const INTERVAL       = 5 * 60 * 1000; // 5 minutos — mesmo ritmo do trip_history_sync
-  const DAYS_BACK      = 7;             // mesma janela do trip_history_sync
+  const SERVER_BASE     = 'https://stage-out.onrender.com';
+  const SERVER_URL      = `${SERVER_BASE}/api/transbordo-cd-data`;
   // ID da estação deste computador — MUDE aqui ao instalar numa estação diferente
   const STATION_ID  = '15000'; // SoC_PE_Recife_04
   const STATION_NUM = 15000;
+  const TRIPS_URL        = `${SERVER_BASE}/api/trips?station=${STATION_ID}`;
+  const TRIP_HISTORY_URL = `${SERVER_BASE}/api/trip-history?station=${STATION_ID}`;
+  const LOADING_URL      = '/api/admin/transportation/trip/history/loading/list';
+  const INTERVAL         = 5 * 60 * 1000; // 5 minutos — mesmo ritmo do trip_history_sync
 
   function getCsrf() {
     const m = document.cookie.match(/csrftoken=([^;]+)/);
@@ -30,6 +31,17 @@
   }
 
   const PAGE_SIZE = 100;
+
+  function gmGetJson(url) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url,
+        onload:  r => { try { resolve(JSON.parse(r.responseText)); } catch (e) { reject(e); } },
+        onerror: () => reject(new Error('network error')),
+      });
+    });
+  }
 
   // ── Viagens já totalmente descarregadas nesta estação não mudam mais — evita
   // rebater na API de novo a cada ciclo (cada viagem custa 1+ chamadas extras).
@@ -43,44 +55,25 @@
   }
   const doneTrips = loadDone();
 
-  async function fetchTripListPage(pageno) {
-    const now   = Math.floor(Date.now() / 1000);
-    const start = now - DAYS_BACK * 86400;
-    const params = new URLSearchParams({ mtime: `${start},${now}`, pageno: String(pageno), count: String(PAGE_SIZE) });
-    const res = await fetch(`${TRIP_LIST_URL}?${params}`, {
-      credentials: 'include',
-      headers: { 'x-csrftoken': getCsrf() },
-    });
-    const raw = await res.text();
-    let json;
-    try { json = JSON.parse(raw); }
-    catch (e) { throw new Error(`Resposta não é JSON (status ${res.status})`); }
-    if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
-    return json.data;
-  }
-
   // Acha a "perna" da viagem que chega NESTA estação (pode não ser a última —
   // um LH pode continuar depois daqui).
   function findDestEntry(trip) {
     return trip.trip_station?.find(s => s.station === STATION_NUM) || null;
   }
 
+  // Reaproveita os dados que o trip_list_sync (viagens ao vivo) e o trip_history_sync
+  // (últimos 7 dias) já mantêm sincronizados no nosso servidor — em vez de refazer a
+  // paginação da SPX aqui (que descobrimos ficar aquém do volume real da estação e
+  // deixava viagens de fora, mesmo com cd_flag=true de verdade).
   async function fetchCandidateTrips() {
-    const first = await fetchTripListPage(1);
-    const total = first.total || 0;
-    let list    = first.list || [];
-    const pages = Math.min(Math.ceil(total / PAGE_SIZE), 10);
-    for (let p = 2; p <= pages; p++) {
-      try {
-        const d = await fetchTripListPage(p);
-        list = list.concat(d.list || []);
-      } catch (e) {
-        console.warn(`[TransbordoCD] Erro na página ${p} da lista de viagens:`, e.message);
-        break;
-      }
-    }
+    const [liveData, histData] = await Promise.all([
+      gmGetJson(TRIPS_URL).catch(e => { console.warn('[TransbordoCD] Falha ao ler /api/trips:', e.message); return { list: [] }; }),
+      gmGetJson(TRIP_HISTORY_URL).catch(e => { console.warn('[TransbordoCD] Falha ao ler /api/trip-history:', e.message); return { list: [] }; }),
+    ]);
+    const map = new Map();
+    [...(liveData.list || []), ...(histData.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
     // Só interessam viagens que já chegaram (ata>0) nesta estação especificamente
-    return list
+    return [...map.values()]
       .map(trip => ({ trip, dest: findDestEntry(trip) }))
       .filter(x => x.dest && x.dest.ata > 0);
   }
