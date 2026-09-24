@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.3
+// @version      1.4
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -58,10 +58,12 @@
   }
   const doneTrips = loadDone();
 
-  // Acha a "perna" da viagem que chega NESTA estação (pode não ser a última —
-  // um LH pode continuar depois daqui).
+  // Acha a "perna" da viagem em que esta estação recebe carga (não pode ser a
+  // primeira perna — sequence_number 1 é sempre a origem/carregamento, onde o
+  // caminhão também "chega" (ata>0) mas pra CARREGAR, não descarregar; pedir
+  // type=inbound nessa perna sempre retorna vazio, mesmo com ata preenchido).
   function findDestEntry(trip) {
-    return trip.trip_station?.find(s => s.station === STATION_NUM) || null;
+    return trip.trip_station?.find(s => s.station === STATION_NUM && s.sequence_number > 1) || null;
   }
 
   // Reaproveita os dados que o trip_list_sync (viagens ao vivo) e o trip_history_sync
@@ -76,7 +78,8 @@
     const map = new Map();
     [...(liveData.list || []), ...(histData.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
     console.log(`[TransbordoCD] fontes: /api/trips=${liveData.list?.length || 0} viagens, /api/trip-history=${histData.list?.length || 0} viagens`);
-    // Só interessam viagens que já chegaram (ata>0) nesta estação especificamente
+    // Só interessam viagens que já chegaram (ata>0) nesta estação especificamente, numa
+    // perna que não seja a origem
     return [...map.values()]
       .map(trip => ({ trip, dest: findDestEntry(trip) }))
       .filter(x => x.dest && x.dest.ata > 0);
