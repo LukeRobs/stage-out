@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -31,6 +31,9 @@
   }
 
   const PAGE_SIZE = 100;
+  // Viagem(ns) confirmada(s) manualmente ter TOs com cd_flag=true — log extra de diagnóstico
+  // enquanto investigamos por que o sync automático não está achando nenhuma.
+  const DEBUG_TRIPS = [4157500];
 
   function gmGetJson(url) {
     return new Promise((resolve, reject) => {
@@ -110,6 +113,12 @@
       list = list.concat(d.list || []);
     }
 
+    // ── Debug temporário: log bruto pra viagem que sabemos ter CD de verdade (confirmado
+    // manualmente), pra comparar com o que a chamada automática do script está trazendo.
+    if (DEBUG_TRIPS.includes(trip.id)) {
+      console.log(`[TransbordoCD][DEBUG] trip ${trip.id}: seq=${seq} apiTotal=${total} scanned=${list.length} cd=${list.filter(t => t.cd_flag === true).length}`, list.slice(0, 3));
+    }
+
     const cdList = list.filter(to => to.cd_flag === true).map(to => ({
       to_number:             to.to_number,
       to_weight:             to.to_weight,
@@ -129,7 +138,7 @@
     }));
 
     const finished = dest.unloaded_time > 0 || dest.trip_station_status === 100;
-    return { cdList, finished };
+    return { cdList, finished, scanned: list.length };
   }
 
   function sendToServer(list) {
@@ -154,12 +163,16 @@
 
       let allCd = [];
       let newlyDone = 0;
+      let totalScanned = 0;
+      let errorCount = 0;
       for (const { trip, dest } of toProcess) {
         try {
-          const { cdList, finished } = await fetchCdTosForTrip(trip, dest);
+          const { cdList, finished, scanned } = await fetchCdTosForTrip(trip, dest);
           allCd = allCd.concat(cdList);
+          totalScanned += scanned;
           if (finished) { doneTrips.add(trip.id); newlyDone++; }
         } catch (e) {
+          errorCount++;
           console.warn(`[TransbordoCD] Erro na viagem ${trip.id}:`, e.message);
         }
       }
@@ -171,7 +184,7 @@
 
       dot.textContent      = `✅ CD ${allCd.length}/${toProcess.length}v ` + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       dot.style.background = '#059669';
-      console.log(`[TransbordoCD] ${allCd.length} TOs CD em ${toProcess.length} viagens processadas (${candidates.length} candidatas, ${doneTrips.size} já concluídas)`);
+      console.log(`[TransbordoCD] ${allCd.length} TOs CD em ${toProcess.length} viagens processadas (${candidates.length} candidatas, ${doneTrips.size} já concluídas, ${totalScanned} TOs escaneados no total, ${errorCount} erros)`);
     } catch (e) {
       dot.textContent      = '⚠️ Erro CD';
       dot.style.background = '#cc7700';
