@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.7
+// @version      1.8
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -75,18 +75,70 @@
     return trip.trip_station?.find(s => s.station === STATION_NUM && s.sequence_number > 1) || null;
   }
 
+  // ── Busca direta na SPX (backfill) ──────────────────────────────────────────
+  // O trip_history_sync compartilhado (usado pelos outros dashboards) tem um teto de 1000
+  // viagens/7 dias — confirmado que estações de volume alto (ex: Jaboatão) já ultrapassam
+  // isso, perdendo viagens reais com cd_flag de vista. Roda só de vez em quando (não a cada
+  // ciclo de 5min) pra não sobrecarregar a API da SPX com paginação pesada o tempo todo —
+  // serve como uma "revarredura" periódica de backfill, enquanto /api/trips e
+  // /api/trip-history (mais frescos, ritmo de 1-5min) cobrem a maior parte do dia-a-dia.
+  const DIRECT_FETCH_DAYS_BACK    = 3;
+  const DIRECT_FETCH_MAX_PAGES    = 40; // até 4000 viagens
+  const DIRECT_FETCH_EVERY_N_SYNC = 6;  // a cada ~6 ciclos de 5min = ~30min
+  let syncCycleCount = 0;
+
+  async function fetchDirectTripListPage(pageno) {
+    const now   = Math.floor(Date.now() / 1000);
+    const start = now - DIRECT_FETCH_DAYS_BACK * 86400;
+    const params = new URLSearchParams({ mtime: `${start},${now}`, pageno: String(pageno), count: String(PAGE_SIZE) });
+    const res = await fetch(`/api/admin/transportation/trip/history/list?${params}`, {
+      credentials: 'include',
+      headers: { 'x-csrftoken': getCsrf() },
+    });
+    const raw = await res.text();
+    let json;
+    try { json = JSON.parse(raw); }
+    catch (e) { throw new Error(`Resposta não é JSON (status ${res.status})`); }
+    if (json.retcode !== 0) throw new Error(`API retcode ${json.retcode}: ${json.message}`);
+    return json.data;
+  }
+
+  async function fetchDirectTrips() {
+    try {
+      const first = await fetchDirectTripListPage(1);
+      const total = first.total || 0;
+      let list    = first.list || [];
+      const pages = Math.min(Math.ceil(total / PAGE_SIZE), DIRECT_FETCH_MAX_PAGES);
+      for (let p = 2; p <= pages; p++) {
+        try {
+          const d = await fetchDirectTripListPage(p);
+          list = list.concat(d.list || []);
+        } catch (e) {
+          console.warn(`[TransbordoCD] Erro na página ${p} da busca direta:`, e.message);
+          break;
+        }
+      }
+      return { list, total };
+    } catch (e) {
+      console.warn('[TransbordoCD] Falha na busca direta:', e.message);
+      return { list: [], total: 0 };
+    }
+  }
+
   // Reaproveita os dados que o trip_list_sync (viagens ao vivo) e o trip_history_sync
   // (últimos 7 dias) já mantêm sincronizados no nosso servidor — em vez de refazer a
-  // paginação da SPX aqui (que descobrimos ficar aquém do volume real da estação e
-  // deixava viagens de fora, mesmo com cd_flag=true de verdade).
+  // paginação da SPX aqui toda hora. Complementa com a busca direta (backfill periódico,
+  // ver acima) pra cobrir o que o teto de 1000 do trip_history_sync deixa de fora.
   async function fetchCandidateTrips() {
-    const [liveData, histData] = await Promise.all([
+    const runDirectFetch = syncCycleCount % DIRECT_FETCH_EVERY_N_SYNC === 0;
+    const [liveData, histData, directData] = await Promise.all([
       gmGetJson(TRIPS_URL).catch(e => { console.warn('[TransbordoCD] Falha ao ler /api/trips:', e.message); return { list: [] }; }),
       gmGetJson(TRIP_HISTORY_URL).catch(e => { console.warn('[TransbordoCD] Falha ao ler /api/trip-history:', e.message); return { list: [] }; }),
+      runDirectFetch ? fetchDirectTrips() : Promise.resolve({ list: [], total: null }),
     ]);
     const map = new Map();
-    [...(liveData.list || []), ...(histData.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
-    console.log(`[TransbordoCD] fontes: /api/trips=${liveData.list?.length || 0} viagens, /api/trip-history=${histData.list?.length || 0} viagens`);
+    [...(liveData.list || []), ...(histData.list || []), ...(directData.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
+    console.log(`[TransbordoCD] fontes: /api/trips=${liveData.list?.length || 0}, /api/trip-history=${histData.list?.length || 0}${runDirectFetch ? `, busca-direta=${directData.list?.length || 0} (total real na SPX: ${directData.total})` : ' (busca-direta pulada nesse ciclo)'}`);
     // Só interessam viagens que já chegaram (ata>0) nesta estação especificamente, numa
     // perna que não seja a origem
     return [...map.values()]
@@ -177,6 +229,7 @@
     dot.style.background = '#888';
     try {
       const candidates = await fetchCandidateTrips();
+      syncCycleCount++;
       const toProcess  = candidates.filter(x => !doneTrips.has(x.trip.id));
 
       let allCd = [];
