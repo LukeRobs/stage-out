@@ -336,6 +336,9 @@ body {
 .aging-note { font-size: 11px; color: var(--muted); padding: 10px 16px; border-top: 1px solid var(--border); }
 .aging-empty { text-align: center; padding: 28px; color: var(--muted); font-size: 12px; }
 .aging-tbl-wrap { margin-top: 12px; }
+.farol-table tr.ag-row { cursor: pointer; }
+.farol-table tr.ag-row:hover td { background: rgba(255,255,255,.03); }
+.farol-table tr.ag-sel td { background: rgba(238,77,45,.14); box-shadow: inset 0 1px 0 var(--orange), inset 0 -1px 0 var(--orange); }
 .just-badge {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px;
   font-size: 10px; font-weight: 700; white-space: nowrap;
@@ -541,7 +544,7 @@ body {
     </div>
     <div class="tbl-wrap aging-tbl-wrap">
       <table class="op-table" style="min-width:900px">
-        <thead>
+        <thead id="agingThead">
           <tr>
             <th style="cursor:default">Destino</th>
             <th style="cursor:default;text-align:center">TOs</th>
@@ -1065,6 +1068,7 @@ let agingTOs    = null;   // null = sem dados do script ainda; [] = nenhuma TO >
 let agingErr    = '';
 let agingMeta   = {};
 let agingGroups = [];
+let agingSel    = '';     // faixa do farol selecionada ('' = agrupado por destino)
 let agingOpen   = null;   // dest_id do modal aberto
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1128,7 +1132,7 @@ function renderAging() {
     const pac = tos.reduce((s, t) => s + (t.parcels || 0), 0);
     const dst = new Set(tos.map(t => t.dest_id)).size;
     const pct = totTOs > 0 ? (tos.length / totTOs * 100) : 0;
-    return '<tr class="' + b.rowCls + '">' +
+    return '<tr class="ag-row ' + b.rowCls + (agingSel === b.key ? ' ag-sel' : '') + '" title="' + (agingSel === b.key ? 'Clique para limpar o filtro' : 'Clique para ver as TOs desta faixa') + '" onclick="setAgingBand(\x27' + b.key + '\x27)">' +
       '<td><div class="farol-level ' + b.lblCls + '"><span class="farol-dot ' + b.dotCls + '"></span>' + b.label + '</div></td>' +
       '<td style="color:var(--muted);font-size:12px">' + b.desc + '</td>' +
       '<td><span class="farol-count ' + b.valCls + '">' + tos.length + '</span></td>' +
@@ -1147,7 +1151,7 @@ function renderAging() {
   note.textContent = 'Aging = agora − horário em que a TO foi endereçada na rua. Varredura de ' + (agingMeta.ruasScanned || 0) +
     ' ruas ocupadas, atualizada às ' + upd + ' (a cada ~5 min).';
 
-  tb.innerHTML = agingGroups.map(g => {
+  const groupRows = agingGroups.map(g => {
     const rowCls = g.band === 'crit' ? 'row-crit' : g.band === 'urgente' ? 'row-urgente' : '';
     const badge = g.status === 'done' ? '<span class="just-badge done">✔ JUSTIFICADO</span>'
                 : g.status === 'part' ? '<span class="just-badge part">' + g.pending.length + ' PENDENTE(S)</span>'
@@ -1166,8 +1170,38 @@ function renderAging() {
       '<td><button class="just-btn' + (g.pending.length ? '' : ' ghost') + '" onclick="openAgingModal(\'' + esc(g.id) + '\')">' + (g.pending.length ? 'Justificar' : 'Ver') + '</button></td>' +
       '</tr>';
   }).join('') || '<tr><td colspan="8" class="aging-empty">Nenhuma TO endereçada há mais de 24h. 🎉</td></tr>';
+  renderAgingTable(groupRows);
 
   if (agingOpen !== null) renderAgingModal(false); // mantém o modal em dia sem perder o que está sendo digitado
+}
+
+function setAgingBand(key) { agingSel = agingSel === key ? '' : key; renderAging(); }
+
+const AGING_HEAD_GROUP = '<tr><th style="cursor:default">Destino</th><th style="cursor:default;text-align:center">TOs</th><th style="cursor:default;text-align:center">Pacotes</th><th style="cursor:default">Mais antiga</th><th style="cursor:default">Ruas</th><th style="cursor:default">Farol</th><th style="cursor:default">Justificativa</th><th style="cursor:default"></th></tr>';
+
+function renderAgingTable(groupRows) {
+  const thead = document.getElementById('agingThead');
+  const tb    = document.getElementById('agingTbody');
+  if (!agingSel) { thead.innerHTML = AGING_HEAD_GROUP; tb.innerHTML = groupRows; return; }
+  const band = AGING_BANDS.find(b => b.key === agingSel);
+  const tos  = agingTOs.filter(t => agingBand(agingHours(t)) === agingSel).sort((a, b) => a.scan_time - b.scan_time);
+  thead.innerHTML = '<tr><th style="cursor:default">Destino</th><th style="cursor:default">TO</th><th style="cursor:default">Rua</th><th style="cursor:default">Endereçada</th><th style="cursor:default">Aging</th>' +
+    '<th style="cursor:default;text-align:center">Pacotes</th><th style="cursor:default">Justificativa</th>' +
+    '<th style="cursor:default;text-align:right"><button class="just-btn ghost" onclick="setAgingBand(\x27' + agingSel + '\x27)">✕ ' + band.label + ' · ' + tos.length + ' TOs</button></th></tr>';
+  tb.innerHTML = tos.map(t => {
+    const h = agingHours(t);
+    const badge = t.justification ? '<span class="just-badge done">✔ JUSTIFICADO</span>' : '<span class="just-badge pend">PENDENTE</span>';
+    return '<tr>' +
+      '<td style="font-weight:600">' + esc(t.dest_name) + '<br><span style="font-size:10px;color:var(--muted);font-weight:400">[' + esc(t.dest_id) + ']</span></td>' +
+      '<td style="font-family:monospace;font-weight:700">' + esc(t.to_number) + '</td>' +
+      '<td style="font-family:monospace">' + esc(t.staging_area_name) + '</td>' +
+      '<td style="font-family:monospace;color:var(--muted)">' + new Date(t.scan_time * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>' +
+      '<td><span class="dur ' + (h >= 48 ? 'crit' : 'warn') + '">' + fmtAge(h) + '</span></td>' +
+      '<td style="text-align:center;font-family:monospace">' + fmtPac(t.parcels) + '</td>' +
+      '<td>' + badge + (t.justification ? '<div class="just-text" title="' + esc(t.justification) + '">' + esc(t.justification) + '</div>' : '') + '</td>' +
+      '<td style="text-align:right"><button class="just-btn' + (t.justification ? ' ghost' : '') + '" onclick="openAgingModal(\x27' + esc(t.dest_id) + '\x27)">' + (t.justification ? 'Ver' : 'Justificar') + '</button></td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="8" class="aging-empty">Nenhuma TO nesta faixa.</td></tr>';
 }
 
 function openAgingModal(destId) { agingOpen = String(destId); renderAgingModal(true); document.getElementById('agModal').classList.add('open'); }
