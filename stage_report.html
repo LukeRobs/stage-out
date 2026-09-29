@@ -1060,9 +1060,9 @@ function exportCSV() {
    AGING > 24h  (TOs endereçadas há mais de 24h e ainda no Stage Out)
 ═════════════════════════════════════════════════════════════════ */
 const AGING_BANDS = [
-  { key: 'crit',    label: 'CRÍTICO', dotCls: 'crit-dot',    lblCls: 'crit-label',    valCls: 'crit-val',    rowCls: 'farol-crit-row',    desc: '> 72h',     min: 72 },
-  { key: 'urgente', label: 'URGENTE', dotCls: 'urgente-dot', lblCls: 'urgente-label', valCls: 'urgente-val', rowCls: 'farol-urgente-row', desc: '48h – 72h', min: 48 },
-  { key: 'atencao', label: 'ATENÇÃO', dotCls: 'atencao-dot', lblCls: 'atencao-label', valCls: 'atencao-val', rowCls: '',                  desc: '24h – 48h', min: 24 },
+  { key: 'crit',    label: 'CRÍTICO', dotCls: 'crit-dot',    lblCls: 'crit-label',    valCls: 'crit-val',    rowCls: 'farol-crit-row',    desc: '> 48h',     min: 48 },
+  { key: 'urgente', label: 'URGENTE', dotCls: 'urgente-dot', lblCls: 'urgente-label', valCls: 'urgente-val', rowCls: 'farol-urgente-row', desc: '36h – 48h', min: 36 },
+  { key: 'atencao', label: 'ATENÇÃO', dotCls: 'atencao-dot', lblCls: 'atencao-label', valCls: 'atencao-val', rowCls: '',                  desc: '24h – 36h', min: 24 },
 ];
 let agingTOs    = null;   // null = sem dados do script ainda; [] = nenhuma TO > 24h
 let agingErr    = '';
