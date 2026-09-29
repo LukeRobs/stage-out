@@ -1240,6 +1240,94 @@
       transbordoCdPendingRows.unshift(...batch); // tenta de novo no próximo ciclo
     }
   }
+  // ── Aging do Stage Out (TOs endereçadas há > 24h) + justificativas → Google Sheets ──
+  // stage_out_aging_sync.user.js varre as ruas ocupadas e manda só as TOs cujo scan_time
+  // (momento do endereçamento na rua) passou de 24h. O snapshot é SUBSTITUÍDO a cada envio
+  // (TO que saiu da rua some do farol), mas cada justificativa é gravada na aba "Base" da
+  // planilha no ato — uma linha por TO — e recarregada no boot, então nada se perde num restart.
+  const AGING_SHEET_ID     = '1FQRdePrujpeQChdBT8UCIcd_d5hdNo-m7QffR7m0tCY';
+  const AGING_SHEET_RANGE  = 'Base!A:L';
+  const AGING_SHEET_HEADER = ['dt_registro', 'station_id', 'dest_id', 'destino', 'to_number', 'rua', 'dt_enderecamento', 'horas_enderecado', 'pacotes', 'justificativa', 'justificado_por', 'tos_destino'];
+  const agingCacheByStation = makeStationCache();   // station_id -> { list, ruasScanned, fetchedAt }
+  const agingJustified      = new Map();            // `${station}|${to_number}` -> { text, by, at }
+  const AGING_JUSTIFY_MAX   = 1000;                 // limite de caracteres da justificativa
+
+  async function ensureAgingSheetHeader() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const token = await getServiceAccountToken();
+      const headerRange = 'Base!A1:L1';
+      const getUrl = `https://sheets.googleapis.com/v4/spreadsheets/${AGING_SHEET_ID}/values/${encodeURIComponent(headerRange)}`;
+      const getResp = await fetch(getUrl, { headers: { Authorization: `Bearer ${token}` } });
+      if (!getResp.ok) throw new Error(`Sheets get ${getResp.status}: ${await getResp.text()}`);
+      const data = await getResp.json();
+      if (data.values && data.values.length) return; // já tem cabeçalho, não sobrescreve
+      const putUrl = `${getUrl}?valueInputOption=USER_ENTERED`;
+      const putResp = await fetch(putUrl, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: [AGING_SHEET_HEADER] }),
+      });
+      if (!putResp.ok) throw new Error(`Sheets put ${putResp.status}: ${await putResp.text()}`);
+      console.log('[aging-sheet] cabeçalho gravado na aba "Base"');
+    } catch (e) { console.error('[aging-sheet] falha ao verificar/gravar cabeçalho:', e.message); }
+  }
+
+  // Recuperação pós-restart: relê a aba e remonta o mapa de TOs já justificadas.
+  async function loadAgingJustifiedFromSheet() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const token = await getServiceAccountToken();
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${AGING_SHEET_ID}/values/${encodeURIComponent('Base!A2:L1000000')}`;
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
+      const rows = (await resp.json()).values || [];
+      let restored = 0;
+      rows.forEach(r => {
+        if (!r[1] || !r[4]) return;
+        const key = `${r[1]}|${r[4]}`;
+        if (agingJustified.has(key)) return;
+        agingJustified.set(key, { text: r[9] || '', by: r[10] || '', at: r[0] || '' });
+        restored++;
+      });
+      if (restored) console.log(`[aging-sheet] ${restored} justificativas recuperadas da planilha`);
+    } catch (e) { console.error('[aging-sheet] falha ao recarregar planilha:', e.message); }
+  }
+
+  ensureAgingSheetHeader();
+  loadAgingJustifiedFromSheet();
+  setTimeout(loadAgingJustifiedFromSheet, 30 * 1000); // idempotente — cobre rede ainda fria no cold start
+
+  async function appendAgingRowsToSheet(rows) {
+    if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
+    const token = await getServiceAccountToken();
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${AGING_SHEET_ID}/values/${encodeURIComponent(AGING_SHEET_RANGE)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: rows }),
+    });
+    if (!resp.ok) throw new Error(`Sheets append ${resp.status}: ${await resp.text()}`);
+  }
+
+  // Pacotes: o script manda o que conseguiu; se faltou, completa com o que o merge de
+  // Packed/Packing já conhece (campo `quantity`).
+  function agingParcels(t) {
+    if (t.parcels != null) return t.parcels;
+    const known = toPackedMap.get(t.to_number) || toPackingMap.get(t.to_number);
+    return known?.quantity ?? null;
+  }
+
+  function agingView(station) {
+    const snap = agingCacheByStation.get(station);
+    if (!snap) return null;
+    const list = snap.list.map(t => {
+      const j = agingJustified.get(`${station}|${t.to_number}`);
+      return { ...t, parcels: agingParcels(t), justification: j ? j.text : null, justified_by: j ? j.by : null, justified_at: j ? j.at : null };
+    });
+    return { ...snap, list, total: list.length };
+  }
+
   const workstationCacheByStation = makeStationCache(); // station_id -> { workstations, operators, startTime, endTime, fetchedAt }
   const prodIndividualByStation = new Map(); // station_id -> { hora_key → { hora, records, total, start_time, end_time, fetchedAt } }
   function getProdIndividualSlot(station) {
@@ -1664,6 +1752,91 @@
           console.error('[justify] Erro:', e.message);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: e.message }));
+        }
+      });
+      return;
+    }
+
+    // POST /api/aging-data — stage_out_aging_sync.user.js manda as TOs > 24h no Stage Out
+    if (urlPath === '/api/aging-data' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const parsed  = JSON.parse(body);
+          if (!Array.isArray(parsed.list)) throw new Error('list obrigatório');
+          const station = String(parsed.station || DEFAULT_STATION);
+          agingCacheByStation.set(station, { list: parsed.list, ruasScanned: parsed.ruasScanned || 0, fetchedAt: parsed.fetchedAt || Date.now() });
+          console.log(`[aging] ${parsed.list.length} TOs > 24h (station ${station}, ${parsed.ruasScanned || 0} ruas varridas)`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
+    // GET /api/aging?station=X — TOs > 24h + justificativas já registradas
+    if (urlPath === '/api/aging') {
+      const view = agingView(stationParam(req));
+      if (!view) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Sem dados de aging ainda — instale/ative stage_out_aging_sync.user.js no SPX' }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(JSON.stringify(view));
+      return;
+    }
+
+    // POST /api/aging-justify — grava a justificativa de um destino (uma linha por TO) na planilha.
+    // Body: { station, dest_id, to_numbers: [...], text, by }. Só marca como justificada DEPOIS
+    // que o append no Sheets deu certo — se falhar, a UI recebe o erro e nada é perdido.
+    if (urlPath === '/api/aging-justify' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', async () => {
+        const fail = (code, msg) => {
+          res.writeHead(code, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: msg }));
+        };
+        try {
+          const { station: st, dest_id, to_numbers, text, by } = JSON.parse(body);
+          const station = String(st || DEFAULT_STATION);
+          const just    = String(text || '').trim();
+          const author  = String(by || '').trim();
+          if (just.length < 5)                 return fail(400, 'Justificativa muito curta');
+          if (just.length > AGING_JUSTIFY_MAX) return fail(400, `Justificativa acima de ${AGING_JUSTIFY_MAX} caracteres`);
+          if (!author)                         return fail(400, 'Informe o responsável');
+          if (!SERVICE_ACCOUNT)                return fail(501, 'Escrita requer Service Account configurado');
+
+          const snap = agingCacheByStation.get(station);
+          if (!snap) return fail(409, 'Sem dados de aging — atualize a página');
+          const wanted = new Set(Array.isArray(to_numbers) ? to_numbers : []);
+          const tos = snap.list.filter(t =>
+            String(t.dest_id) === String(dest_id) && wanted.has(t.to_number) && !agingJustified.has(`${station}|${t.to_number}`));
+          if (!tos.length) return fail(409, 'Essas TOs já foram justificadas ou saíram do Stage Out — atualize a página');
+
+          const nowSec = Math.floor(Date.now() / 1000);
+          const stamp  = fmtDtComplete(nowSec);
+          const rows = tos.map(t => [
+            stamp, station, t.dest_id, t.dest_name || '', t.to_number, t.staging_area_name || '',
+            t.scan_time ? fmtDtComplete(t.scan_time) : '',
+            t.scan_time ? Math.round((nowSec - t.scan_time) / 360) / 10 : '',
+            agingParcels(t) ?? '', just, author, tos.length,
+          ]);
+          // Reserva antes do await: um segundo clique/aba não duplica as linhas. Se o append falhar, devolve.
+          tos.forEach(t => agingJustified.set(`${station}|${t.to_number}`, { text: just, by: author, at: stamp }));
+          try { await appendAgingRowsToSheet(rows); }
+          catch (e) { tos.forEach(t => agingJustified.delete(`${station}|${t.to_number}`)); throw e; }
+          console.log(`[aging-justify] ${tos.length} TOs de ${tos[0].dest_name} justificadas por ${author}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, saved: tos.length }));
+        } catch (e) {
+          console.error('[aging-justify] Erro:', e.message);
+          fail(500, e.message);
         }
       });
       return;

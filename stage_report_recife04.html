@@ -330,6 +330,69 @@ body {
 .dur.warn { color: var(--yellow); }
 .dur.crit { color: var(--red); }
 
+/* ── Aging > 24h ── */
+.aging-summary { text-transform: none; letter-spacing: 0; font-weight: 600; margin-left: 10px; font-size: 11px; }
+.aging-summary b { font-family: monospace; }
+.aging-note { font-size: 11px; color: var(--muted); padding: 10px 16px; border-top: 1px solid var(--border); }
+.aging-empty { text-align: center; padding: 28px; color: var(--muted); font-size: 12px; }
+.aging-tbl-wrap { margin-top: 12px; }
+.just-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+}
+.just-badge.pend { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.25); animation: pulse 2s infinite; }
+.just-badge.done { background: rgba(34,197,94,.12); color: #4ade80; border: 1px solid rgba(34,197,94,.2); }
+.just-badge.part { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+.just-text { font-size: 11px; color: var(--muted); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.just-btn {
+  background: var(--orange); border: 1px solid var(--orange); color: #fff; padding: 4px 12px;
+  border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.just-btn:hover { background: var(--orange2); }
+.just-btn.ghost { background: var(--surface2); border-color: var(--border); color: var(--muted); }
+.just-btn.ghost:hover { color: var(--text); border-color: var(--border2); }
+.just-btn:disabled { opacity: .5; cursor: wait; }
+.ag-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.65); z-index: 9000; display: none;
+  align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(3px);
+}
+.ag-modal-overlay.open { display: flex; }
+.ag-modal-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 100%;
+  max-width: 820px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.ag-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--border); }
+.ag-modal-title { font-size: 16px; font-weight: 700; color: var(--orange2); }
+.ag-modal-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.ag-modal-close {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--muted); width: 30px; height: 30px;
+  border-radius: 8px; font-size: 16px; cursor: pointer; flex-shrink: 0;
+}
+.ag-modal-close:hover { color: var(--text); border-color: var(--border2); }
+.ag-modal-body { padding: 16px 20px 20px; }
+.ag-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.ag-kpi { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.ag-kpi-l { font-size: 9px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted); margin-bottom: 3px; }
+.ag-kpi-v { font-size: 18px; font-weight: 800; font-family: monospace; }
+.ag-to-wrap { max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; }
+.ag-to-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.ag-to-table th { position: sticky; top: 0; background: var(--surface2); padding: 8px 10px; text-align: left; text-transform: uppercase; font-size: 9px; letter-spacing: .4px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.ag-to-table td { padding: 6px 10px; border-bottom: 1px solid rgba(42,45,62,.5); }
+.ag-to-table tr:last-child td { border-bottom: none; }
+.ag-form label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin: 0 0 5px; }
+.ag-form textarea, .ag-form input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 12px; outline: none;
+}
+.ag-form textarea { min-height: 84px; resize: vertical; }
+.ag-form textarea:focus, .ag-form input:focus { border-color: var(--orange); }
+.ag-form .row { margin-bottom: 12px; }
+.ag-form-foot { display: flex; align-items: center; gap: 10px; }
+.ag-form-msg { font-size: 11px; color: var(--muted); flex: 1; }
+.ag-form-msg.err { color: #f87171; }
+.ag-count { font-size: 10px; color: var(--muted); text-align: right; margin-top: 3px; }
+@media (max-width: 700px) { .ag-kpis { grid-template-columns: 1fr 1fr 1fr; } }
+
 /* ── Pagination ── */
 .pagination { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
 .page-btn {
@@ -391,6 +454,11 @@ body {
   </code>
 </div>
 
+<!-- ── Modal de justificativa (aging) ── -->
+<div class="ag-modal-overlay" id="agModal" onclick="if(event.target===this)closeAgingModal()">
+  <div class="ag-modal-box" id="agModalBox"></div>
+</div>
+
 <!-- ── Report content ── -->
 <div class="main-wrap" id="reportContent" style="display:none">
 
@@ -447,6 +515,45 @@ body {
           </tr>
         </thead>
         <tbody id="farolBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Farol de Aging (TOs > 24h no Stage Out) -->
+  <div class="report-section">
+    <div class="report-section-title">🕒 Farol de Aging &mdash; TOs &gt; 24h no Stage Out <span class="aging-summary" id="agingSummary"></span></div>
+    <div class="farol-wrap" id="agingWrap">
+      <table class="farol-table">
+        <thead>
+          <tr>
+            <th>N&iacute;vel</th>
+            <th>Crit&eacute;rio (tempo endere&ccedil;ada)</th>
+            <th>TOs</th>
+            <th>Pacotes</th>
+            <th>Destinos</th>
+            <th>% TOs</th>
+            <th>Distribui&ccedil;&atilde;o</th>
+          </tr>
+        </thead>
+        <tbody id="agingFarolBody"></tbody>
+      </table>
+      <div class="aging-note" id="agingNote"></div>
+    </div>
+    <div class="tbl-wrap aging-tbl-wrap">
+      <table class="op-table" style="min-width:900px">
+        <thead>
+          <tr>
+            <th style="cursor:default">Destino</th>
+            <th style="cursor:default;text-align:center">TOs</th>
+            <th style="cursor:default;text-align:center">Pacotes</th>
+            <th style="cursor:default">Mais antiga</th>
+            <th style="cursor:default">Ruas</th>
+            <th style="cursor:default">Farol</th>
+            <th style="cursor:default">Justificativa</th>
+            <th style="cursor:default"></th>
+          </tr>
+        </thead>
+        <tbody id="agingTbody"></tbody>
       </table>
     </div>
   </div>
@@ -564,6 +671,8 @@ body {
 const STATION    = '15000'; // SoC_PE_Recife_04
 const API_STAGE  = `/api/stage-out?station=${STATION}`;
 const API_CAGE   = '/api/cage-data';
+const API_AGING  = `/api/aging?station=${STATION}`;
+const API_AGING_JUSTIFY = '/api/aging-justify';
 const REFRESH_MS = 30000;
 const PAGE_SZ    = 10;
 
@@ -945,6 +1054,206 @@ function exportCSV() {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   AGING > 24h  (TOs endereçadas há mais de 24h e ainda no Stage Out)
+═════════════════════════════════════════════════════════════════ */
+const AGING_BANDS = [
+  { key: 'crit',    label: 'CRÍTICO', dotCls: 'crit-dot',    lblCls: 'crit-label',    valCls: 'crit-val',    rowCls: 'farol-crit-row',    desc: '> 72h',     min: 72 },
+  { key: 'urgente', label: 'URGENTE', dotCls: 'urgente-dot', lblCls: 'urgente-label', valCls: 'urgente-val', rowCls: 'farol-urgente-row', desc: '48h – 72h', min: 48 },
+  { key: 'atencao', label: 'ATENÇÃO', dotCls: 'atencao-dot', lblCls: 'atencao-label', valCls: 'atencao-val', rowCls: '',                  desc: '24h – 48h', min: 24 },
+];
+let agingTOs    = null;   // null = sem dados do script ainda; [] = nenhuma TO > 24h
+let agingErr    = '';
+let agingMeta   = {};
+let agingGroups = [];
+let agingOpen   = null;   // dest_id do modal aberto
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const agingHours = t => (Date.now() / 1000 - t.scan_time) / 3600;
+const agingBand  = h => (AGING_BANDS.find(b => h >= b.min) || AGING_BANDS[2]).key;
+const fmtAge     = h => fmtDur(Math.round(h * 3600));
+const fmtPac     = n => (n == null ? '—' : n.toLocaleString('pt-BR'));
+
+async function loadAging() {
+  try {
+    const res = await fetch(API_AGING, { cache: 'no-store' });
+    const j   = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || 'HTTP ' + res.status);
+    agingTOs  = j.list || [];
+    agingErr  = '';
+    agingMeta = { fetchedAt: j.fetchedAt, ruasScanned: j.ruasScanned };
+  } catch (e) {
+    agingTOs = null;
+    agingErr = e.message;
+  }
+  buildAgingGroups();
+}
+
+function buildAgingGroups() {
+  const map = {};
+  (agingTOs || []).forEach(t => {
+    const g = map[t.dest_id] || (map[t.dest_id] = { id: t.dest_id, name: t.dest_name, tos: [], ruas: new Set() });
+    g.tos.push(t);
+    g.ruas.add(t.staging_area_name);
+  });
+  agingGroups = Object.values(map).map(g => {
+    const pending = g.tos.filter(t => !t.justification);
+    const maxH    = Math.max(...g.tos.map(agingHours));
+    const parcels = g.tos.reduce((s, t) => s + (t.parcels || 0), 0);
+    const unknown = g.tos.filter(t => t.parcels == null).length;
+    return { ...g, pending, maxH, parcels, unknown, band: agingBand(maxH),
+             status: pending.length === 0 ? 'done' : pending.length === g.tos.length ? 'pend' : 'part' };
+  }).sort((a, b) => (b.pending.length > 0) - (a.pending.length > 0) || b.maxH - a.maxH);
+}
+
+function renderAging() {
+  const body = document.getElementById('agingFarolBody');
+  const tb   = document.getElementById('agingTbody');
+  const note = document.getElementById('agingNote');
+  const sum  = document.getElementById('agingSummary');
+
+  if (agingTOs === null) {
+    body.innerHTML = '';
+    tb.innerHTML = '<tr><td colspan="8" class="aging-empty">Sem dados de aging: ' + esc(agingErr || 'aguardando') + '</td></tr>';
+    note.textContent = 'Instale/ative o script stage_out_aging_sync.user.js no Tampermonkey (aba do SPX aberta).';
+    sum.innerHTML = '';
+    document.getElementById('agingWrap').className = 'farol-wrap';
+    return;
+  }
+
+  const totTOs = agingTOs.length;
+  document.getElementById('agingWrap').className = 'farol-wrap' + (agingTOs.some(t => agingBand(agingHours(t)) === 'crit') ? ' has-crit' : '');
+
+  body.innerHTML = AGING_BANDS.map(b => {
+    const tos = agingTOs.filter(t => agingBand(agingHours(t)) === b.key);
+    const pac = tos.reduce((s, t) => s + (t.parcels || 0), 0);
+    const dst = new Set(tos.map(t => t.dest_id)).size;
+    const pct = totTOs > 0 ? (tos.length / totTOs * 100) : 0;
+    return '<tr class="' + b.rowCls + '">' +
+      '<td><div class="farol-level ' + b.lblCls + '"><span class="farol-dot ' + b.dotCls + '"></span>' + b.label + '</div></td>' +
+      '<td style="color:var(--muted);font-size:12px">' + b.desc + '</td>' +
+      '<td><span class="farol-count ' + b.valCls + '">' + tos.length + '</span></td>' +
+      '<td style="font-family:monospace;font-size:13px">' + pac.toLocaleString('pt-BR') + '</td>' +
+      '<td style="font-family:monospace;font-size:13px">' + dst + '</td>' +
+      '<td><span class="farol-pct">' + pct.toFixed(1) + '%</span></td>' +
+      '<td style="min-width:100px"><div class="farol-bar-wrap"><div class="farol-bar ' + b.key + '" style="width:' + Math.round(pct) + '%"></div></div></td>' +
+      '</tr>';
+  }).join('');
+
+  const pendDest = agingGroups.filter(g => g.pending.length).length;
+  sum.innerHTML = totTOs === 0 ? '<span style="color:#4ade80">✔ nenhuma TO acima de 24h</span>' :
+    '<span style="color:var(--text)"><b>' + agingGroups.length + '</b> destinos</span> · ' +
+    (pendDest ? '<span style="color:#f87171"><b>' + pendDest + '</b> aguardando justificativa</span>' : '<span style="color:#4ade80">todos justificados</span>');
+  const upd = agingMeta.fetchedAt ? new Date(agingMeta.fetchedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—';
+  note.textContent = 'Aging = agora − horário em que a TO foi endereçada na rua. Varredura de ' + (agingMeta.ruasScanned || 0) +
+    ' ruas ocupadas, atualizada às ' + upd + ' (a cada ~5 min).';
+
+  tb.innerHTML = agingGroups.map(g => {
+    const rowCls = g.band === 'crit' ? 'row-crit' : g.band === 'urgente' ? 'row-urgente' : '';
+    const badge = g.status === 'done' ? '<span class="just-badge done">✔ JUSTIFICADO</span>'
+                : g.status === 'part' ? '<span class="just-badge part">' + g.pending.length + ' PENDENTE(S)</span>'
+                :                       '<span class="just-badge pend">PENDENTE</span>';
+    const last = [...g.tos].reverse().find(t => t.justification);
+    const txt  = last ? '<div class="just-text" title="' + esc(last.justification) + '">' + esc(last.justification) + ' <span style="opacity:.6">— ' + esc(last.justified_by) + '</span></div>' : '';
+    const ruas = [...g.ruas].join(', ');
+    return '<tr class="' + rowCls + '">' +
+      '<td style="font-weight:600">' + esc(g.name) + '<br><span style="font-size:10px;color:var(--muted);font-weight:400">[' + esc(g.id) + ']</span></td>' +
+      '<td style="text-align:center;font-family:monospace;font-weight:700">' + g.tos.length + '</td>' +
+      '<td style="text-align:center;font-family:monospace" title="' + (g.unknown ? g.unknown + ' TO(s) sem contagem de pacotes' : '') + '">' + g.parcels.toLocaleString('pt-BR') + (g.unknown ? '*' : '') + '</td>' +
+      '<td><span class="dur crit">' + fmtAge(g.maxH) + '</span></td>' +
+      '<td style="font-family:monospace;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(ruas) + '">' + esc(ruas) + '</td>' +
+      '<td><span class="farol-badge ' + g.band + '">' + farolLabel(g.band) + '</span></td>' +
+      '<td>' + badge + txt + '</td>' +
+      '<td><button class="just-btn' + (g.pending.length ? '' : ' ghost') + '" onclick="openAgingModal(\'' + esc(g.id) + '\')">' + (g.pending.length ? 'Justificar' : 'Ver') + '</button></td>' +
+      '</tr>';
+  }).join('') || '<tr><td colspan="8" class="aging-empty">Nenhuma TO endereçada há mais de 24h. 🎉</td></tr>';
+
+  if (agingOpen !== null) renderAgingModal(false); // mantém o modal em dia sem perder o que está sendo digitado
+}
+
+function openAgingModal(destId) { agingOpen = String(destId); renderAgingModal(true); document.getElementById('agModal').classList.add('open'); }
+function closeAgingModal()      { agingOpen = null; document.getElementById('agModal').classList.remove('open'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAgingModal(); });
+
+function renderAgingModal(fresh) {
+  const g   = agingGroups.find(x => String(x.id) === agingOpen);
+  const box = document.getElementById('agModalBox');
+  if (!g) { closeAgingModal(); return; }
+  const savedTxt = !fresh && document.getElementById('agText') ? document.getElementById('agText').value : '';
+  let savedBy = '';
+  try { savedBy = localStorage.getItem('agingBy') || ''; } catch (_) {}
+  if (!fresh && document.getElementById('agBy')) savedBy = document.getElementById('agBy').value;
+
+  const rows = [...g.tos].sort((a, b) => a.scan_time - b.scan_time).map(t => {
+    const h = agingHours(t);
+    return '<tr>' +
+      '<td style="font-family:monospace;font-weight:700">' + esc(t.to_number) + '</td>' +
+      '<td style="font-family:monospace">' + esc(t.staging_area_name) + '</td>' +
+      '<td style="font-family:monospace;color:var(--muted)">' + new Date(t.scan_time * 1000).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + '</td>' +
+      '<td><span class="dur ' + (h >= 48 ? 'crit' : 'warn') + '">' + fmtAge(h) + '</span></td>' +
+      '<td style="text-align:right;font-family:monospace">' + fmtPac(t.parcels) + '</td>' +
+      '<td>' + (t.justification ? '<span class="just-badge done">✔</span>' : '<span class="just-badge pend">pendente</span>') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  const done = g.tos.filter(t => t.justification);
+  const doneHtml = done.length ? '<div style="margin-bottom:14px;font-size:11px;color:var(--muted)"><b style="color:var(--text)">Já justificado:</b> ' +
+    [...new Map(done.map(t => [t.justification + '|' + t.justified_by, t])).values()]
+      .map(t => '“' + esc(t.justification) + '” — ' + esc(t.justified_by) + ' (' + esc(t.justified_at) + ')').join('<br>') + '</div>' : '';
+
+  const form = g.pending.length ? (
+    '<div class="ag-form">' +
+      '<div class="row"><label for="agText">Justificativa para ' + g.pending.length + ' TO(s) pendente(s) — ' + g.pending.reduce((s, t) => s + (t.parcels || 0), 0).toLocaleString('pt-BR') + ' pacotes</label>' +
+        '<textarea id="agText" maxlength="1000" placeholder="Por que essas TOs estão há mais de 24h no Stage Out?" oninput="document.getElementById(\'agCount\').textContent=this.value.length+\'/1000\'">' + esc(savedTxt) + '</textarea>' +
+        '<div class="ag-count" id="agCount">' + savedTxt.length + '/1000</div></div>' +
+      '<div class="row"><label for="agBy">Responsável</label><input id="agBy" maxlength="80" placeholder="Seu nome" value="' + esc(savedBy) + '"></div>' +
+      '<div class="ag-form-foot"><span class="ag-form-msg" id="agMsg">Salvo na planilha (aba Base), uma linha por TO.</span>' +
+        '<button class="just-btn ghost" onclick="closeAgingModal()">Cancelar</button>' +
+        '<button class="just-btn" id="agSave" onclick="saveAgingJustification()">Salvar justificativa</button></div>' +
+    '</div>') : '<div class="ag-form-foot"><span class="ag-form-msg">Todas as TOs deste destino já estão justificadas.</span><button class="just-btn ghost" onclick="closeAgingModal()">Fechar</button></div>';
+
+  box.innerHTML =
+    '<div class="ag-modal-head"><div><div class="ag-modal-title">' + esc(g.name) + '</div><div class="ag-modal-sub">[' + esc(g.id) + '] · ' + esc([...g.ruas].join(', ')) + '</div></div>' +
+    '<button class="ag-modal-close" onclick="closeAgingModal()">✕</button></div>' +
+    '<div class="ag-modal-body">' +
+      '<div class="ag-kpis">' +
+        '<div class="ag-kpi"><div class="ag-kpi-l">TOs &gt; 24h</div><div class="ag-kpi-v" style="color:#f87171">' + g.tos.length + '</div></div>' +
+        '<div class="ag-kpi"><div class="ag-kpi-l">Pacotes</div><div class="ag-kpi-v" style="color:#a78bfa">' + g.parcels.toLocaleString('pt-BR') + (g.unknown ? '*' : '') + '</div></div>' +
+        '<div class="ag-kpi"><div class="ag-kpi-l">Mais antiga</div><div class="ag-kpi-v" style="color:#fbbf24">' + fmtAge(g.maxH) + '</div></div>' +
+      '</div>' +
+      '<div class="ag-to-wrap"><table class="ag-to-table"><thead><tr><th>TO</th><th>Rua</th><th>Endereçada</th><th>Aging</th><th style="text-align:right">Pacotes</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      doneHtml + form +
+    '</div>';
+}
+
+async function saveAgingJustification() {
+  const g    = agingGroups.find(x => String(x.id) === agingOpen);
+  const msg  = document.getElementById('agMsg');
+  const btn  = document.getElementById('agSave');
+  const text = document.getElementById('agText').value.trim();
+  const by   = document.getElementById('agBy').value.trim();
+  const fail = m => { msg.textContent = m; msg.className = 'ag-form-msg err'; };
+  if (!g) return;
+  if (text.length < 5) return fail('Escreva a justificativa (mín. 5 caracteres).');
+  if (!by)             return fail('Informe o responsável.');
+  btn.disabled = true; msg.className = 'ag-form-msg'; msg.textContent = 'Salvando na planilha...';
+  try {
+    const res = await fetch(API_AGING_JUSTIFY, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ station: STATION, dest_id: g.id, to_numbers: g.pending.map(t => t.to_number), text, by }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error || 'HTTP ' + res.status);
+    try { localStorage.setItem('agingBy', by); } catch (_) {}
+    closeAgingModal();
+    await loadAging();
+    renderAging();
+  } catch (e) {
+    btn.disabled = false;
+    fail('Não salvou: ' + e.message);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
    LOAD DATA
 ═════════════════════════════════════════════════════════════════ */
 async function loadData() {
@@ -976,7 +1285,9 @@ async function loadData() {
     document.getElementById('reportContent').style.display = '';
 
     renderKPIs();
+    await loadAging();
     renderFarol();
+    renderAging();
     renderTop10();
     renderTurno();
     renderCurva();
