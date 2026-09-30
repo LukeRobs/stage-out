@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         SPX Stage Out Aging → Dashboard Sync
+// @name         SPX Stage Out Aging → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      1.1
-// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_out_aging_sync.user.js
-// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_out_aging_sync.user.js
+// @version      1.0
+// @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_out_aging_sync_recife04.user.js
+// @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/stage_out_aging_sync_recife04.user.js
 // @description  Varre as ruas ocupadas do Stage Out e envia as TOs endereçadas há mais de 24h (farol de aging do Report)
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const STATION_ID  = '10963'; // SoC_PE_Jaboatão dos Guararapes
+  const STATION_ID  = '15000'; // SoC_PE_Recife_04
   const SERVER_URL  = 'https://stage-out.onrender.com/api/aging-data';
   const CONFIG_URL  = '/api/in-station/outbound/outbound_staging_area/config/search';
   const RUA_URL     = '/api/in-station/outbound/outbound_staging_area/details';
