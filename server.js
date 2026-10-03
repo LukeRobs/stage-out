@@ -2,6 +2,7 @@
   const fs     = require('fs');
   const path   = require('path');
   const crypto = require('crypto');
+  const zlib   = require('zlib');
   const { spawn } = require('child_process');
 
   // Blindagem: uma excecao nao tratada (ex: dentro de um setInterval, fora do request
@@ -586,6 +587,9 @@
   }
 
   let sacasLogSaveTimer = null;
+  // O disco do Render é efêmero (zera a cada restart/deploy) — a cópia durável é a planilha. Regravar
+  // o histórico inteiro (centenas de milhares de TOs) a cada TO nova só gerava picos de memória.
+  // Mantido apenas para uso local: SACAS_LOG_DISK=1.
   function saveSacasLog() {
     try {
       const out = {};
@@ -594,7 +598,7 @@
     } catch (e) { console.error('[sacas-log] falha ao salvar:', e.message); }
   }
   function scheduleSacasLogSave() {
-    if (sacasLogSaveTimer) return;
+    if (!process.env.SACAS_LOG_DISK || sacasLogSaveTimer) return;
     sacasLogSaveTimer = setTimeout(() => { sacasLogSaveTimer = null; saveSacasLog(); }, 5000);
   }
 
@@ -616,6 +620,25 @@
   // só grava TOs com complete_time (ou seja, já efetivamente Packed) e nunca sobrescreve um
   // registro existente (a 1ª captura já tem o complete_time correto; sobrescrever abriria
   // brecha pra um snapshot atrasado/inconsistente mudar retroativamente um dia já fechado).
+  // /api/sacas-history devolvia ~37MB de JSON novo a cada request (o dashboard consulta a cada 30s).
+  // Agora o JSON é gerado no máximo 1x por SACAS_HISTORY_TTL_MS por estação, já comprimido (gzip), e
+  // reaproveitado por todos os requests — e requests simultâneos compartilham a mesma geração.
+  const SACAS_HISTORY_TTL_MS = 60 * 1000;
+  const sacasHistoryCache = new Map(); // station -> { gz, builtAt, pending }
+  function sacasHistoryGz(station) {
+    const key = String(station);
+    const c = sacasHistoryCache.get(key);
+    if (c?.gz && Date.now() - c.builtAt < SACAS_HISTORY_TTL_MS) return Promise.resolve(c.gz);
+    if (c?.pending) return c.pending;
+    const log = getSacasLog(key);
+    const json = JSON.stringify({ list: [...log.values()], total: log.size, fetchedAt: Date.now() });
+    const pending = new Promise((resolve, reject) => zlib.gzip(json, (err, gz) => err ? reject(err) : resolve(gz)))
+      .then(gz => { sacasHistoryCache.set(key, { gz, builtAt: Date.now() }); return gz; })
+      .catch(e => { sacasHistoryCache.delete(key); throw e; });
+    sacasHistoryCache.set(key, { gz: c?.gz, builtAt: c?.builtAt || 0, pending });
+    return pending;
+  }
+
   function recordSacasLog(list) {
     let added = 0;
     (list || []).forEach(to => {
@@ -884,20 +907,39 @@
   // históricas das DUAS estações misturadas (gravadas antes do Recife04 ganhar planilha
   // própria) — por isso ainda filtramos pela coluna J nela, pra não importar TOs do
   // Recife04 pro histórico do Jaboatão.
+  // Lê uma aba em blocos de CHUNK linhas (em vez de A2:J1000000 de uma vez — o JSON inteiro de
+  // 200 mil linhas + as linhas parseadas estouravam os 512MB no boot) e entrega cada bloco a fn()
+  // antes de buscar o próximo, então só um bloco existe em memória por vez.
+  async function forEachSheetChunk(spreadsheetId, sheet, lastCol, fn, chunk = 15000) {
+    for (let start = 2; ; start += chunk) {
+      const token = await getServiceAccountToken();
+      const range = `${sheet}!A${start}:${lastCol}${start + chunk - 1}`;
+      const resp  = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) {
+        if (start > 2 && resp.status === 400) break; // bloco além do fim da grade da aba
+        throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
+      }
+      const rows = (await resp.json()).values || [];
+      fn(rows);
+      if (rows.length < chunk) break;
+    }
+  }
+
+  // Cargas pesadas do boot rodam UMA POR VEZ (antes: as duas estações + transbordo em paralelo).
+  let bootChain = Promise.resolve();
+  const enqueueBoot = fn => { bootChain = bootChain.then(fn).catch(e => console.error('[boot]', e.message)); return bootChain; };
+
   async function loadSacasLogFromSheet(station, spreadsheetId) {
     if (!SERVICE_ACCOUNT) return;
     try {
-      const token = await getServiceAccountToken();
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent('db!A2:J1000000')}`;
-      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
-      const rows = (await resp.json()).values || [];
       const log  = getSacasLog(station);
+      const cutoffSec = Date.now() / 1000 - SACAS_LOG_MAX_AGE_DAYS * 86400;
       let restored = 0;
-      rows.forEach(r => {
+      await forEachSheetChunk(spreadsheetId, 'db', 'J', rows => rows.forEach(r => {
         const complete_time = parseDtComplete(r[0]);
         const to_number     = r[1];
         if (!complete_time || !to_number) return;
+        if (complete_time < cutoffSec) return; // além da retenção — seria podado logo em seguida
         if (String(r[9] || DEFAULT_STATION) !== String(station)) return; // linha de outra estação (planilha antiga era compartilhada)
         if (log.has(to_number)) return; // já tem em memória (mais recente/completo) — não sobrescreve
         log.set(to_number, {
@@ -911,15 +953,15 @@
           status: 'Packed',
         });
         restored++;
-      });
+      }));
       pruneSacasLog();
       if (restored) console.log(`[sacas-sheet] ${restored} registros recuperados da planilha da estação ${station} (recomposição pós-restart)`);
     } catch (e) { console.error(`[sacas-sheet] falha ao recarregar planilha da estação ${station}:`, e.message); }
   }
 
   for (const [station, spreadsheetId] of Object.entries(SACAS_SHEET_ID_BY_STATION)) {
-    ensureSacasSheetHeader(spreadsheetId);
-    loadSacasLogFromSheet(station, spreadsheetId);
+    enqueueBoot(() => ensureSacasSheetHeader(spreadsheetId));
+    enqueueBoot(() => loadSacasLogFromSheet(station, spreadsheetId));
   }
 
   // ── Planejamento (aba "Planejamento" na MESMA planilha de SACAS) ────────────
@@ -1174,13 +1216,8 @@
   async function loadTransbordoCdFromSheet() {
     if (!SERVICE_ACCOUNT) return;
     try {
-      const token = await getServiceAccountToken();
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent('Base!A2:N1000000')}`;
-      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
-      const rows = (await resp.json()).values || [];
       const byStation = new Map(); // station_id -> Map(to_number -> record)
-      rows.forEach(r => {
+      await forEachSheetChunk(TRANSBORDO_SHEET_ID, 'Base', 'N', rows => rows.forEach(r => {
         const to_number = r[1];
         const station   = String(r[13] || DEFAULT_STATION);
         if (!to_number) return;
@@ -1200,7 +1237,7 @@
           abnormal_labels:       r[12] ? r[12].split('; ') : null,
           unloaded_time:         parseDtComplete(r[0]) || 0,
         });
-      });
+      }));
       let restoredTotal = 0;
       for (const [station, map] of byStation) {
         const existing    = transbordoCdCacheByStation.get(station) || { list: [], fetchedAt: null };
@@ -1220,13 +1257,13 @@
     } catch (e) { console.error('[transbordo-cd-sheet] falha ao recarregar planilha:', e.message); }
   }
 
-  ensureTransbordoCdSheetHeader();
-  loadTransbordoCdFromSheet();
+  enqueueBoot(ensureTransbordoCdSheetHeader);
+  enqueueBoot(loadTransbordoCdFromSheet);
   // Tentativas extras logo após o boot — a chamada é idempotente (só preenche o que estiver
   // faltando em memória, nunca sobrescreve), então repetir é seguro. Cobre o caso de rede
   // ainda não estar totalmente pronta bem no instante do cold start do Render.
-  setTimeout(loadTransbordoCdFromSheet, 30 * 1000);
-  setTimeout(loadTransbordoCdFromSheet, 2 * 60 * 1000);
+  setTimeout(() => enqueueBoot(loadTransbordoCdFromSheet), 30 * 1000);
+  setTimeout(() => enqueueBoot(loadTransbordoCdFromSheet), 2 * 60 * 1000);
 
   async function flushTransbordoCdSheet() {
     if (!transbordoCdPendingRows.length) return;
@@ -1294,9 +1331,9 @@
     } catch (e) { console.error('[aging-sheet] falha ao recarregar planilha:', e.message); }
   }
 
-  ensureAgingSheetHeader();
-  loadAgingJustifiedFromSheet();
-  setTimeout(loadAgingJustifiedFromSheet, 30 * 1000); // idempotente — cobre rede ainda fria no cold start
+  enqueueBoot(ensureAgingSheetHeader);
+  enqueueBoot(loadAgingJustifiedFromSheet);
+  setTimeout(() => enqueueBoot(loadAgingJustifiedFromSheet), 30 * 1000); // idempotente — cobre rede ainda fria no cold start
 
   async function appendAgingRowsToSheet(rows) {
     if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
@@ -1940,9 +1977,13 @@
     // operacional/turno. Ver recordSacasLog() acima — populado a partir do mesmo payload de
     // /api/tos-packed-data, então não precisa de nenhum script Tampermonkey novo.
     if (urlPath === '/api/sacas-history') {
-      const log = getSacasLog(stationParam(req));
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify({ list: [...log.values()], total: log.size, fetchedAt: Date.now() }));
+      const st = stationParam(req);
+      sacasHistoryGz(st).then(gz => {
+        const wantsGzip = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+        const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Vary': 'Accept-Encoding' };
+        if (wantsGzip) { res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip' }); res.end(gz); }
+        else zlib.gunzip(gz, (err, raw) => { res.writeHead(err ? 500 : 200, headers); res.end(err ? '{}' : raw); });
+      }).catch(e => { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: e.message })); });
       return;
     }
 
