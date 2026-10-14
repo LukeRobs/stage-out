@@ -1621,7 +1621,7 @@
   }
 
   // ── Cage map + sacas (calculados pelo Tampermonkey via SPX cage API) ───
-  let cageMapCache = null; // { cageMap: { CG001: OUT-185 }, byArea: { OUT-185: { sacas, cages } }, fetchedAt }
+  const cageMapCacheByStation = makeStationCache(); // station_id -> { cageMap: { CG001: OUT-185 }, byArea: { OUT-185: { sacas, cages } }, fetchedAt }
   async function forceSaveToSheets() {
   try {
     if (!workstationCacheByStation.get(DEFAULT_STATION)) {
@@ -2688,11 +2688,25 @@
       req.on('data', d => { body += d; });
       req.on('end', () => {
         try {
-          cageMapCache = JSON.parse(body);
-          const cages = Object.keys(cageMapCache.cageMap  || {}).length;
-          const areas = Object.keys(cageMapCache.byArea   || {}).length;
-          const sacas = Object.values(cageMapCache.byArea || {}).reduce((s, a) => s + (a.sacas || 0), 0);
-          console.log(`[cage-map] ${cages} gaiolas · ${areas} ruas · ${sacas} sacas`);
+          const parsed = JSON.parse(body);
+          // Sem station_id = script antigo: antes todo envio caía num cache global único e uma
+          // estação sobrescrevia as sacas da outra. Agora é descartado (e logado).
+          if (parsed.station_id == null || parsed.station_id === '') {
+            const now = Date.now();
+            if (now - (global.__cageMapUnlabeledLog || 0) > 5 * 60 * 1000) {
+              global.__cageMapUnlabeledLog = now;
+              console.warn('[cage-map] IGNORADO envio sem station_id — script de Stage Out desatualizado em algum computador');
+            }
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'station_id obrigatório — atualize o script de Stage Out (sacas)' }));
+            return;
+          }
+          const station = String(parsed.station_id);
+          cageMapCacheByStation.set(station, parsed);
+          const cages = Object.keys(parsed.cageMap  || {}).length;
+          const areas = Object.keys(parsed.byArea   || {}).length;
+          const sacas = Object.values(parsed.byArea || {}).reduce((s, a) => s + (a.sacas || 0), 0);
+          console.log(`[cage-map] ${cages} gaiolas · ${areas} ruas · ${sacas} sacas (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: true, cages, areas, sacas }));
         } catch (e) {
@@ -2705,6 +2719,7 @@
 
     // GET /api/cage-data — sacas por rua (calculado pelo Tampermonkey via SPX cage API)
     if (urlPath === '/api/cage-data') {
+      const cageMapCache = cageMapCacheByStation.get(stationParam(req));
       if (!cageMapCache) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Aguardando sync do Tampermonkey — abra o SPX e aguarde' }));

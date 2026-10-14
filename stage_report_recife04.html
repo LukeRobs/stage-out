@@ -673,7 +673,7 @@ body {
 // arquivo, mudando só esta constante (ver server.js: particionamento por station_id).
 const STATION    = '15000'; // SoC_PE_Recife_04
 const API_STAGE  = `/api/stage-out?station=${STATION}`;
-const API_CAGE   = '/api/cage-data';
+const API_CAGE   = `/api/cage-data?station=${STATION}`;
 const API_AGING  = `/api/aging?station=${STATION}`;
 const API_AGING_JUSTIFY = '/api/aging-justify';
 const REFRESH_MS = 30000;
