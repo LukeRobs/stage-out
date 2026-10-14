@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      1.9
+// @version      2.0
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -60,6 +60,8 @@
         url:     `${COPEOPLE_INGEST}${path}`,
         headers: { 'Content-Type': 'application/json', 'X-Ingest-Token': token },
         data:    JSON.stringify(payload),
+        timeout: 30000,
+        ontimeout: () => reject(new Error('COPEOPLE: timeout (30s)')),
         onload:  r => {
           if (r.status === 200) return resolve('ok');
           if (r.status === 401) copeopleRecusouToken();
@@ -96,8 +98,10 @@
         method: 'GET',
         url,
         headers: headers || {},
+        timeout: 30000,
         onload:  r => { try { resolve(JSON.parse(r.responseText)); } catch (e) { reject(e); } },
         onerror: () => reject(new Error('network error')),
+        ontimeout: () => reject(new Error('timeout (30s)')),
       });
     });
   }
@@ -284,8 +288,10 @@
         url:     SERVER_URL,
         headers: { 'Content-Type': 'application/json' },
         data:    JSON.stringify(payload),
+        timeout: 30000,
         onload:  r => (r.status === 200 ? resolve() : reject(new Error(`status ${r.status}`))),
         onerror: () => reject(new Error('network error')),
+        ontimeout: () => reject(new Error('timeout (30s)')),
       });
     });
   }
