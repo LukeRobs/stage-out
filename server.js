@@ -2306,7 +2306,19 @@
       req.on('end', () => {
         try {
           const parsed  = JSON.parse(body);
-          const station = String(parsed.station_id ?? DEFAULT_STATION);
+          // Pacote sem station_id = script antigo (v1.0, sem @updateURL) ainda rodando em algum PC.
+          // Antes caía na estação padrão e uma estação sobrescrevia a outra a cada minuto — agora é descartado.
+          if (parsed.station_id == null || parsed.station_id === '') {
+            const now = Date.now();
+            if (now - (global.__stageInUnlabeledLog || 0) > 5 * 60 * 1000) {
+              global.__stageInUnlabeledLog = now;
+              console.warn(`[stage-in] IGNORADO pacote sem station_id (${parsed.list?.length} ruas) — script de Stage In desatualizado em algum computador`);
+            }
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'station_id obrigatório — atualize o script stage_in_sync' }));
+            return;
+          }
+          const station = String(parsed.station_id);
           stageInCacheByStation.set(station, parsed);
           console.log(`[stage-in] Received ${parsed.list?.length}/${parsed.total} ruas (station ${station})`);
           res.writeHead(200, { 'Content-Type': 'application/json' });
