@@ -1,17 +1,74 @@
 // ==UserScript==
 // @name         SPX Trip List → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/trip_list_sync_recife04.user.js
 // @description  Sincroniza trip list (viagens em trânsito) com o dashboard local
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @connect      stage-out.onrender.com
+// @connect      gestao-colaboradores-backend.onrender.com
 // ==/UserScript==
 
 (function () {
   'use strict';
+
+  // ── COPEOPLE (envio duplo durante a migração) ───────────────────────────
+  // Os mesmos dados também vão para o COPEOPLE. O token NÃO fica neste arquivo (o repositório é público):
+  // é digitado uma única vez em cada máquina e fica guardado no Tampermonkey (e no localStorage do SPX, para
+  // os outros scripts desta máquina não pedirem de novo). Sem token — ou com o endereço ainda por preencher —
+  // o envio ao COPEOPLE é simplesmente pulado e o servidor antigo continua como sempre.
+  const COPEOPLE_HOST   = 'gestao-colaboradores-backend.onrender.com';
+  const COPEOPLE_INGEST = `https://${COPEOPLE_HOST}/api/spx-ingest`;
+  const TOKEN_KEY       = 'copeopleIngestToken';
+
+  function copeopleAtivo() { return !COPEOPLE_HOST.startsWith('SEU-BACKEND'); }
+
+  function getCopeopleToken() {
+    let t = GM_getValue(TOKEN_KEY, '') || localStorage.getItem(TOKEN_KEY) || '';
+    if (t) {
+      GM_setValue(TOKEN_KEY, t);
+      localStorage.setItem(TOKEN_KEY, t);
+      return t;
+    }
+    // Pergunta no máximo 1x a cada 12h por máquina (deixar em branco = pular).
+    if (Date.now() - Number(GM_getValue('copeopleTokenAsk', 0)) > 12 * 3600 * 1000) {
+      GM_setValue('copeopleTokenAsk', Date.now());
+      t = (window.prompt('COPEOPLE: cole o token de sincronização (peça ao responsável). Deixe em branco para pular.') || '').trim();
+      if (t) { GM_setValue(TOKEN_KEY, t); localStorage.setItem(TOKEN_KEY, t); }
+    }
+    return t;
+  }
+
+  function copeopleRecusouToken() {
+    GM_setValue(TOKEN_KEY, '');
+    localStorage.removeItem(TOKEN_KEY);
+    GM_setValue('copeopleTokenAsk', 0); // volta a pedir um token válido
+  }
+
+  // POST pro COPEOPLE: resolve 'pulado' (sem token/endereço), 'ok', ou rejeita. Nunca atrapalha o envio ao servidor antigo.
+  function postCopeople(path, payload) {
+    return new Promise((resolve, reject) => {
+      if (!copeopleAtivo()) return resolve('pulado');
+      const token = getCopeopleToken();
+      if (!token) return resolve('pulado');
+      GM_xmlhttpRequest({
+        method:  'POST',
+        url:     `${COPEOPLE_INGEST}${path}`,
+        headers: { 'Content-Type': 'application/json', 'X-Ingest-Token': token },
+        data:    JSON.stringify(payload),
+        onload:  r => {
+          if (r.status === 200) return resolve('ok');
+          if (r.status === 401) copeopleRecusouToken();
+          reject(new Error(`COPEOPLE status ${r.status}`));
+        },
+        onerror: () => reject(new Error('COPEOPLE: falha de rede')),
+      });
+    });
+  }
 
   const SERVER_URL = 'https://stage-out.onrender.com/api/trip-data';
   const API_URL    = '/api/admin/transportation/trip/list_v2';
@@ -74,6 +131,7 @@
   }
 
   function sendToServer(data) {
+    postCopeople('/trip-list', data).catch(e => console.warn('[Trips]', e.message));
     GM_xmlhttpRequest({
       method:  'POST',
       url:     SERVER_URL,

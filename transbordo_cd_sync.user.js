@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      1.9
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -10,10 +10,65 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @connect      stage-out.onrender.com
+// @connect      gestao-colaboradores-backend.onrender.com
 // ==/UserScript==
 
 (function () {
   'use strict';
+
+  // ── COPEOPLE (envio duplo durante a migração) ───────────────────────────
+  // Os mesmos dados também vão para o COPEOPLE. O token NÃO fica neste arquivo (o repositório é público):
+  // é digitado uma única vez em cada máquina e fica guardado no Tampermonkey (e no localStorage do SPX, para
+  // os outros scripts desta máquina não pedirem de novo). Sem token — ou com o endereço ainda por preencher —
+  // o envio ao COPEOPLE é simplesmente pulado e o servidor antigo continua como sempre.
+  const COPEOPLE_HOST   = 'gestao-colaboradores-backend.onrender.com';
+  const COPEOPLE_INGEST = `https://${COPEOPLE_HOST}/api/spx-ingest`;
+  const TOKEN_KEY       = 'copeopleIngestToken';
+
+  function copeopleAtivo() { return !COPEOPLE_HOST.startsWith('SEU-BACKEND'); }
+
+  function getCopeopleToken() {
+    let t = GM_getValue(TOKEN_KEY, '') || localStorage.getItem(TOKEN_KEY) || '';
+    if (t) {
+      GM_setValue(TOKEN_KEY, t);
+      localStorage.setItem(TOKEN_KEY, t);
+      return t;
+    }
+    // Pergunta no máximo 1x a cada 12h por máquina (deixar em branco = pular).
+    if (Date.now() - Number(GM_getValue('copeopleTokenAsk', 0)) > 12 * 3600 * 1000) {
+      GM_setValue('copeopleTokenAsk', Date.now());
+      t = (window.prompt('COPEOPLE: cole o token de sincronização (peça ao responsável). Deixe em branco para pular.') || '').trim();
+      if (t) { GM_setValue(TOKEN_KEY, t); localStorage.setItem(TOKEN_KEY, t); }
+    }
+    return t;
+  }
+
+  function copeopleRecusouToken() {
+    GM_setValue(TOKEN_KEY, '');
+    localStorage.removeItem(TOKEN_KEY);
+    GM_setValue('copeopleTokenAsk', 0); // volta a pedir um token válido
+  }
+
+  // POST pro COPEOPLE: resolve 'pulado' (sem token/endereço), 'ok', ou rejeita. Nunca atrapalha o envio ao servidor antigo.
+  function postCopeople(path, payload) {
+    return new Promise((resolve, reject) => {
+      if (!copeopleAtivo()) return resolve('pulado');
+      const token = getCopeopleToken();
+      if (!token) return resolve('pulado');
+      GM_xmlhttpRequest({
+        method:  'POST',
+        url:     `${COPEOPLE_INGEST}${path}`,
+        headers: { 'Content-Type': 'application/json', 'X-Ingest-Token': token },
+        data:    JSON.stringify(payload),
+        onload:  r => {
+          if (r.status === 200) return resolve('ok');
+          if (r.status === 401) copeopleRecusouToken();
+          reject(new Error(`COPEOPLE status ${r.status}`));
+        },
+        onerror: () => reject(new Error('COPEOPLE: falha de rede')),
+      });
+    });
+  }
 
   const SERVER_BASE     = 'https://stage-out.onrender.com';
   const SERVER_URL      = `${SERVER_BASE}/api/transbordo-cd-data`;
@@ -35,11 +90,12 @@
   // enquanto investigamos por que o sync automático não está achando nenhuma.
   const DEBUG_TRIPS = [4157500];
 
-  function gmGetJson(url) {
+  function gmGetJson(url, headers) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method: 'GET',
         url,
+        headers: headers || {},
         onload:  r => { try { resolve(JSON.parse(r.responseText)); } catch (e) { reject(e); } },
         onerror: () => reject(new Error('network error')),
       });
@@ -125,19 +181,29 @@
     }
   }
 
+  // Viagens guardadas no COPEOPLE (mesmo formato do servidor antigo). Sem token/endereço, devolve lista vazia.
+  async function copeopleGetTrips(rota) {
+    if (!copeopleAtivo()) return { list: [] };
+    const token = getCopeopleToken();
+    if (!token) return { list: [] };
+    return gmGetJson(`${COPEOPLE_INGEST}/${rota}?station=${STATION_ID}`, { 'X-Ingest-Token': token });
+  }
+
   // Reaproveita os dados que o trip_list_sync (viagens ao vivo) e o trip_history_sync
   // (últimos 7 dias) já mantêm sincronizados no nosso servidor — em vez de refazer a
   // paginação da SPX aqui toda hora. Complementa com a busca direta (backfill periódico,
   // ver acima) pra cobrir o que o teto de 1000 do trip_history_sync deixa de fora.
   async function fetchCandidateTrips() {
     const runDirectFetch = syncCycleCount % DIRECT_FETCH_EVERY_N_SYNC === 0;
-    const [liveData, histData, directData] = await Promise.all([
+    const [liveData, histData, directData, cpLive, cpHist] = await Promise.all([
       gmGetJson(TRIPS_URL).catch(e => { console.warn('[TransbordoCD] Falha ao ler /api/trips:', e.message); return { list: [] }; }),
       gmGetJson(TRIP_HISTORY_URL).catch(e => { console.warn('[TransbordoCD] Falha ao ler /api/trip-history:', e.message); return { list: [] }; }),
       runDirectFetch ? fetchDirectTrips() : Promise.resolve({ list: [], total: null }),
+      copeopleGetTrips('trip-list').catch(e => { console.warn('[TransbordoCD] Falha ao ler viagens do COPEOPLE:', e.message); return { list: [] }; }),
+      copeopleGetTrips('trip-history').catch(e => { console.warn('[TransbordoCD] Falha ao ler histórico do COPEOPLE:', e.message); return { list: [] }; }),
     ]);
     const map = new Map();
-    [...(liveData.list || []), ...(histData.list || []), ...(directData.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
+    [...(liveData.list || []), ...(histData.list || []), ...(directData.list || []), ...(cpLive.list || []), ...(cpHist.list || [])].forEach(t => { if (t.id) map.set(t.id, t); });
     console.log(`[TransbordoCD] fontes: /api/trips=${liveData.list?.length || 0}, /api/trip-history=${histData.list?.length || 0}${runDirectFetch ? `, busca-direta=${directData.list?.length || 0} (total real na SPX: ${directData.total})` : ' (busca-direta pulada nesse ciclo)'}`);
     // Só interessam viagens que já chegaram (ata>0) nesta estação especificamente, numa
     // perna que não seja a origem
@@ -211,17 +277,25 @@
     return { cdList, finished, scanned: list.length };
   }
 
-  function sendToServer(list) {
+  function sendToOldServer(payload) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method:  'POST',
         url:     SERVER_URL,
         headers: { 'Content-Type': 'application/json' },
-        data:    JSON.stringify({ list, fetchedAt: Date.now(), station_id: STATION_ID }),
+        data:    JSON.stringify(payload),
         onload:  r => (r.status === 200 ? resolve() : reject(new Error(`status ${r.status}`))),
         onerror: () => reject(new Error('network error')),
       });
     });
+  }
+
+  // Manda ao servidor antigo E ao COPEOPLE; só dá erro se os dois falharem.
+  async function sendToServer(list) {
+    const payload = { list, fetchedAt: Date.now(), station_id: STATION_ID };
+    const resultados = await Promise.allSettled([sendToOldServer(payload), postCopeople('/transbordo-cd', payload)]);
+    resultados.forEach((r, i) => { if (r.status === 'rejected') console.warn(`[TransbordoCD] envio ${i === 0 ? 'servidor antigo' : 'COPEOPLE'} falhou:`, r.reason?.message); });
+    if (resultados.every(r => r.status === 'rejected')) throw new Error('nenhum destino aceitou o envio');
   }
 
   async function sync() {

@@ -4,11 +4,36 @@
 // @version      1.6
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/tos_sync.user.js
-// @description  Sincroniza TOs Packing e Packed com o dashboard local
+// @description  Sync de TOs Packing/Packed + backfill de status pós-Packed pro dashboard de SACAS
 // @match        https://spx.shopee.com.br/*
 // @grant        GM_xmlhttpRequest
 // @connect      stage-out.onrender.com
 // ==/UserScript==
+
+// ── O que esse script faz, tecnicamente ────────────────────────────────────
+//
+// PIPELINE 1 — sync() a cada 60s (INTERVAL):
+//   GET outbound/search com status=1 (Packing) e status=2 (Packed), 1 requisição por dia
+//   dentro da janela DAYS_BACK (hoje + 2 dias anteriores, cada dia buscado separadamente
+//   e mesclado — ver fetchAll/dayResultCache), deduplicado por to_number.
+//   POST -> /api/tos-packing-data e /api/tos-packed-data.
+//   Alimenta toPackingMap/toPackedMap no servidor, que por sua vez servem tos_packing.html,
+//   tos_packed.html e o mecanismo de eviction (/api/to-evict).
+//
+// PIPELINE 2 — syncBackfill() a cada 5min (BACKFILL_INTERVAL_MS), independente do pipeline 1:
+//   GET outbound/search com status=4 (Transporting), 5 (Transported), 6 (Received),
+//   9 (Partially Received), 10 (LHPacking), 11 (LHPacked) — todos estados que uma TO
+//   assume DEPOIS de sair de Packed, e que (confirmado via engenharia reversa da API)
+//   continuam com o campo complete_time do momento em que ela foi packed originalmente.
+//   Existe porque status=2 sozinho perde TOs que saem de Packed mais rápido que os 60s
+//   do pipeline 1 (gaps de 8-18% medidos contra a produção real das esteiras).
+//   current_station_id vem sobrescrito com myStationId (capturado do pipeline 1, via
+//   Packing/Packed) antes do envio — nesses status pós-Packed o current_station_id pode
+//   já apontar pro destino/estação seguinte, não pra quem empacotou de verdade (sender
+//   continua correto, mas current_station_id sozinho não serve mais).
+//   POST -> /api/sacas-backfill-data, que só alimenta recordSacasLog() no servidor (o
+//   histórico usado pelo dashboard de SACAS) — nunca toca em toPackingMap/toPackedMap,
+//   então tos_packing.html/tos_packed.html não são afetados por esse pipeline.
 
 (function () {
   'use strict';
