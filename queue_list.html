@@ -546,13 +546,20 @@ function buildQueueMap(queueList) {
   });
 }
 
+// Pacotes pendentes: a própria viagem informa o que ainda está a bordo (order_loaded_quantity, cai conforme as TOs são
+// descarregadas). A fila só tem esse número enquanto
+// o veículo está nela e o perde ao entrar na doca (por isso aparecia 0 nos veículos descarregando).
+function tripPackages(trip, q) {
+  return trip.order_loaded_quantity || q?.order_quantity || trip.order_inbound_quantity || 0;
+}
+
 function getQueueInfo(trip) {
   const q = queueMap[trip.trip_number];
-  if (!q) return { waitMins: null, onHoldTime: 0, orderQty: 0, assignedDock: '—', occupiedDock: '—', queueStatus: null };
+  if (!q) return { waitMins: null, onHoldTime: 0, orderQty: tripPackages(trip), assignedDock: '—', occupiedDock: '—', queueStatus: null };
   return {
     waitMins:    q.waiting_time    || 0,
     onHoldTime:  q.on_hold_time    || 0,
-    orderQty:    q.order_quantity  || 0,
+    orderQty:    tripPackages(trip, q),
     assignedDock: q.assigned_dock_name || '—',
     occupiedDock: q.occupied_dock_name || '—',
     queueStatus:  q.queue_status,
@@ -605,7 +612,7 @@ function buildKPIs() {
     return sinceT > sinceB ? t : best;
   }, null);
 
-  const totalPackages = allItems.reduce((sum, t) => sum + (queueMap[t.trip_number]?.order_quantity || 0), 0);
+  const totalPackages = allItems.reduce((sum, t) => sum + getQueueInfo(t).orderQty, 0);
 
   document.getElementById('kTotal').textContent    = allItems.length;
   document.getElementById('kTotalPackages').textContent = fmtNum(totalPackages);
@@ -660,6 +667,10 @@ function sortedItems(items) {
     if (sortCol === 'lh_status') {
       av = getDestStation(a)?.trip_station_status || 0;
       bv = getDestStation(b)?.trip_station_status || 0;
+      return sortAsc ? av - bv : bv - av;
+    }
+    if (sortCol === 'order_quantity') {
+      av = getQueueInfo(a).orderQty; bv = getQueueInfo(b).orderQty;
       return sortAsc ? av - bv : bv - av;
     }
     // Campos da queue (secundários)
