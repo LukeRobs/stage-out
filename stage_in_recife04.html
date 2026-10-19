@@ -871,6 +871,14 @@ function getAreaLabel(a) {
 // Each staging zone maps only to its exact counterpart in the report sheet.
 // ZONA LINEAR shows its own data when the report has it; BUFFER zones never
 // inherit data from ZONA VOLUMOSO etc.
+// Gaiolas (código CG...) aparecem na mesma lista de TOs do Report e têm pacotes, mas o to_quantity da API de
+// staging NÃO as conta. Para o SPP bater (pacotes ÷ unidades), o divisor é TOs + gaiolas da rua.
+const ehGaiola = t => /^CG/i.test(t?.to || '');
+function gaiolasDaRua(areaName) {
+  return (reportData?.byAreaTOs?.[areaName] || []).filter(ehGaiola).length;
+}
+function tosSpp(a) { return (a.to_quantity || 0) + gaiolasDaRua(a.area_name); }
+
 function getReportZone(stagingName) {
   if (!reportData) return null;
   return reportData.byZone[(stagingName || '').trim()] || null;
@@ -1001,9 +1009,11 @@ function updateStats(areas) {
       : Object.values(reportData.byZone).reduce((s, v) => s + v.pacotes, 0);
     document.getElementById('sTotalPacotes').textContent = totalPac.toLocaleString('pt-BR');
 
-    const avgTO = totalTOs > 0 ? Math.round(totalPac / totalTOs) : null;
+    const totalGaiolas = active.reduce((s, a) => s + gaiolasDaRua(a.area_name), 0);
+    const totalUnid    = totalTOs + totalGaiolas;
+    const avgTO = totalUnid > 0 ? Math.round(totalPac / totalUnid) : null;
     document.getElementById('sAvgTO').textContent    = avgTO !== null ? avgTO.toLocaleString('pt-BR') : '—';
-    document.getElementById('sAvgTOSub').textContent = avgTO !== null ? `${totalPac.toLocaleString('pt-BR')} pkgs ÷ ${totalTOs} TOs` : 'pacotes / TO';
+    document.getElementById('sAvgTOSub').textContent = avgTO !== null ? `${totalPac.toLocaleString('pt-BR')} pkgs ÷ ${totalTOs} TOs${totalGaiolas ? ` + ${totalGaiolas} gaiolas` : ''}` : 'pacotes / TO';
   }
 }
 
@@ -1017,8 +1027,9 @@ function buildZonaSection(areas) {
   const zones = {};
   active.forEach(a => {
     const z = (a.staging_group_name || 'OUTRAS').trim();
-    if (!zones[z]) zones[z] = { name: z, tos: 0, agings: [], cap: 0 };
+    if (!zones[z]) zones[z] = { name: z, tos: 0, gaiolas: 0, agings: [], cap: 0 };
     zones[z].tos  += a.to_quantity;
+    zones[z].gaiolas += gaiolasDaRua(a.area_name);
     zones[z].cap  += a.capacity || 0;
     if (a.staging_duration_time > 0) zones[z].agings.push(a.staging_duration_time);
   });
@@ -1040,7 +1051,7 @@ function buildZonaSection(areas) {
       if (!ad.zona) return;
       const tos = sMap[rua] || 0;
       if (tos === 0) return;
-      const s = ad.pacotes / tos;
+      const s = ad.pacotes / (tos + gaiolasDaRua(rua));
       if (!zoneSPPRange[ad.zona]) zoneSPPRange[ad.zona] = [];
       zoneSPPRange[ad.zona].push(s);
     });
@@ -1052,8 +1063,8 @@ function buildZonaSection(areas) {
     const rd   = getReportZone(z.name);
     const mainVal   = rd ? rd.pacotes.toLocaleString('pt-BR') : z.tos.toLocaleString('pt-BR');
     const mainLabel = rd ? 'pacotes' : 'TOs';
-    const tosLine   = rd ? `<span>${z.tos} TOs</span>` : '';
-    const spp       = (rd && z.tos > 0) ? Math.round(rd.pacotes / z.tos) : null;
+    const tosLine   = rd ? `<span>${z.tos} TOs${z.gaiolas ? ` + ${z.gaiolas} CG` : ''}</span>` : '';
+    const spp       = (rd && z.tos > 0) ? Math.round(rd.pacotes / (z.tos + z.gaiolas)) : null;
     const sppLine   = spp !== null ? `<span>SPP: <strong>${spp}</strong></span>` : '';
     const sppVals   = zoneSPPRange[z.name] || [];
     const sppMax    = sppVals.length ? Math.round(Math.max(...sppVals)) : null;
@@ -1136,7 +1147,7 @@ function buildZonaSection(areas) {
       }
       const idx = BINS.findIndex(b => duration >= b.min && duration < b.max);
       if (idx < 0) return;
-      tosBins[idx] += (staging?.to_quantity || areaData?.to_quantity || 0); // soma TOs da área
+      tosBins[idx] += (staging?.to_quantity || areaData?.to_quantity || 0) + gaiolasDaRua(rua); // TOs + gaiolas da área
     });
   }
 
@@ -1406,7 +1417,7 @@ function filteredAreas() {
     if (activeZone === 'all') {
       base = base.filter(a => {
         const pac = reportData?.byArea?.[a.area_name]?.pacotes;
-        const tos = a.to_quantity || 0;
+        const tos = tosSpp(a);
         if (pac == null || tos === 0) return false;
         const spp = Math.round(pac / tos);
         const { key } = activeVolFilter.value;
@@ -1434,8 +1445,8 @@ function sortedAreas(areas) {
       av = reportData?.byArea?.[a.area_name]?.pacotes || 0;
       bv = reportData?.byArea?.[b.area_name]?.pacotes || 0;
     } else if (sortCol === 'spp') {
-      const apac = reportData?.byArea?.[a.area_name]?.pacotes; const atos = a.to_quantity || 0;
-      const bpac = reportData?.byArea?.[b.area_name]?.pacotes; const btos = b.to_quantity || 0;
+      const apac = reportData?.byArea?.[a.area_name]?.pacotes; const atos = tosSpp(a);
+      const bpac = reportData?.byArea?.[b.area_name]?.pacotes; const btos = tosSpp(b);
       av = (apac != null && atos > 0) ? apac / atos : 0;
       bv = (bpac != null && btos > 0) ? bpac / btos : 0;
     } else if (['area_name','staging_group_name','operator'].includes(sortCol)) {
@@ -1606,7 +1617,7 @@ function buildMainTable(areas) {
   document.getElementById('mainBody').innerHTML = page.map(a => {
     const occ = parseOcc(a.occupy_percentage);
     const pac = reportData?.byArea?.[a.area_name]?.pacotes;
-    const tos = a.to_quantity || 0;
+    const tos = tosSpp(a);
     const spp = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
     const isExp = expandedAreas.has(a.area_name);
     const areaInfo  = getAreaLabel(a);
@@ -1893,9 +1904,9 @@ function buildSPPView() {
   // Calcula SPP por rua
   const areasSpp = areas.map(a => {
     const pac = reportData.byArea[a.area_name]?.pacotes;
-    const tos = a.to_quantity || 0;
+    const tos = tosSpp(a);
     const spp = (pac != null && tos > 0) ? pac / tos : null;
-    return { ...a, spp, pac: pac ?? 0 };
+    return { ...a, spp, pac: pac ?? 0, tosSpp: tos };
   }).filter(a => a.spp !== null);
 
   const bands = [
@@ -1944,7 +1955,7 @@ function buildSPPView() {
     areasSpp.forEach(a => {
       const z = (a.staging_group_name || 'OUTRAS').trim();
       if (!zoneSpp[z]) zoneSpp[z] = { tos: 0, pac: 0 };
-      zoneSpp[z].tos += a.to_quantity;
+      zoneSpp[z].tos += a.tosSpp;
       zoneSpp[z].pac += a.pac;
     });
 
@@ -2330,7 +2341,7 @@ function buildOperacional() {
         const tos  = a.to_quantity || 0;
         const cap  = a.capacity    || 0;
         const pac  = reportData?.byArea?.[a.area_name]?.pacotes ?? null;
-        const spp  = (pac != null && tos > 0) ? Math.round(pac / tos) : null;
+        const spp  = (pac != null && tos > 0) ? Math.round(pac / tosSpp(a)) : null;
         const occ  = parseOcc(a.occupy_percentage);
         const occColor = occ >= 85 ? 'var(--red)' : occ >= 60 ? 'var(--yellow)' : 'var(--green)';
         return `<div class="op-fifo-row">
