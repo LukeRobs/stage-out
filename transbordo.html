@@ -186,6 +186,25 @@ svg.icon { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-w
 .filters-count { margin-left: auto; font-size: 11.5px; color: var(--text-mute); align-self: center; }
 .filters-count b { color: var(--text); font-family: var(--font-mono); }
 
+/* ══════════════════════════ PERÍODO + CONSOLIDADO DIA A DIA ══════════════════════════ */
+.period-row { display: flex; align-items: center; gap: 6px; }
+.period-row .sep { font-size: 11px; color: var(--text-mute); }
+.preset-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.preset-btn {
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); padding: 7px 10px;
+  border-radius: 7px; font-size: 11.5px; font-weight: 600; cursor: pointer; min-height: 32px; font-family: inherit;
+  transition: all .15s var(--ease);
+}
+.preset-btn:hover { border-color: var(--border2); color: var(--text); background: var(--surface3); }
+.preset-btn.active { border-color: var(--accent-line); color: var(--accent); background: var(--accent-dim); }
+.daily-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.daily-bar { height: 6px; min-width: 90px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+.daily-bar > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+tr.daily-zero td { color: var(--text-mute); }
+tr.daily-total td { font-weight: 800; background: var(--surface2); position: sticky; bottom: 0; border-top: 1px solid var(--border); }
+tr.daily-row .dia-sem { color: var(--text-mute); font-size: 11px; margin-left: 6px; text-transform: capitalize; }
+.more-wrap { text-align: center; padding: 14px 0 4px; }
+
 /* ══════════════════════════ CHART + ORIGINS ROW ══════════════════════════ */
 .analysis-section { padding: 16px 28px 0; display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: stretch; }
 .panel-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; }
@@ -358,7 +377,7 @@ tr.turno-total:hover td { background: transparent; }
   <div class="kpi-card">
     <div class="kpi-label">Peso</div>
     <div class="kpi-value" id="kPeso">—</div>
-    <div class="kpi-sub">total escaneado no dia</div>
+    <div class="kpi-sub" id="kPesoSub">total escaneado no dia</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-label">Origens Ativas</div>
@@ -375,8 +394,22 @@ tr.turno-total:hover td { background: transparent; }
 <!-- Filtros -->
 <div class="filters-bar">
   <div class="filter-group">
-    <label for="dateFilter">Data</label>
-    <input type="date" id="dateFilter" class="filter-input">
+    <label for="dateFrom">Período</label>
+    <div class="period-row">
+      <input type="date" id="dateFrom" class="filter-input" aria-label="Data inicial">
+      <span class="sep">até</span>
+      <input type="date" id="dateTo" class="filter-input" aria-label="Data final">
+    </div>
+  </div>
+  <div class="filter-group">
+    <label>Atalhos</label>
+    <div class="preset-row" id="presetRow">
+      <button type="button" class="preset-btn" data-preset="hoje">Hoje</button>
+      <button type="button" class="preset-btn" data-preset="ontem">Ontem</button>
+      <button type="button" class="preset-btn" data-preset="7d">7 dias</button>
+      <button type="button" class="preset-btn" data-preset="mes">Este mês</button>
+      <button type="button" class="preset-btn" data-preset="mesant">Mês anterior</button>
+    </div>
   </div>
   <div class="filter-group">
     <label for="originFilter">Origem</label>
@@ -396,6 +429,34 @@ tr.turno-total:hover td { background: transparent; }
     Limpar filtros
   </button>
   <span class="filters-count" id="filtersCount"></span>
+</div>
+
+<!-- Consolidado dia a dia (aparece quando o período tem mais de 1 dia) -->
+<div id="dailySection" style="display:none">
+  <div class="section-divider daily-head">
+    <span>Consolidado dia a dia <span id="dailyMeta" style="text-transform:none;font-weight:500"></span></span>
+    <button type="button" class="preset-btn" id="dailyExport">⬇ Exportar CSV</button>
+  </div>
+  <div class="table-wrap">
+    <div class="table-scroll" style="max-height:520px">
+      <table class="main-table" id="dailyTable">
+        <thead>
+          <tr>
+            <th style="cursor:default">Dia</th>
+            <th style="text-align:right;cursor:default">TOs</th>
+            <th style="text-align:right;cursor:default">Pacotes</th>
+            <th style="cursor:default"></th>
+            <th style="text-align:right;cursor:default">Peso (kg)</th>
+            <th style="text-align:right;cursor:default">T1</th>
+            <th style="text-align:right;cursor:default">T2</th>
+            <th style="text-align:right;cursor:default">T3</th>
+            <th style="text-align:right;cursor:default">Exceções</th>
+          </tr>
+        </thead>
+        <tbody id="dailyBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- Análise -->
@@ -466,6 +527,7 @@ tr.turno-total:hover td { background: transparent; }
       <tbody id="mainBody"></tbody>
     </table>
   </div>
+  <div class="more-wrap" id="moreWrap" style="display:none"><button type="button" class="preset-btn" id="moreBtn">Mostrar mais</button></div>
 </div>
 
 <!-- Drill-down -->
@@ -555,15 +617,59 @@ let sortAsc       = false;
 let tableSearch   = '';
 let originFilter  = '';
 let turnoFilter   = null; // null | 'T1' | 'T2' | 'T3'
-let selectedDate  = todayStr();
+const ROW_PAGE    = 500;     // linhas da lista de TOs por vez (um mês inteiro passa de 20 mil e travaria o navegador)
+let dateFrom      = todayStr();
+let dateTo        = todayStr();
+let rowLimit      = ROW_PAGE;
 let lastFetchAt   = null;   // quando o servidor gerou os dados
 let lastLoadOkAt  = null;   // quando o browser conseguiu carregar com sucesso
 let fetchFailed   = false;
 let firstLoadDone = false;
 let nextPollAt    = Date.now() + POLL_MS;
 
-document.getElementById('dateFilter').value = selectedDate;
-document.getElementById('dateFilter').max = todayStr();
+// ── Período (dia operacional 06:00–05:59) ──────────────────────────────
+function addDays(str, n) {
+  const d = new Date(str + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function daysBetween(a, b) { return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5); }
+function isRange() { return dateFrom !== dateTo; }
+function periodLabel() { return isRange() ? `${fmtDateBR(dateFrom)} a ${fmtDateBR(dateTo)}` : fmtDateBR(dateFrom); }
+function presetRange(nome) {
+  const hoje = todayStr();
+  const [y, m] = hoje.split('-').map(Number);
+  const pad = n => String(n).padStart(2, '0');
+  if (nome === 'hoje')   return [hoje, hoje];
+  if (nome === 'ontem')  { const o = addDays(hoje, -1); return [o, o]; }
+  if (nome === '7d')     return [addDays(hoje, -6), hoje];
+  if (nome === 'mes')    return [`${y}-${pad(m)}-01`, hoje];
+  if (nome === 'mesant') {
+    const ult = addDays(`${y}-${pad(m)}-01`, -1);                 // último dia do mês anterior
+    return [ult.slice(0, 8) + '01', ult];
+  }
+  return [hoje, hoje];
+}
+function syncPeriodInputs() {
+  const fromEl = document.getElementById('dateFrom'), toEl = document.getElementById('dateTo');
+  fromEl.value = dateFrom; toEl.value = dateTo;
+  fromEl.max = dateTo;  toEl.min = dateFrom;  toEl.max = todayStr();
+  document.querySelectorAll('#presetRow .preset-btn').forEach(b => {
+    const [f, t] = presetRange(b.dataset.preset);
+    b.classList.toggle('active', f === dateFrom && t === dateTo);
+  });
+}
+function setPeriod(from, to) {
+  const hoje = todayStr();
+  if (!from) from = hoje;
+  if (!to) to = from;
+  if (to > hoje) to = hoje;
+  if (from > to) from = to;
+  dateFrom = from; dateTo = to; rowLimit = ROW_PAGE;
+  syncPeriodInputs();
+  render();
+}
+syncPeriodInputs();
 
 // ── System status / freshness ────────────────────────────────────────
 function renderSysStatus() {
@@ -622,7 +728,7 @@ renderDatePill();
 
 // ── Filters ────────────────────────────────────────────────────────────
 function filteredByDate() {
-  return allCd.filter(t => tsToDateStr(t.unloaded_time) === selectedDate);
+  return allCd.filter(t => { const d = tsToDateStr(t.unloaded_time); return d >= dateFrom && d <= dateTo; });
 }
 function applyFilters(items, opts) {
   opts = opts || {};
@@ -639,7 +745,7 @@ function applyFilters(items, opts) {
   return vis;
 }
 function updateClearFiltersState() {
-  const active = originFilter || turnoFilter || tableSearch || selectedDate !== todayStr();
+  const active = originFilter || turnoFilter || tableSearch || dateFrom !== todayStr() || dateTo !== todayStr();
   document.getElementById('clearFilters').classList.toggle('active', !!active);
 }
 
@@ -658,7 +764,7 @@ function buildKPIs() {
   document.getElementById('kOrigens').textContent = origens.size;
   document.getElementById('kOrigensSub').textContent = origens.size
     ? [...origens].slice(0, 2).join(', ') + (origens.size > 2 ? ` +${origens.size - 2}` : '')
-    : 'nenhuma estação com TO no dia';
+    : `nenhuma estação com TO ${isRange() ? 'no período' : 'no dia'}`;
   document.getElementById('kExc').textContent = excecoes;
 
   const excCard = document.getElementById('kExcCard');
@@ -666,29 +772,38 @@ function buildKPIs() {
   excCard.classList.toggle('ok', excecoes === 0);
   document.getElementById('kExcSub').textContent = excecoes > 0 ? 'requer verificação' : 'nenhuma pendência';
 
-  // Tendência vs dia anterior (só mostra se existir dado real do dia anterior)
-  const prevDate = new Date(selectedDate + 'T12:00:00');
-  prevDate.setDate(prevDate.getDate() - 1);
-  const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth()+1).padStart(2,'0')}-${String(prevDate.getDate()).padStart(2,'0')}`;
-  const prevCount = allCd.filter(t => tsToDateStr(t.unloaded_time) === prevStr).length;
+  // Tendência vs período anterior de MESMO tamanho (1 dia → dia anterior; mês → mesma quantidade de dias antes)
+  const nDias    = daysBetween(dateFrom, dateTo) + 1;
+  const prevTo   = addDays(dateFrom, -1);
+  const prevFrom = addDays(dateFrom, -nDias);
+  const prevCount = allCd.filter(t => { const d = tsToDateStr(t.unloaded_time); return d >= prevFrom && d <= prevTo; }).length;
   const trendEl = document.getElementById('kTrend');
   if (prevCount > 0) {
     const diff = dayTos.length - prevCount;
     const pct  = Math.round((diff / prevCount) * 100);
     trendEl.style.display = 'flex';
     trendEl.className = 'kpi-trend ' + (diff >= 0 ? 'up' : 'down');
-    trendEl.innerHTML = `${diff >= 0 ? '▲' : '▼'} ${Math.abs(pct)}% vs dia anterior (${fmtNum(prevCount)})`;
+    trendEl.innerHTML = `${diff >= 0 ? '▲' : '▼'} ${Math.abs(pct)}% vs ${isRange() ? 'período anterior' : 'dia anterior'} (${fmtNum(prevCount)})`;
   } else {
     trendEl.style.display = 'none';
   }
 
-  const label = selectedDate === todayStr() ? 'hoje' : fmtDateBR(selectedDate);
-  document.getElementById('kTotalSub').textContent = `TOs com tag CD escaneados ${label}`;
+  // Total consolidado do filtro: no período mostra também a média por dia
+  if (isRange()) {
+    const diasComDado = new Set(dayTos.map(t => tsToDateStr(t.unloaded_time))).size;
+    const media = diasComDado ? Math.round(dayTos.length / diasComDado) : 0;
+    document.getElementById('kTotalSub').textContent = `TOs com tag CD · ${periodLabel()} · ${diasComDado} ${diasComDado === 1 ? 'dia' : 'dias'} com dados · média ${fmtNum(media)}/dia`;
+    document.getElementById('kPesoSub').textContent = 'total escaneado no período';
+  } else {
+    const label = dateFrom === todayStr() ? 'hoje' : fmtDateBR(dateFrom);
+    document.getElementById('kTotalSub').textContent = `TOs com tag CD escaneados ${label}`;
+    document.getElementById('kPesoSub').textContent = 'total escaneado no dia';
+  }
 }
 
 // ── Chart ───────────────────────────────────────────────────────────────
 function buildChart() {
-  const isToday = selectedDate === todayStr();
+  const isToday = !isRange() && dateFrom === todayStr();
   const nowH  = new Date().getHours();
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const dayTos = applyFilters(filteredByDate());
@@ -701,8 +816,8 @@ function buildChart() {
 
   const maxVal = Math.max(1, ...arrived);
   document.getElementById('chartHl').textContent = dayTos.length
-    ? `— ${fmtDateBR(selectedDate)} · ${dayTos.length} TOs`
-    : `— ${fmtDateBR(selectedDate)} · sem TOs`;
+    ? `— ${periodLabel()}${isRange() ? ' (soma de todos os dias)' : ''} · ${dayTos.length} TOs`
+    : `— ${periodLabel()} · sem TOs`;
 
   const yLabels = [0, Math.round(maxVal * 0.33), Math.round(maxVal * 0.66), maxVal];
   document.getElementById('chartYAxis').innerHTML = [...yLabels].reverse().map(v => `<span>${fmtNum(v)}</span>`).join('');
@@ -779,7 +894,7 @@ function buildTurnoTable() {
 
   document.querySelectorAll('#turnoBody tr.turno-row').forEach(tr => {
     const t = tr.dataset.turno;
-    const toggle = () => { turnoFilter = turnoFilter === t ? null : t; render(); };
+    const toggle = () => { turnoFilter = turnoFilter === t ? null : t; rowLimit = ROW_PAGE; render(); };
     tr.addEventListener('click', toggle);
     tr.addEventListener('keydown', e => { if (e.key === 'Enter') toggle(); });
   });
@@ -853,8 +968,12 @@ function buildMainTable() {
   document.getElementById('emptyMsg').style.display  = 'none';
 
   const vis = sortedItems(applyFilters(dayTos));
-  document.getElementById('tableSectionMeta').textContent = `· ${fmtDateBR(selectedDate)}`;
-  document.getElementById('filtersCount').innerHTML = `<b>${vis.length}</b> TO${vis.length !== 1 ? 's' : ''} de ${dayTos.length} no dia`;
+  const shown = vis.slice(0, rowLimit);
+  document.getElementById('tableSectionMeta').textContent = `· ${periodLabel()}${vis.length > shown.length ? ` · mostrando ${fmtNum(shown.length)} de ${fmtNum(vis.length)}` : ''}`;
+  document.getElementById('filtersCount').innerHTML = `<b>${fmtNum(vis.length)}</b> TO${vis.length !== 1 ? 's' : ''} de ${fmtNum(dayTos.length)} ${isRange() ? 'no período' : 'no dia'}`;
+  const moreWrap = document.getElementById('moreWrap');
+  moreWrap.style.display = vis.length > shown.length ? '' : 'none';
+  document.getElementById('moreBtn').textContent = `Mostrar mais ${fmtNum(Math.min(ROW_PAGE, vis.length - shown.length))} (restam ${fmtNum(vis.length - shown.length)})`;
   updateClearFiltersState();
 
   if (!vis.length) {
@@ -862,7 +981,7 @@ function buildMainTable() {
     return;
   }
 
-  document.getElementById('mainBody').innerHTML = vis.map((t, i) => {
+  document.getElementById('mainBody').innerHTML = shown.map((t, i) => {
     const exc = hasException(t);
     return `<tr class="${exc ? 'row-flagged' : ''}" tabindex="0" data-idx="${i}" data-to="${t.to_number}">
       <td class="mono" style="color:var(--accent)">${t.to_number || '—'}</td>
@@ -879,11 +998,85 @@ function buildMainTable() {
   }).join('');
 
   // referência pro drill-down (evita re-buscar em allCd por índice de linha filtrada)
-  window.__visibleRows = vis;
+  window.__visibleRows = shown;
   document.querySelectorAll('#mainBody tr[data-idx]').forEach(tr => {
     tr.addEventListener('click', () => openDrawer(window.__visibleRows[Number(tr.dataset.idx)]));
     tr.addEventListener('keydown', e => { if (e.key === 'Enter') openDrawer(window.__visibleRows[Number(tr.dataset.idx)]); });
   });
+}
+
+// ── Consolidado dia a dia (só quando o período tem mais de 1 dia) ───────────
+let __dailyRows = [];
+function buildDaily() {
+  const sec = document.getElementById('dailySection');
+  if (!isRange() || !allCd.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+
+  const items = applyFilters(filteredByDate()); // mesmos filtros dos cartões
+  const nDias = daysBetween(dateFrom, dateTo) + 1;
+  const dias = {};
+  const nova = () => ({ tos: 0, pacotes: 0, peso: 0, T1: 0, T2: 0, T3: 0, exc: 0 });
+  if (nDias <= 93) for (let d = dateFrom; d <= dateTo; d = addDays(d, 1)) dias[d] = nova(); // mostra também os dias SEM dado
+  items.forEach(t => {
+    const d = tsToDateStr(t.unloaded_time);
+    const a = dias[d] || (dias[d] = nova());
+    a.tos++; a.pacotes += t.to_parcel_quantity || 0; a.peso += t.to_weight || 0;
+    const tu = turnoOf(t.unloaded_time); if (tu) a[tu]++;
+    if (hasException(t)) a.exc++;
+  });
+  const lista = Object.entries(dias).sort((x, y) => x[0].localeCompare(y[0]));
+  const tot = nova();
+  lista.forEach(([, a]) => { Object.keys(tot).forEach(k => { tot[k] += a[k]; }); });
+  const maxP = Math.max(1, ...lista.map(([, a]) => a.pacotes));
+  const comDado = lista.filter(([, a]) => a.tos > 0).length;
+  __dailyRows = lista.map(([d, a]) => ({ dia: d, ...a })).concat([{ dia: 'TOTAL', ...tot }]);
+
+  document.getElementById('dailyMeta').textContent = `· ${periodLabel()} · ${comDado} de ${lista.length} dias com dados`;
+  document.getElementById('dailyBody').innerHTML = lista.map(([d, a]) => {
+    const sem = new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+    const vazio = a.tos === 0;
+    return `<tr class="daily-row${vazio ? ' daily-zero' : ''}" data-dia="${d}" tabindex="0" title="Clique para ver só este dia">
+      <td class="mono">${fmtDateBR(d)}<span class="dia-sem">${sem}</span></td>
+      <td class="num-cell">${vazio ? '—' : fmtNum(a.tos)}</td>
+      <td class="num-cell" style="font-weight:700">${vazio ? '—' : fmtNum(a.pacotes)}</td>
+      <td><div class="daily-bar"><i style="width:${Math.round(a.pacotes / maxP * 100)}%"></i></div></td>
+      <td class="num-cell mono">${vazio ? '—' : fmtKg(a.peso)}</td>
+      <td class="num-cell">${vazio ? '—' : fmtNum(a.T1)}</td>
+      <td class="num-cell">${vazio ? '—' : fmtNum(a.T2)}</td>
+      <td class="num-cell">${vazio ? '—' : fmtNum(a.T3)}</td>
+      <td class="num-cell">${a.exc ? '<span class="badge badge-exc">' + fmtNum(a.exc) + '</span>' : (vazio ? '—' : '0')}</td>
+    </tr>`;
+  }).join('') + `<tr class="daily-total">
+      <td>Total do filtro</td>
+      <td class="num-cell">${fmtNum(tot.tos)}</td>
+      <td class="num-cell">${fmtNum(tot.pacotes)}</td>
+      <td></td>
+      <td class="num-cell mono">${fmtKg(tot.peso)}</td>
+      <td class="num-cell">${fmtNum(tot.T1)}</td>
+      <td class="num-cell">${fmtNum(tot.T2)}</td>
+      <td class="num-cell">${fmtNum(tot.T3)}</td>
+      <td class="num-cell">${fmtNum(tot.exc)}</td>
+    </tr>`;
+
+  document.querySelectorAll('#dailyBody tr.daily-row').forEach(tr => {
+    const abrir = () => { setPeriod(tr.dataset.dia, tr.dataset.dia); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    tr.addEventListener('click', abrir);
+    tr.addEventListener('keydown', e => { if (e.key === 'Enter') abrir(); });
+  });
+}
+function exportDailyCSV() {
+  if (!__dailyRows.length) return;
+  const cab = ['Dia', 'TOs', 'Pacotes', 'Peso_kg', 'T1', 'T2', 'T3', 'Excecoes'];
+  const linhas = __dailyRows.map(r => [
+    r.dia === 'TOTAL' ? 'TOTAL' : fmtDateBR(r.dia), r.tos, r.pacotes,
+    (r.peso / 1000).toFixed(1).replace('.', ','), r.T1, r.T2, r.T3, r.exc,
+  ].join(';'));
+  const blob = new Blob(['\uFEFF' + [cab.join(';'), ...linhas].join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `transbordo_consolidado_${dateFrom}_${dateTo}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 // ── Sort headers ────────────────────────────────────────────────────────
@@ -936,21 +1129,28 @@ document.getElementById('drawerOverlay').addEventListener('click', closeDrawer);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
 // ── Filters wiring ──────────────────────────────────────────────────────
-document.getElementById('tableSearch').addEventListener('input', e => { tableSearch = e.target.value; render(); });
-document.getElementById('originFilter').addEventListener('change', e => { originFilter = e.target.value; render(); });
-document.getElementById('dateFilter').addEventListener('change', e => { selectedDate = e.target.value || todayStr(); render(); });
+document.getElementById('tableSearch').addEventListener('input', e => { tableSearch = e.target.value; rowLimit = ROW_PAGE; render(); });
+document.getElementById('originFilter').addEventListener('change', e => { originFilter = e.target.value; rowLimit = ROW_PAGE; render(); });
+document.getElementById('dateFrom').addEventListener('change', e => setPeriod(e.target.value, dateTo));
+document.getElementById('dateTo').addEventListener('change', e => setPeriod(dateFrom, e.target.value));
+document.getElementById('presetRow').addEventListener('click', e => {
+  const b = e.target.closest('[data-preset]');
+  if (b) { const [f, t] = presetRange(b.dataset.preset); setPeriod(f, t); }
+});
+document.getElementById('dailyExport').addEventListener('click', exportDailyCSV);
+document.getElementById('moreBtn').addEventListener('click', () => { rowLimit += ROW_PAGE; buildMainTable(); });
 document.getElementById('clearFilters').addEventListener('click', () => {
-  tableSearch = ''; originFilter = ''; turnoFilter = null; selectedDate = todayStr();
+  tableSearch = ''; originFilter = ''; turnoFilter = null;
   document.getElementById('tableSearch').value = '';
   document.getElementById('originFilter').value = '';
-  document.getElementById('dateFilter').value = selectedDate;
-  render();
+  setPeriod(todayStr(), todayStr());
 });
 
 // ── Render all ──────────────────────────────────────────────────────────
 function render() {
   buildOriginOptions();
   buildKPIs();
+  buildDaily();
   buildChart();
   buildOriginsPanel();
   buildTurnoTable();
