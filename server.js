@@ -1705,6 +1705,14 @@
       return;
     }
 
+    // GET/HEAD /healthz — resposta mínima, sem tocar em planilha. Usada por monitor externo
+    // (ex.: UptimeRobot) para o plano Free do Render não hibernar fora do horário de operação.
+    if (urlPath === '/healthz' && (req.method === 'GET' || req.method === 'HEAD')) {
+      res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : 'ok');
+      return;
+    }
+
     if (urlPath === '/api/force-save' && req.method === 'POST') {
       (async () => {
         const result = await forceSaveToSheets();
