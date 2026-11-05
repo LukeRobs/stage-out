@@ -910,11 +910,26 @@
   // Lê uma aba em blocos de CHUNK linhas (em vez de A2:J1000000 de uma vez — o JSON inteiro de
   // 200 mil linhas + as linhas parseadas estouravam os 512MB no boot) e entrega cada bloco a fn()
   // antes de buscar o próximo, então só um bloco existe em memória por vez.
-  async function forEachSheetChunk(spreadsheetId, sheet, lastCol, fn, chunk = 15000) {
-    for (let start = 2; ; start += chunk) {
+  // A cota de leitura do Google é de ~60 requisições/min por PROJETO (compartilhada com qualquer outro
+  // processo que use a mesma conta de serviço). Por isso: blocos maiores (menos chamadas), pausa entre
+  // blocos e, se vier 429/5xx, espera e tenta de novo em vez de desistir e deixar a memória sem dados.
+  const SHEETS_PAUSA_ENTRE_BLOCOS_MS = 1500;
+  async function sheetsGetComRetry(url) {
+    for (let tentativa = 0; ; tentativa++) {
       const token = await getServiceAccountToken();
+      const resp  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if ((resp.status !== 429 && resp.status < 500) || tentativa >= 6) return resp;
+      const espera = Math.min(60000, 5000 * 2 ** tentativa);
+      console.warn(`[sheets] ${resp.status} na leitura — nova tentativa em ${Math.round(espera / 1000)}s (${tentativa + 1}/6)`);
+      await new Promise(r => setTimeout(r, espera));
+    }
+  }
+
+  async function forEachSheetChunk(spreadsheetId, sheet, lastCol, fn, chunk = 20000) {
+    for (let start = 2; ; start += chunk) {
+      if (start > 2) await new Promise(r => setTimeout(r, SHEETS_PAUSA_ENTRE_BLOCOS_MS));
       const range = `${sheet}!A${start}:${lastCol}${start + chunk - 1}`;
-      const resp  = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`, { headers: { Authorization: `Bearer ${token}` } });
+      const resp  = await sheetsGetComRetry(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`);
       if (!resp.ok) {
         if (start > 2 && resp.status === 400) break; // bloco além do fim da grade da aba
         throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
@@ -1314,9 +1329,8 @@
   async function loadAgingJustifiedFromSheet() {
     if (!SERVICE_ACCOUNT) return;
     try {
-      const token = await getServiceAccountToken();
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${AGING_SHEET_ID}/values/${encodeURIComponent('Base!A2:L1000000')}`;
-      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const resp = await sheetsGetComRetry(url);
       if (!resp.ok) throw new Error(`Sheets get ${resp.status}: ${await resp.text()}`);
       const rows = (await resp.json()).values || [];
       let restored = 0;
