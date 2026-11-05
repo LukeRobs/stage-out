@@ -25,6 +25,20 @@
     });
   } catch (_) {}
 
+  // ── Modo de operação ───────────────────────────────────────────────────
+  // O plano Free do Render (512MB) não aguentava todos os módulos ao mesmo tempo (histórico de sacas, TOs
+  // packing/packed, stage in/out, fila, etc.): o servidor caía a cada poucos minutos. Por enquanto roda SÓ o
+  // Transbordo. Para religar tudo, defina a variável de ambiente MODULOS=todos (sem mexer no código).
+  const MODULOS = String(process.env.MODULOS || 'transbordo').toLowerCase();
+  const SOMENTE_TRANSBORDO = MODULOS !== 'todos';
+  const ROTAS_TRANSBORDO = new Set([
+    '/healthz',
+    '/api/transbordo-cd-data', '/api/transbordo-cd', // TOs com tag CD (Tampermonkey → servidor → dashboard)
+    '/api/trip-data', '/api/trips',                  // viagens em andamento (fonte do transbordo_cd_sync)
+    '/api/trip-history-data', '/api/trip-history',   // histórico de viagens (idem)
+  ]);
+  console.log(SOMENTE_TRANSBORDO ? '[modo] SOMENTE TRANSBORDO — demais módulos desativados (MODULOS=todos religa)' : '[modo] TODOS os módulos ativos');
+
   const SPREADSHEET_ID = '1Sk16vRNBUsQitL3cRUSIH86SyfQpxV9t08UW2YrSdmQ';
   const RANGE          = 'Daily!A1:Q3000';
   const CACHE_TTL      = 60 * 1000; // 60 seconds
@@ -263,7 +277,7 @@
 }
 
   // Pre-warm cache on startup
-  getData((err, data) => {
+  if (!SOMENTE_TRANSBORDO) getData((err, data) => {
     if (err) console.error('[startup] Initial data fetch failed:', err.message);
     else     console.log(`[startup] Data ready — ${data.rowCount} rows across ${data.DATES.length} dates`);
   });
@@ -974,7 +988,7 @@
     } catch (e) { console.error(`[sacas-sheet] falha ao recarregar planilha da estação ${station}:`, e.message); }
   }
 
-  for (const [station, spreadsheetId] of Object.entries(SACAS_SHEET_ID_BY_STATION)) {
+  if (!SOMENTE_TRANSBORDO) for (const [station, spreadsheetId] of Object.entries(SACAS_SHEET_ID_BY_STATION)) {
     enqueueBoot(() => ensureSacasSheetHeader(spreadsheetId));
     enqueueBoot(() => loadSacasLogFromSheet(station, spreadsheetId));
   }
@@ -1280,6 +1294,44 @@
   setTimeout(() => enqueueBoot(loadTransbordoCdFromSheet), 30 * 1000);
   setTimeout(() => enqueueBoot(loadTransbordoCdFromSheet), 2 * 60 * 1000);
 
+  // /api/transbordo-cd devolvia ~30MB de JSON NOVO a cada requisição (o dashboard consulta a cada 15 s, por aba).
+  // Agora o JSON é gerado no máximo 1x a cada TRANSBORDO_GZ_TTL_MS por estação, já comprimido (gzip), e reaproveitado
+  // por todas as requisições; requisições simultâneas compartilham a mesma geração (dado novo aparece em até 10 s).
+  const TRANSBORDO_GZ_TTL_MS = 10 * 1000;
+  const transbordoCdGzCache = new Map(); // station -> { gz, builtAt, pending }
+  function transbordoCdGz(station) {
+    const key = String(station);
+    const c = transbordoCdGzCache.get(key);
+    if (c?.gz && Date.now() - c.builtAt < TRANSBORDO_GZ_TTL_MS) return Promise.resolve(c.gz);
+    if (c?.pending) return c.pending;
+    const dados = transbordoCdCacheByStation.get(key) || { list: [], fetchedAt: null };
+    const { list = [], ...resto } = dados;
+    // Comprime em FATIAS: o JSON completo (~30MB) nunca existe de uma vez na memória — só uma fatia por vez
+    // (a saída comprimida tem ~1MB). O formato final é o mesmo { ...resto, list: [...] }.
+    const pending = new Promise((resolve, reject) => {
+      const gz = zlib.createGzip();
+      const partes = [];
+      gz.on('data', p => partes.push(p));
+      gz.on('end', () => resolve(Buffer.concat(partes)));
+      gz.on('error', reject);
+      const FATIA = 2000;
+      gz.write(JSON.stringify({ ...resto, list: [] }).slice(0, -2)); // abre o array: ...,"list":[
+      let i = 0;
+      const proxima = () => {
+        if (i >= list.length) { gz.end(']}'); return; }
+        const texto = list.slice(i, i + FATIA).map(t => JSON.stringify(t)).join(',');
+        gz.write((i > 0 ? ',' : '') + texto);
+        i += FATIA;
+        setImmediate(proxima); // devolve o controle ao event loop entre as fatias (não trava os outros requests)
+      };
+      proxima();
+    })
+      .then(gz => { transbordoCdGzCache.set(key, { gz, builtAt: Date.now() }); return gz; })
+      .catch(e => { transbordoCdGzCache.delete(key); throw e; });
+    transbordoCdGzCache.set(key, { gz: c?.gz, builtAt: c?.builtAt || 0, pending });
+    return pending;
+  }
+
   async function flushTransbordoCdSheet() {
     if (!transbordoCdPendingRows.length) return;
     const batch = transbordoCdPendingRows;
@@ -1345,9 +1397,11 @@
     } catch (e) { console.error('[aging-sheet] falha ao recarregar planilha:', e.message); }
   }
 
-  enqueueBoot(ensureAgingSheetHeader);
-  enqueueBoot(loadAgingJustifiedFromSheet);
-  setTimeout(() => enqueueBoot(loadAgingJustifiedFromSheet), 30 * 1000); // idempotente — cobre rede ainda fria no cold start
+  if (!SOMENTE_TRANSBORDO) {
+    enqueueBoot(ensureAgingSheetHeader);
+    enqueueBoot(loadAgingJustifiedFromSheet);
+    setTimeout(() => enqueueBoot(loadAgingJustifiedFromSheet), 30 * 1000); // idempotente — cobre rede ainda fria no cold start
+  }
 
   async function appendAgingRowsToSheet(rows) {
     if (!SERVICE_ACCOUNT) throw new Error('Service Account não configurado');
@@ -1724,6 +1778,20 @@
     if (urlPath === '/healthz' && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(200, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
       res.end(req.method === 'HEAD' ? undefined : 'ok');
+      return;
+    }
+
+    // Modo somente-transbordo: os demais módulos não guardam nada em memória. Os POSTs dos scripts
+    // recebem 200 (pra não gerar erro/retry nos computadores); as leituras recebem 503 com o motivo.
+    if (SOMENTE_TRANSBORDO && urlPath.startsWith('/api/') && !ROTAS_TRANSBORDO.has(urlPath)) {
+      req.resume(); // descarta o corpo sem acumular
+      if (req.method === 'POST') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ignored: true, motivo: 'servidor em modo somente transbordo' }));
+      } else {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Módulo desativado temporariamente — o servidor está em modo somente transbordo.' }));
+      }
       return;
     }
 
@@ -2483,8 +2551,12 @@
 
     // GET /api/transbordo-cd?station=X — serves TOs de transbordo (cd_flag) ao dashboard
     if (urlPath === '/api/transbordo-cd') {
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
-      res.end(JSON.stringify(transbordoCdCacheByStation.get(stationParam(req)) || { list: [], fetchedAt: null }));
+      transbordoCdGz(stationParam(req)).then(gz => {
+        const wantsGzip = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+        const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Vary': 'Accept-Encoding' };
+        if (wantsGzip) { res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip' }); res.end(gz); }
+        else zlib.gunzip(gz, (err, raw) => { res.writeHead(err ? 500 : 200, headers); res.end(err ? '{}' : raw); });
+      }).catch(e => { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: e.message })); });
       return;
     }
 
@@ -2983,13 +3055,15 @@
     try { scheduleRevalidation(); }
     catch (e) { console.error('[revalidate] erro (ignorado):', e.message); }
   }
-  setInterval(safeScheduleRevalidation, REVALIDATE_INTERVAL_MS);
-  setTimeout(safeScheduleRevalidation, 15 * 1000); // primeira leva logo apos o boot, sem esperar 5min
+  if (!SOMENTE_TRANSBORDO) {
+    setInterval(safeScheduleRevalidation, REVALIDATE_INTERVAL_MS);
+    setTimeout(safeScheduleRevalidation, 15 * 1000); // primeira leva logo apos o boot, sem esperar 5min
+  }
 
   function safeFlushSacasSheet() {
     flushSacasSheet().catch(e => console.error('[sacas-sheet] erro inesperado (ignorado):', e.message));
   }
-  setInterval(safeFlushSacasSheet, SACAS_SHEET_FLUSH_MS);
+  if (!SOMENTE_TRANSBORDO) setInterval(safeFlushSacasSheet, SACAS_SHEET_FLUSH_MS);
 
   function safeFlushTransbordoCdSheet() {
     flushTransbordoCdSheet().catch(e => console.error('[transbordo-cd-sheet] erro inesperado (ignorado):', e.message));
