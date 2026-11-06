@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -257,6 +257,15 @@
     // manualmente), pra comparar com o que a chamada automática do script está trazendo.
     if (DEBUG_TRIPS.includes(trip.id)) {
       console.log(`[TransbordoCD][DEBUG] trip ${trip.id}: seq=${seq} apiTotal=${total} scanned=${list.length} cd=${list.filter(t => t.cd_flag === true).length}`, list.slice(0, 3));
+    }
+
+    // Diagnóstico (v2.1): registra 1 TO bruta com TODOS os campos que o SPX devolve, pra descobrir se já vem o
+    // próximo destino. Só loga (nada é enviado). Uma vez por carga da página — F12 > Console > filtrar "AMOSTRA".
+    const brutaCd = list.find(to => to.cd_flag === true);
+    if (brutaCd && !window.__tcdAmostraLogada) {
+      window.__tcdAmostraLogada = true;
+      console.log('[TransbordoCD][AMOSTRA] campos da TO:', Object.keys(brutaCd).join(', '));
+      console.log('[TransbordoCD][AMOSTRA] item bruto:', JSON.stringify(brutaCd));
     }
 
     const cdList = list.filter(to => to.cd_flag === true).map(to => ({
