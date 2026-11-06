@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync · Recife 04
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync_recife04.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -313,7 +313,7 @@
     if (resultados.every(r => r.status === 'rejected')) throw new Error('nenhum destino aceitou o envio');
   }
 
-  // ── Próximo destino (v2.2) ────────────────────────────────────────────────
+  // ── Próximo destino (v2.3) ────────────────────────────────────────────────
   // A lista de TOs da viagem NÃO traz o destino seguinte. Ele está no DETALHE da TO: to_path = "Origem>Esta(XD)>Destino"
   // ((XD) = cross-dock). Consulta 1 TO por vez (count=1: só os dados da TO, sem os pacotes), devagar e em lotes pequenos,
   // priorizando as mais recentes, e manda ao servidor. TOs já enviadas ficam registradas (GM_setValue) e não são buscadas de novo.
@@ -349,8 +349,15 @@
 
   async function enriquecerDestinos(cdList) {
     const enviados = loadDestEnviados();
+    // TOs recentes que o servidor já tem mas ainda estão sem destino (ex.: recebidas antes desta versão, de viagens
+    // já concluídas que a rodada normal não reprocessa). Janela de 48 h; as mais recentes primeiro.
+    let doServidor = [];
+    try {
+      const r = await gmGetJson(`${SERVER_BASE}/api/transbordo-destino-pendentes?station=${STATION_ID}&horas=48`);
+      doServidor = r.list || [];
+    } catch (e) { console.warn('[TransbordoCD] pendentes de destino:', e.message); }
     const vistos = new Set();
-    const pendentes = cdList.filter(t => {
+    const pendentes = cdList.concat(doServidor).filter(t => {
       if (!t.to_number || enviados.has(t.to_number) || vistos.has(t.to_number)) return false;
       vistos.add(t.to_number); return true;
     }).sort((a, b) => (b.unloaded_time || 0) - (a.unloaded_time || 0)); // as mais recentes primeiro

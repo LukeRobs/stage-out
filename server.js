@@ -35,6 +35,7 @@
     '/healthz',
     '/api/transbordo-cd-data', '/api/transbordo-cd', // TOs com tag CD (Tampermonkey → servidor → dashboard)
     '/api/transbordo-destino-data',                  // próximo destino de cada TO CD (Tampermonkey → servidor)
+    '/api/transbordo-destino-pendentes',             // TOs recentes ainda sem destino (o script busca essas também)
     '/api/trip-data', '/api/trips',                  // viagens em andamento (fonte do transbordo_cd_sync)
     '/api/trip-history-data', '/api/trip-history',   // histórico de viagens (idem)
   ]);
@@ -2618,6 +2619,24 @@
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
         }
       });
+      return;
+    }
+
+    // GET /api/transbordo-destino-pendentes?station=X&horas=48 — TOs das últimas N horas que ainda não têm destino.
+    // O script usa isso pra buscar o destino também das TOs que já foram recebidas (viagens já concluídas não voltam
+    // na rodada normal dele).
+    if (urlPath === '/api/transbordo-destino-pendentes') {
+      const st    = stationParam(req);
+      const horas = Math.min(168, Math.max(1, Number(new URL(req.url, 'http://internal').searchParams.get('horas')) || 48));
+      const corte = Math.floor(Date.now() / 1000) - horas * 3600;
+      const todas = (transbordoCdCacheByStation.get(st)?.list || [])
+        .filter(t => t.to_number && (t.unloaded_time || 0) >= corte && !transbordoDestino.has(`${st}|${t.to_number}`));
+      const list = todas
+        .sort((a, b) => (b.unloaded_time || 0) - (a.unloaded_time || 0)) // as mais recentes primeiro
+        .slice(0, 2000)
+        .map(t => ({ to_number: t.to_number, unloaded_station_name: t.unloaded_station_name || '', unloaded_time: t.unloaded_time || 0 }));
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ list, total: todas.length, horas }));
       return;
     }
 
