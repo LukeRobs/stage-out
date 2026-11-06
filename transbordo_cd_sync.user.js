@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         SPX Transbordo CD → Dashboard Sync
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.2
 // @updateURL    https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/LukeRobs/stage-out/main/transbordo_cd_sync.user.js
 // @description  Sincroniza TOs de transbordo (cd_flag) — busca viagem por viagem via trip/history/loading/list e manda só as marcadas CD pro dashboard Transbordo
@@ -313,6 +313,75 @@
     if (resultados.every(r => r.status === 'rejected')) throw new Error('nenhum destino aceitou o envio');
   }
 
+  // ── Próximo destino (v2.2) ────────────────────────────────────────────────
+  // A lista de TOs da viagem NÃO traz o destino seguinte. Ele está no DETALHE da TO: to_path = "Origem>Esta(XD)>Destino"
+  // ((XD) = cross-dock). Consulta 1 TO por vez (count=1: só os dados da TO, sem os pacotes), devagar e em lotes pequenos,
+  // priorizando as mais recentes, e manda ao servidor. TOs já enviadas ficam registradas (GM_setValue) e não são buscadas de novo.
+  const DEST_URL        = `${SERVER_BASE}/api/transbordo-destino-data`;
+  const TO_DETAIL_URL   = '/api/in-station/general_to/detail/search';
+  const DEST_POR_CICLO  = 150;   // máx. de consultas ao SPX por ciclo (o resto fica pro próximo; ~2 min de trabalho)
+  const DEST_PAUSA_MS   = 700;   // pausa entre consultas — sem rajada contra o SPX
+  const DEST_KEY        = 'tcd_dest_enviados_' + STATION_ID;
+  const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+  function loadDestEnviados() { try { return new Set(JSON.parse(GM_getValue(DEST_KEY, '[]'))); } catch (e) { return new Set(); } }
+  function saveDestEnviados(set) { GM_setValue(DEST_KEY, JSON.stringify([...set].slice(-30000))); }
+
+  // O nome que vem DEPOIS da nossa estação na rota. Fallbacks: marcador (XD); por fim dest_station_name.
+  function proximoDestino(d, nossaEstacao) {
+    const partes = String(d.to_path || '').split('>').map(x => x.trim()).filter(Boolean);
+    const nomes  = partes.map(x => x.replace(/\s*\(XD\)\s*$/i, '').trim());
+    let idx = nossaEstacao ? nomes.indexOf(nossaEstacao) : -1;
+    if (idx < 0) idx = partes.findIndex(x => /\(XD\)/i.test(x));
+    const prox = idx >= 0 ? nomes[idx + 1] : null;
+    if (prox) return prox;
+    const dest = d.dest_station_name || d.receiver || '';
+    return dest && dest !== nossaEstacao ? dest : null;
+  }
+
+  async function fetchToDetalhe(toNumber) {
+    const res = await fetch(`${TO_DETAIL_URL}?to_number=${encodeURIComponent(toNumber)}&pageno=1&count=1`, {
+      credentials: 'include', headers: { 'x-csrftoken': getCsrf() },
+    });
+    const json = JSON.parse(await res.text());
+    if (json.retcode !== 0) throw new Error(`retcode ${json.retcode}: ${json.message}`);
+    return json.data || {};
+  }
+
+  async function enriquecerDestinos(cdList) {
+    const enviados = loadDestEnviados();
+    const vistos = new Set();
+    const pendentes = cdList.filter(t => {
+      if (!t.to_number || enviados.has(t.to_number) || vistos.has(t.to_number)) return false;
+      vistos.add(t.to_number); return true;
+    }).sort((a, b) => (b.unloaded_time || 0) - (a.unloaded_time || 0)); // as mais recentes primeiro
+    if (!pendentes.length) return;
+
+    const lote = pendentes.slice(0, DEST_POR_CICLO);
+    const itens = [], resolvidas = [];
+    for (const t of lote) {
+      try {
+        const d = await fetchToDetalhe(t.to_number);
+        const dest = proximoDestino(d, t.unloaded_station_name);
+        if (dest) itens.push({ to_number: t.to_number, proximo_destino: dest, to_path: d.to_path || '' });
+        resolvidas.push(t.to_number); // sem rota/destino também sai da fila (não adianta insistir)
+      } catch (e) {
+        console.warn(`[TransbordoCD] destino de ${t.to_number}:`, e.message); // falhou: tenta de novo no próximo ciclo
+      }
+      await sleepMs(DEST_PAUSA_MS);
+    }
+    if (itens.length) {
+      await new Promise((resolve, reject) => GM_xmlhttpRequest({
+        method: 'POST', url: DEST_URL, headers: { 'Content-Type': 'application/json' },
+        data: JSON.stringify({ station_id: STATION_ID, items: itens }), timeout: 30000,
+        onload: r => (r.status === 200 ? resolve() : reject(new Error(`status ${r.status}`))),
+        onerror: () => reject(new Error('network error')), ontimeout: () => reject(new Error('timeout')),
+      }));
+    }
+    resolvidas.forEach(x => enviados.add(x)); // só marca como enviada depois do envio dar certo
+    saveDestEnviados(enviados);
+    console.log(`[TransbordoCD] destinos: ${itens.length} enviados, ${pendentes.length - lote.length} ainda na fila`);
+  }
+
   async function sync() {
     dot.textContent      = '🔄 CD...';
     dot.style.background = '#888';
@@ -341,6 +410,7 @@
       // pro dashboard que o sync rodou com sucesso (só não achou nenhuma TO com CD ainda).
       // Sem isso, o dashboard não tem como distinguir "nunca sincronizou" de "sincronizou e achou zero".
       await sendToServer(allCd);
+      try { await enriquecerDestinos(allCd); } catch (e) { console.warn('[TransbordoCD] destinos:', e.message); }
 
       dot.textContent      = `✅ CD ${allCd.length}/${toProcess.length}v ` + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       dot.style.background = '#059669';

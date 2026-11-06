@@ -204,6 +204,12 @@ tr.daily-zero td { color: var(--text-mute); }
 tr.daily-total td { font-weight: 800; background: var(--surface2); position: sticky; bottom: 0; border-top: 1px solid var(--border); }
 tr.daily-row .dia-sem { color: var(--text-mute); font-size: 11px; margin-left: 6px; text-transform: capitalize; }
 .more-wrap { text-align: center; padding: 14px 0 4px; }
+.analysis-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.analysis-side .panel-card { flex: 1; }
+.origin-row.sem-dest .origin-name, .origin-row.sem-dest .origin-count { color: var(--text-mute); font-style: italic; }
+.origin-row.sem-dest .origin-bar-fill { background: var(--surface3); }
+.dest-note { font-size: 10.5px; color: var(--text-mute); margin-top: 10px; line-height: 1.4; }
+.dest-fill { background: #2DD4BF !important; }
 
 /* ══════════════════════════ CHART + ORIGINS ROW ══════════════════════════ */
 .analysis-section { padding: 16px 28px 0; display: grid; grid-template-columns: 2fr 1fr; gap: 12px; align-items: stretch; }
@@ -477,12 +483,22 @@ tr.turno-total:hover td { background: transparent; }
       </div>
     </div>
   </div>
-  <div class="panel-card">
-    <div class="panel-title">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
-      Top Origens
+  <div class="analysis-side">
+    <div class="panel-card">
+      <div class="panel-title">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+        Top Origens
+      </div>
+      <div class="origins-list" id="originsList"></div>
     </div>
-    <div class="origins-list" id="originsList"></div>
+    <div class="panel-card">
+      <div class="panel-title">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+        Top Destinos <span class="hl" style="font-weight:500;color:var(--text-mute)">· próximo destino</span>
+      </div>
+      <div class="origins-list" id="destinosList"></div>
+      <div class="dest-note" id="destinosNote"></div>
+    </div>
   </div>
 </div>
 
@@ -863,6 +879,42 @@ function buildOriginsPanel() {
     </div>`).join('');
 }
 
+// ── Destinos (próximo destino da TO — vem do detalhe da TO, coletado pelo script v2.2+) ───────────────
+function buildDestinosPanel() {
+  const dayTos = applyFilters(filteredByDate());
+  const el = document.getElementById('destinosList');
+  const note = document.getElementById('destinosNote');
+  const counts = {};
+  let semDest = 0;
+  dayTos.forEach(t => {
+    if (t.proximo_destino) counts[t.proximo_destino] = (counts[t.proximo_destino] || 0) + 1;
+    else semDest++;
+  });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!dayTos.length) { el.innerHTML = '<div class="panel-empty">Nenhuma TO no período selecionado</div>'; note.textContent = ''; return; }
+  if (!entries.length) {
+    el.innerHTML = '<div class="panel-empty">Destino ainda não coletado para este período</div>';
+    note.textContent = 'O próximo destino é coletado das TOs novas, a partir da versão 2.2 do script de transbordo.';
+    return;
+  }
+  const max = entries[0][1];
+  const linhas = entries.map(([name, count]) => `
+    <div class="origin-row" title="${name}">
+      <span class="origin-name">${name}</span>
+      <div class="origin-bar-track"><div class="origin-bar-fill dest-fill" style="width:${Math.max(4, Math.round(count/max*100))}%"></div></div>
+      <span class="origin-count">${fmtNum(count)}</span>
+    </div>`).join('');
+  const sem = semDest ? `
+    <div class="origin-row sem-dest" title="TOs sem destino identificado">
+      <span class="origin-name">(sem destino)</span>
+      <div class="origin-bar-track"><div class="origin-bar-fill" style="width:${Math.max(4, Math.round(semDest/max*100))}%"></div></div>
+      <span class="origin-count">${fmtNum(semDest)}</span>
+    </div>` : '';
+  el.innerHTML = linhas + sem;
+  const comDest = dayTos.length - semDest;
+  note.textContent = `${fmtNum(comDest)} de ${fmtNum(dayTos.length)} TOs (${Math.round(comDest / dayTos.length * 100)}%) com destino identificado${semDest ? ' — as demais são anteriores à coleta ou ainda estão na fila' : ''}.`;
+}
+
 // ── Turno (T1 06:00-13:59 · T2 14:00-21:59 · T3 22:00-05:59) ──────────────
 function buildTurnoTable() {
   // Ignora o próprio filtro de turno aqui — a tabela sempre mostra os 3 turnos completos
@@ -1153,6 +1205,7 @@ function render() {
   buildDaily();
   buildChart();
   buildOriginsPanel();
+  buildDestinosPanel();
   buildTurnoTable();
   buildMainTable();
 }

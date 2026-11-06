@@ -34,6 +34,7 @@
   const ROTAS_TRANSBORDO = new Set([
     '/healthz',
     '/api/transbordo-cd-data', '/api/transbordo-cd', // TOs com tag CD (Tampermonkey → servidor → dashboard)
+    '/api/transbordo-destino-data',                  // próximo destino de cada TO CD (Tampermonkey → servidor)
     '/api/trip-data', '/api/trips',                  // viagens em andamento (fonte do transbordo_cd_sync)
     '/api/trip-history-data', '/api/trip-history',   // histórico de viagens (idem)
   ]);
@@ -1286,6 +1287,74 @@
     } catch (e) { console.error('[transbordo-cd-sheet] falha ao recarregar planilha:', e.message); }
   }
 
+  // ── Próximo destino de cada TO CD ────────────────────────────────────────
+  // O SPX não traz o destino na lista de TOs da viagem; ele vem do DETALHE da TO (to_path: "Origem>Esta(XD)>Destino").
+  // O script do Tampermonkey consulta o detalhe e manda o resultado pra cá. Fica em memória (mapa por estação+TO) e
+  // numa aba "Destino" da mesma planilha de transbordo, recarregada no boot. A página recebe o campo
+  // proximo_destino junto de cada TO (ver transbordoCdGz).
+  const TRANSBORDO_DEST_RANGE  = 'Destino!A:E';
+  const TRANSBORDO_DEST_HEADER = ['to_number', 'proximo_destino', 'to_path', 'station_id', 'dt_registro'];
+  const transbordoDestino      = new Map(); // `${station}|${to_number}` -> { dest, path }
+  let   transbordoDestinoPendingRows = [];
+
+  async function ensureTransbordoDestinoTab() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      const meta = await (await sheetsGetComRetry(`https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}?fields=sheets.properties.title`)).json();
+      const existe = (meta.sheets || []).some(sh => sh.properties?.title === 'Destino');
+      const token = await getServiceAccountToken();
+      const auth = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+      if (!existe) {
+        const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}:batchUpdate`, {
+          method: 'POST', headers: auth,
+          body: JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Destino' } } }] }),
+        });
+        if (!r.ok) throw new Error(`addSheet ${r.status}: ${await r.text()}`);
+        console.log('[transbordo-destino] aba "Destino" criada na planilha');
+      }
+      const head = await (await sheetsGetComRetry(`https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent('Destino!A1:E1')}`)).json();
+      if (!(head.values && head.values.length)) {
+        const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent('Destino!A1:E1')}?valueInputOption=USER_ENTERED`, {
+          method: 'PUT', headers: auth, body: JSON.stringify({ values: [TRANSBORDO_DEST_HEADER] }),
+        });
+        if (!r.ok) throw new Error(`header ${r.status}: ${await r.text()}`);
+      }
+    } catch (e) { console.error('[transbordo-destino] falha ao preparar a aba Destino:', e.message); }
+  }
+
+  async function loadTransbordoDestinoFromSheet() {
+    if (!SERVICE_ACCOUNT) return;
+    try {
+      let n = 0;
+      await forEachSheetChunk(TRANSBORDO_SHEET_ID, 'Destino', 'E', rows => rows.forEach(r => {
+        if (!r[0] || !r[1]) return;
+        const key = `${r[3] || DEFAULT_STATION}|${r[0]}`;
+        if (!transbordoDestino.has(key)) { transbordoDestino.set(key, { dest: r[1], path: r[2] || '' }); n++; }
+      }));
+      if (n) console.log(`[transbordo-destino] ${n} destinos recuperados da planilha`);
+    } catch (e) { console.error('[transbordo-destino] falha ao recarregar a aba Destino:', e.message); }
+  }
+
+  async function flushTransbordoDestino() {
+    if (!transbordoDestinoPendingRows.length || !SERVICE_ACCOUNT) return;
+    const batch = transbordoDestinoPendingRows;
+    transbordoDestinoPendingRows = [];
+    try {
+      const token = await getServiceAccountToken();
+      const resp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${TRANSBORDO_SHEET_ID}/values/${encodeURIComponent(TRANSBORDO_DEST_RANGE)}:append?valueInputOption=USER_ENTERED`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values: batch }),
+      });
+      if (!resp.ok) throw new Error(`Sheets append ${resp.status}: ${await resp.text()}`);
+      console.log(`[transbordo-destino] ${batch.length} destinos gravados na planilha`);
+    } catch (e) {
+      console.error('[transbordo-destino] falha ao gravar, devolvendo para a fila:', e.message);
+      transbordoDestinoPendingRows.unshift(...batch);
+    }
+  }
+
+  enqueueBoot(ensureTransbordoDestinoTab);
+  enqueueBoot(loadTransbordoDestinoFromSheet);
   enqueueBoot(ensureTransbordoCdSheetHeader);
   enqueueBoot(loadTransbordoCdFromSheet);
   // Tentativas extras logo após o boot — a chamada é idempotente (só preenche o que estiver
@@ -1319,7 +1388,10 @@
       let i = 0;
       const proxima = () => {
         if (i >= list.length) { gz.end(']}'); return; }
-        const texto = list.slice(i, i + FATIA).map(t => JSON.stringify(t)).join(',');
+        const texto = list.slice(i, i + FATIA).map(t => {
+          const d = transbordoDestino.get(`${key}|${t.to_number}`);
+          return JSON.stringify(d ? { ...t, proximo_destino: d.dest } : t);
+        }).join(',');
         gz.write((i > 0 ? ',' : '') + texto);
         i += FATIA;
         setImmediate(proxima); // devolve o controle ao event loop entre as fatias (não trava os outros requests)
@@ -2549,6 +2621,39 @@
       return;
     }
 
+    // POST /api/transbordo-destino-data — { station_id, items: [{ to_number, proximo_destino, to_path }] }
+    if (urlPath === '/api/transbordo-destino-data' && req.method === 'POST') {
+      let body = '';
+      req.on('data', d => { body += d; });
+      req.on('end', () => {
+        try {
+          const incoming = JSON.parse(body);
+          const station  = String(incoming.station_id ?? DEFAULT_STATION);
+          const items    = Array.isArray(incoming.items) ? incoming.items.slice(0, 2000) : [];
+          const agora    = fmtDtComplete(Math.floor(Date.now() / 1000));
+          let novos = 0;
+          items.forEach(it => {
+            const to = String(it.to_number || '').trim();
+            const dest = String(it.proximo_destino || '').trim().slice(0, 120);
+            if (!to || !dest) return;
+            const key = `${station}|${to}`;
+            if (transbordoDestino.has(key)) return; // 1ª informação vale (a rota da TO não muda)
+            const path = String(it.to_path || '').slice(0, 300);
+            transbordoDestino.set(key, { dest, path });
+            transbordoDestinoPendingRows.push([to, dest, path, station, agora]);
+            novos++;
+          });
+          if (novos) { transbordoCdGzCache.delete(station); console.log(`[transbordo-destino] +${novos} destinos (station ${station}), ${transbordoDestino.size} no total`); }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, novos, total: transbordoDestino.size }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
     // GET /api/transbordo-cd?station=X — serves TOs de transbordo (cd_flag) ao dashboard
     if (urlPath === '/api/transbordo-cd') {
       transbordoCdGz(stationParam(req)).then(gz => {
@@ -3067,6 +3172,7 @@
 
   function safeFlushTransbordoCdSheet() {
     flushTransbordoCdSheet().catch(e => console.error('[transbordo-cd-sheet] erro inesperado (ignorado):', e.message));
+    flushTransbordoDestino().catch(e => console.error('[transbordo-destino] erro inesperado (ignorado):', e.message));
   }
   setInterval(safeFlushTransbordoCdSheet, TRANSBORDO_SHEET_FLUSH_MS);
 
